@@ -593,13 +593,19 @@ async function reverseGeocode(lat, lng) {
 }
 // Ближайшие известные отключения к точке (в пределах ~250 м)
 function outagesNear(lat, lng, address) {
+  // ⚠️ Совпадение по улице БЕЗ ограничения расстояния давало ложные привязки:
+  // для «Камзина, 37» карточка показывала наряд с «Камзина, 172» — это километры.
+  // Поэтому улица учитывается только в пределах разумного радиуса.
   const near = [];
   DATA.houses.forEach((h) => {
-    const sameStreet = address && streetMatches(h.address, streetName(address));
     const d = Math.hypot((h.lat - lat) * 111, (h.lng - lng) * 68); // км
-    if (d < 0.25 || sameStreet) near.push({ h, d });
+    const exact = address && h.address.toLowerCase() === String(address).toLowerCase();
+    const sameStreet = address && streetMatches(h.address, streetName(address));
+    if (exact || d < 0.12 || (sameStreet && d < 0.35)) near.push({ h, d, exact });
   });
-  return near.sort((a, b) => a.d - b.d).slice(0, 3).map((x) => x.h);
+  // точное совпадение адреса всегда первым
+  near.sort((a, b) => (a.exact === b.exact ? a.d - b.d : a.exact ? -1 : 1));
+  return near.slice(0, 3).map((x) => x.h);
 }
 async function checkAddress(q) {
   showToast(t().searching);
