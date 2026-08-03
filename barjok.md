@@ -1,7 +1,8 @@
 # barjok.md — Карта проекта «Бар Жоқ»
 
 > v5 · Павлодар · 2026-08 · реальные парсеры (3 источника) · карта + лендинг разделены · автозапуск 3ч · Vercel
-> Репозиторий: `github.com/Lofte55/barjok` · Домен (план): `barjoq.kz`
+> Репозиторий: `github.com/Lofte55/barjok` (push по **SSH**) · Домен (план): `barjoq.kz`
+> **ПРОД: https://barjok.vercel.app** — `/` лендинг · `/map/` карта · `/ads` реклама
 
 **Что это.** Сервис показывает, когда в доме отключат воду/свет. Ввёл адрес → увидел отключения
 именно по своему дому (дата, время, причина). Позиционирование: информация уже существует,
@@ -190,15 +191,29 @@ Nur.kz 700–2500 ₸, Kiwi.kz 600 ₸, Krisha от 35 ₸ за 1000 показ�
 
 ---
 
-## Деплой (Vercel)
+## Деплой (Vercel) — РАБОТАЕТ
 
-1. `git push` в `github.com/Lofte55/barjok`.
-2. Vercel → Add New Project → Import из GitHub → выбрать репозиторий.
-3. Framework Preset: **Other**, Root Directory: `./`, Build Command: пусто, Output: пусто
-   (чистая статика; маршруты берутся из `vercel.json`).
-4. Домен `barjoq.kz` → Vercel → Settings → Domains.
+**Прод: https://barjok.vercel.app** — деплоится автоматически на каждый `git push` в `main`.
 
-После деплоя: `/` — лендинг, `/map` — карта, `/ads` — рекламодателям.
+Настройки проекта: Framework Preset **Other**, Root Directory `./`, Build Command и
+Output Directory — **пустые** (чистая статика, маршруты из `vercel.json`).
+Домен `barjoq.kz` подключается в Vercel → Settings → Domains.
+
+### ⚠️ Грабли деплоя (были 404 — не повторять)
+
+1. **`cleanUrls: true` ломает rewrites.** Он делает `/landing/index.html` доступным как
+   `/landing`, и destination рерайта перестаёт резолвиться → 404 на `/`. **Не включать.**
+2. **Rewrite на директорию ломает относительные ассеты.** Было
+   `{"source":"/map","destination":"/map/index.html"}` — URL в браузере оставался `/map`
+   (без слэша), поэтому `styles.css` резолвился в `/styles.css` → 404, карта грузилась
+   голой (гигантские SVG без CSS).
+   **Решение:** `"trailingSlash": true` + **никакого рерайта на `/map`** — Vercel сам
+   отдаёт `map/index.html` для `/map/`, и относительные пути работают.
+   Ссылки на карту вести как `/map/` (со слэшем).
+3. Рерайты нужны только там, где путь ≠ папке: `/` → `landing/index.html`, `/ads` → `landing/ads.html`.
+
+Итог `vercel.json`: `trailingSlash: true` + 3 рерайта (`/`, `/ads`, `/ads/`) + cache-заголовок
+для `map/data.json`.
 
 ⚠️ `map/data.json` на Vercel статичен: чтобы данные обновлялись, парсер должен
 коммитить его в репозиторий (GitHub Actions по cron) либо data.json нужно отдавать
