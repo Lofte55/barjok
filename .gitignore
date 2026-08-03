@@ -1,0 +1,5 @@
+node_modules/
+*.log
+map/data.prev.json
+.DS_Store
+.vercel

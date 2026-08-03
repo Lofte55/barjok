@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Бар Жоқ — LaunchAgent: запускает парсер каждые 3 часа (10800 сек).
+  Установка (user-level, без sudo):
+    cp parser/com.barjoq.parser.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.barjoq.parser.plist
+  Остановить:
+    launchctl unload ~/Library/LaunchAgents/com.barjoq.parser.plist
+  Изменить частоту: поменяйте StartInterval (3600=1ч, 10800=3ч, 21600=6ч).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.barjoq.parser</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/clays/Documents/cloude_v1/barjoq/parser/run.sh</string>
+    <string>pavlodar</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>10800</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/clays/Documents/cloude_v1/barjoq/parser/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/clays/Documents/cloude_v1/barjoq/parser/launchd.err.log</string>
+</dict>
+</plist>

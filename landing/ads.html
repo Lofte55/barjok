@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Реклама на Бар Жоқ — форматы, требования, цены</title>
+<meta name="description" content="Рекламные места на сервисе отключений Бар Жоқ: форматы баннеров, требования к макетам (статика, GIF, видео) и стоимость размещения.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f7f9;--bg-2:#eef1f5;--ink:#0f141b;--ink-2:#4b5563;--ink-3:#8a94a3;
+  --line:rgba(15,20,27,.08);--line-2:rgba(15,20,27,.12);--accent:#1f6feb;--accent-ink:#0f4fbf;
+  --hot:#e8663d;--cold:#2f9bd6;--elec:#e0a92c;--heat:#c0492f;--ok:#1f9d55;
+  --white:#fff;--radius:22px;--shadow:0 24px 60px -24px rgba(15,30,60,.2);--shadow-sm:0 10px 30px -12px rgba(15,30,60,.14);
+  --sans:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+.mono{font-family:var(--mono)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent-ink)}
+
+/* nav */
+nav{position:sticky;top:0;z-index:30;background:rgba(246,247,249,.92);border-bottom:1px solid var(--line)}
+.navbar{display:flex;align-items:center;gap:14px;height:66px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px}
+.brand .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#4f93ff);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px}
+.nav-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;border-radius:999px;padding:11px 20px;cursor:pointer;border:0;font-family:var(--sans);transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-ink)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line-2)}.btn-ghost:hover{background:#fff}
+
+/* hero */
+.hero{padding:64px 0 40px}
+.hero h1{font-size:clamp(32px,5vw,54px);line-height:1.03;letter-spacing:-1.6px;font-weight:800;margin:16px 0}
+.hero h1 .a{color:var(--accent)}
+.hero p{font-size:18px;color:var(--ink-2);max-width:60ch}
+.aud{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:34px}
+.aud .a{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}
+.aud .a b{font-family:var(--mono);font-size:26px;display:block;letter-spacing:-1px}
+.aud .a span{font-size:13px;color:var(--ink-3)}
+
+section{padding:44px 0}
+.sh{max-width:640px;margin-bottom:26px}
+.sh h2{font-size:clamp(24px,3.2vw,34px);letter-spacing:-1px;font-weight:700;margin:10px 0 6px}
+.sh p{color:var(--ink-2);font-size:16px}
+
+/* inventory */
+.inv{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.slot{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.slot.wide{grid-column:1/-1}
+.slot .top{display:flex;align-items:center;gap:10px}
+.slot .top b{font-size:17px;letter-spacing:-.3px}
+.slot .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-3);background:var(--bg-2);padding:4px 9px;border-radius:999px}
+.slot .tag.soon{color:var(--accent-ink);background:rgba(31,111,235,.1)}
+.slot p{font-size:14px;color:var(--ink-2)}
+.mock{border:1.5px dashed #c9d2de;border-radius:12px;background:repeating-linear-gradient(135deg,#fafbfc,#fafbfc 12px,#f4f6f9 12px,#f4f6f9 24px);
+  display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-family:var(--mono);font-size:13px;gap:8px}
+.mock .px{color:var(--ink-2);font-weight:700}
+.mock.mpu{height:150px}.mock.lead{height:78px}.mock.mob{height:64px;max-width:280px}.mock.native{height:70px}.mock.brand{height:60px}
+
+/* spec table */
+.tbl{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:14px}
+.tbl th,.tbl td{text-align:left;padding:13px 16px;border-top:1px solid var(--line-2);vertical-align:top}
+.tbl thead th{background:var(--bg-2);border-top:0;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3)}
+.tbl td .f{font-weight:700}
+.tbl .mono{font-size:13px;color:var(--ink-2)}
+.pill{display:inline-block;font-size:11px;font-family:var(--mono);padding:2px 8px;border-radius:999px;background:var(--bg-2);color:var(--ink-2)}
+.pill.ok{background:rgba(31,157,85,.12);color:#177a43}
+
+/* pricing */
+.price-note{font-size:13px;color:var(--ink-3);margin-top:14px;max-width:70ch}
+.price-note a{color:var(--accent-ink)}
+.addon{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.addon .c{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+.addon .c b{font-size:15px}.addon .c .p{font-family:var(--mono);color:var(--accent-ink);font-weight:700;margin-top:4px}
+.addon .c span{font-size:13px;color:var(--ink-3)}
+.tbl td.price{font-family:var(--mono);font-weight:700;color:var(--ink);white-space:nowrap}
+.tbl td.best{color:var(--accent-ink)}
+
+/* cta */
+.cta{background:var(--ink);color:#fff;border-radius:var(--radius);padding:clamp(30px,5vw,56px);text-align:center;position:relative;overflow:hidden}
+.cta h2{font-size:clamp(24px,3.4vw,38px);letter-spacing:-1px;font-weight:700;position:relative;z-index:2}
+.cta p{color:rgba(255,255,255,.7);margin:14px auto 24px;max-width:52ch;position:relative;z-index:2}
+.cta .glow{position:absolute;right:-8%;top:-40%;width:55%;height:180%;background:radial-gradient(circle,rgba(31,111,235,.5),transparent 62%);filter:blur(18px)}
+.cta .mail{font-family:var(--mono);font-size:15px;position:relative;z-index:2}
+.cta .btn-primary{position:relative;z-index:2}
+
+footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-size:13.5px;margin-top:20px}
+.foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.foot a:hover{color:var(--ink)}
+
+@media(max-width:820px){
+  .aud{grid-template-columns:1fr 1fr}
+  .inv{grid-template-columns:1fr}
+  .addon{grid-template-columns:1fr}
+  .tbl{display:block;overflow-x:auto;white-space:nowrap}
+}
+</style>
+</head>
+<body>
+<nav><div class="wrap"><div class="navbar">
+  <a class="brand" href="/"><span class="mark">Б</span> Бар&nbsp;Жоқ</a>
+  <div class="nav-right">
+    <a class="btn btn-ghost" href="/map/">Открыть карту</a>
+    <a class="btn btn-primary" href="#contact">Связаться</a>
+  </div>
+</div></div></nav>
+
+<header class="hero"><div class="wrap">
+  <span class="eyebrow">Рекламодателям</span>
+  <h1>Реклама на <span class="a">Бар Жоқ</span> —<br>рядом с жителями Павлодара.</h1>
+  <p>На сервис заходят, чтобы узнать про отключения воды и света по своему адресу. Это локальная аудитория с высоким намерением: жильцы конкретных домов и районов Павлодара, здесь и сейчас. Идеально для сервисов, магазинов, ремонтных бригад и управляющих компаний поблизости.</p>
+  <div class="aud">
+    <div class="a"><b>Павлодар</b><span>город и пригород, гео-точность до дома</span></div>
+    <div class="a"><b>Высокий</b><span>интент: человек решает бытовую задачу</span></div>
+    <div class="a"><b>RU / KK</b><span>две языковые аудитории</span></div>
+    <div class="a"><b>Web + mobile</b><span>десктоп-панель и мобильная шторка</span></div>
+  </div>
+</div></header>
+
+<!-- INVENTORY -->
+<section id="inventory"><div class="wrap">
+  <div class="sh"><span class="eyebrow">Инвентарь</span><h2>Рекламные места</h2>
+    <p>Пять форматов: три доступны сейчас, два — на ближайшей итерации.</p></div>
+  <div class="inv">
+    <div class="slot">
+      <div class="top"><b>Боковой баннер карты</b><span class="tag">MPU · доступно</span></div>
+      <div class="mock mpu"><span class="px">300×250</span> · медиум-прямоугольник</div>
+      <p>Левая панель карты на десктопе. Всегда на экране, пока пользователь ищет свой адрес — максимальное время контакта.</p>
+    </div>
+    <div class="slot">
+      <div class="top"><b>Мобильный баннер карты</b><span class="tag">доступно</span></div>
+      <div class="mock mob"><span class="px">320×100</span></div>
+      <p>В нижней шторке карты на телефоне, над списком отключений. Нативно вписан в мобильный сценарий.</p>
+    </div>
+    <div class="slot wide">
+      <div class="top"><b>Лидерборд на лендинге</b><span class="tag">доступно</span></div>
+      <div class="mock lead"><span class="px">970×120</span> · на мобильном 320×100</div>
+      <p>Широкий баннер на главной странице сервиса — охват всех, кто заходит на barjoq.kz.</p>
+    </div>
+    <div class="slot">
+      <div class="top"><b>Нативный блок в карточке дома</b><span class="tag soon">скоро</span></div>
+      <div class="mock native"><span class="px">Спонсор</span> · нативный формат</div>
+      <p>Спонсорская строка в карточке конкретного дома — «сантехник рядом», «магазин у дома». Самый релевантный контакт.</p>
+    </div>
+    <div class="slot">
+      <div class="top"><b>Брендирование сервиса</b><span class="tag soon">скоро</span></div>
+      <div class="mock brand"><span class="px">Эксклюзив</span></div>
+      <p>«Сервис работает при поддержке …» + фон/акцент. Один эксклюзивный партнёр на город.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- TECH SPEC -->
+<section id="spec"><div class="wrap">
+  <div class="sh"><span class="eyebrow">Техзадание</span><h2>Требования к макетам</h2>
+    <p>Принимаем статику, анимацию (GIF) и видео. Для каждого формата — @2x-версия для ретины.</p></div>
+  <table class="tbl">
+    <thead><tr><th>Тип</th><th>Форматы файлов</th><th>Вес / длительность</th><th>Требования</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="f">Статика</td>
+        <td class="mono">JPG, PNG, WebP</td>
+        <td class="mono">≤ 150 КБ</td>
+        <td>Точный размер + @2x (напр. 300×250 и 600×500). RGB. Отступ от краёв 8 px под важные элементы. Кликабельная ссылка https + UTM-метки.</td>
+      </tr>
+      <tr>
+        <td class="f">Анимация <span class="pill">GIF</span></td>
+        <td class="mono">GIF, APNG</td>
+        <td class="mono">≤ 1 МБ · ≤ 15 сек · ≤ 30 fps</td>
+        <td>Зацикливание допускается. Без резких вспышек и стробоскопа (безопасность). Ключевое сообщение читается и на первом кадре.</td>
+      </tr>
+      <tr>
+        <td class="f">Видео <span class="pill">video</span></td>
+        <td class="mono">MP4 (H.264)</td>
+        <td class="mono">≤ 2 МБ · ≤ 10 сек</td>
+        <td>Автоплей <b>без звука</b>, muted-loop. Обязателен статичный фолбэк-кадр (JPG/PNG) для устройств без автоплея. Соотношение сторон под слот.</td>
+      </tr>
+      <tr>
+        <td class="f">HTML5 <span class="pill">по согласованию</span></td>
+        <td class="mono">ZIP (HTML+CSS+JS)</td>
+        <td class="mono">≤ 200 КБ</td>
+        <td>Самодостаточный, без внешних запросов. Показ в изолированном sandbox-iframe. Индивидуальная проверка.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="price-note">Модерация: до 1 рабочего дня. Не принимаем рекламу, запрещённую законом РК (алкоголь, табак, азартные игры, нелегальные микрозаймы и т.п.). Макеты — за 3 рабочих дня до старта; замена макета раз в неделю бесплатно. Ответственность за контент — на рекламодателе.</p>
+</div></section>
+
+<!-- PRICING -->
+<section id="pricing"><div class="wrap">
+  <div class="sh"><span class="eyebrow">Стоимость</span><h2>Цены размещения</h2>
+    <p>Фиксированная оплата за период. Неделя, месяц или год (год = 10 месяцев — два в подарок).</p></div>
+  <table class="tbl">
+    <thead><tr><th>Место</th><th>Размер</th><th>Неделя</th><th>Месяц</th><th>Год</th></tr></thead>
+    <tbody>
+      <tr><td class="f">Боковой баннер карты (MPU)</td><td class="mono">300×250</td><td class="price">16 000 ₸</td><td class="price best">45 000 ₸</td><td class="price">450 000 ₸</td></tr>
+      <tr><td class="f">Нативный блок в карточке дома</td><td class="mono">спонсор</td><td class="price">11 000 ₸</td><td class="price best">30 000 ₸</td><td class="price">300 000 ₸</td></tr>
+      <tr><td class="f">Мобильный баннер карты</td><td class="mono">320×100</td><td class="price">9 000 ₸</td><td class="price best">25 000 ₸</td><td class="price">250 000 ₸</td></tr>
+      <tr><td class="f">Лидерборд на лендинге</td><td class="mono">970×120</td><td class="price">7 500 ₸</td><td class="price best">20 000 ₸</td><td class="price">200 000 ₸</td></tr>
+      <tr><td class="f">Брендирование сервиса (эксклюзив)</td><td class="mono">весь сервис</td><td class="price">—</td><td class="price best">120 000 ₸</td><td class="price">1 200 000 ₸</td></tr>
+    </tbody>
+  </table>
+
+  <div class="addon">
+    <div class="c"><b>Наценка за rich-media</b><div class="p">GIF +20% · видео +40%</div><span>к стоимости места за анимированный или видео-макет</span></div>
+    <div class="c"><b>Оплата за показы (CPM)</b><div class="p">от 500 ₸ / 1000 показов</div><span>альтернатива фиксу, минимум 50 000 показов</span></div>
+  </div>
+
+  <p class="price-note">Цены ориентировочные, стартовые — финализируются по фактическому трафику. Опорные ставки Казнета для баннеров: Nur.kz 700–2500 ₸, Kiwi.kz 600 ₸ (300×250), Krisha.kz от 35 ₸ за 1000 показов
+    (<a href="https://kapital.kz/economic/3965/skol-ko-stoit-bannernaya-reklama-v-kaznete.html" target="_blank" rel="noopener">Kapital.kz</a>).
+    Для узкой локальной аудитории Павлодара с высоким намерением выбрана модель фиксированной оплаты за период, а не чистый CPM.</p>
+</div></section>
+
+<!-- CONTACT -->
+<section id="contact"><div class="wrap">
+  <div class="cta">
+    <div class="glow"></div>
+    <h2>Забронировать место</h2>
+    <p>Напишите, какой формат и период интересуют — пришлём медиаплан и техтребования, поможем с макетом.</p>
+    <div class="mail">reklama@barjoq.kz</div>
+    <div style="margin-top:18px"><a class="btn btn-primary" href="mailto:reklama@barjoq.kz?subject=Реклама на Бар Жоқ">Написать письмо</a></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap"><div class="foot">
+  <a class="brand" href="/"><span class="mark">Б</span> Бар&nbsp;Жоқ</a>
+  <div style="display:flex;gap:20px">
+    <a href="/">Главная</a>
+    <a href="/map/">Карта</a>
+    <a href="#pricing">Цены</a>
+  </div>
+  <span>Павлодар · 2026</span>
+</div></div></footer>
+</body>
+</html>

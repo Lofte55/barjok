@@ -1,0 +1,169 @@
+/*
+ * Адаптер: Павлодар — РЕАЛЬНЫЕ данные с pavlodarenergo.kz.
+ *
+ * Конвейер:
+ *   1. Страница «Плановые отключения» → находим городской .docx (файл вида NN.NN.NN-NN.NN.NN.docx).
+ *   2. Скачиваем .docx, читаем таблицу: Дата · № ТП(фидер) · Причина · Время · Потребители.
+ *   3. Из ячейки «Потребители» вытаскиваем улицы, геокодируем через Nominatim (кэш).
+ *   4. Отдаём записи: электроснабжение, плановые, с датой/временем/причиной/координатами.
+ *
+ * Источник публикует ЭЛЕКТРОСНАБЖЕНИЕ (плановые). ГВС/тепло/вода — отдельные источники,
+ * подключаются позже. Если сеть/парсинг упали — фолбэк на демо-набор (pavlodar-curated).
+ */
+const { fetchDocxRows } = require('../lib/docx');
+const { geocode, geocodeGeometry } = require('../lib/geocode');
+const curated = require('./pavlodar-curated');
+const pvkWater = require('./pvk-water');
+const ptsHeat = require('./pts-heat');
+
+const PAGE = 'https://pavlodarenergo.kz/ru/informacziya-o-planovyix-otklyucheniyax.html';
+const HOST = 'https://pavlodarenergo.kz';
+const SOURCE = 'АО «Павлодарэнерго» · плановые отключения электроэнергии (pavlodarenergo.kz, .docx)';
+const CENTER = [52.2871, 76.9674];
+const NOW = Date.UTC(2026, 7, 3, 12, 0); // «сегодня» продукта — 03.08.2026 (совпадает с неделей графика)
+const MAX_GEOCODE = 200;
+
+const UA = { 'User-Agent': 'Mozilla/5.0 (BarJoqParser/1.0)' };
+
+async function findCityDocx() {
+  const res = await fetch(PAGE, { headers: UA });
+  const html = await res.text();
+  const links = [...new Set((html.match(/\/assets\/files\/[^"']+\.docx/gi) || []))];
+  // Городской файл: имя-даты «03.08.26-07.08.26.docx».
+  // Допускаем суффиксы вида «(1)» — сайт иногда перезаливает файл.
+  const dated = links.filter((u) => /\/\d{2}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}[^/]*\.docx$/i.test(u));
+  // берём последний (самый свежий перезалив)
+  const city = dated.length ? dated[dated.length - 1] : null;
+  return city ? HOST + city : null;
+}
+
+function parseDate(s) { const m = (s || '').match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? { y: +m[3], mo: +m[2], d: +m[1] } : null; }
+function parseTime(s) {
+  const m = (s || '').match(/(\d{1,2}):(\d{2})\s*[–—-]\s*(\d{1,2}):(\d{2})/);
+  return m ? { h1: +m[1], m1: +m[2], h2: +m[3], m2: +m[4] } : { h1: 9, m1: 0, h2: 17, m2: 0 };
+}
+function isoWall(d, h, mi) { return new Date(Date.UTC(d.y, d.mo - 1, d.d, h, mi)).toISOString(); }
+
+// Извлечение улиц из текста «Потребители».
+// Префикс требует точку/пробел (чтобы «улиц:» в «в квадрате улиц:» НЕ ловился),
+// стоп-символы включают дефис (разделитель улиц в «квадрате»), но не точку (инициалы).
+// Без \b: в JS \b не срабатывает перед кириллицей. Точку/пробел после префикса
+// уже достаточно, чтобы «улиц:» и «Рули» не ловились.
+const PFX = '(?:ул\\.|пер\\.|пр\\.|пл\\.|мкр\\.|б-р\\s|проспект\\s|улица\\s|переулок\\s)';
+function cleanStreet(raw) {
+  let s = raw.replace(/\s+/g, ' ').trim();
+  s = s.replace(/\s+(с|со)\s+\d+.*$/i, '');                 // «с 1 по 21», «со 2 по 8»
+  s = s.replace(/\s*(СТО|Кафе|Магазин|Жилой|Частные|Водоснабжение|Сад|ПКСТ|Административ|Управление|филиал|здание|Национальн|Главпоч|Рули).*$/i, '');
+  s = s.replace(/[,.]?\s*\d+[а-я]?\s*$/i, '');              // хвостовой номер дома
+  s = s.replace(/[«».,;:\-]+$/, '').trim();
+  return s;
+}
+function extractStreets(text) {
+  const found = new Map(); // name → house|null
+  const re = new RegExp(PFX + '\\s*([А-ЯЁ][^,;–—«»()\\n-]*)', 'gu');
+  let m;
+  while ((m = re.exec(text))) {
+    const house = (m[1].match(/,\s*(\d+[а-я]?)/) || [])[1] || null;
+    const name = cleanStreet(m[1]);
+    if (name.length < 3 || /[:\d]/.test(name[0]) || /улиц/i.test(name)) continue;
+    if (!found.has(name)) found.set(name, house);
+  }
+  return [...found.entries()].map(([name, house]) => ({ name, house }));
+}
+
+async function fetchPavlodar() {
+  const url = await findCityDocx();
+  if (!url) throw new Error('городской .docx не найден на странице');
+  console.log('  .docx:', url.split('/').pop());
+  const rows = await fetchDocxRows(url);
+
+  // строки данных: [дата, фидер, причина, время, потребители...]
+  const outages = [];
+  for (const cells of rows) {
+    if (cells.length < 5 || !/^\d{2}\.\d{2}\.\d{4}/.test(cells[0])) continue;
+    const date = parseDate(cells[0]); if (!date) continue;
+    const feeder = cells[1], cause = cells[2], time = parseTime(cells[3]);
+    const consumers = cells.slice(4).join(' ');
+    outages.push({ date, feeder, cause, time, streets: extractStreets(consumers) });
+  }
+  console.log(`  строк-отключений: ${outages.length}`);
+
+  // уникальные улицы → геокод (по частоте, с лимитом)
+  const freq = new Map();
+  outages.forEach((o) => o.streets.forEach((s) => freq.set(s.name, (freq.get(s.name) || 0) + 1)));
+  const uniq = [...freq.keys()].sort((a, b) => freq.get(b) - freq.get(a)).slice(0, MAX_GEOCODE);
+  console.log(`  геокодирую улиц: ${uniq.length} (Nominatim, кэш)…`);
+  const coords = new Map(), geoms = new Map();
+  let done = 0;
+  for (const name of uniq) {
+    const g = await geocode(`улица ${name}`);
+    if (g) coords.set(name, g);
+    const gm = await geocodeGeometry(`улица ${name}`);
+    if (gm) geoms.set(name, gm);
+    if (++done % 20 === 0) process.stdout.write(`   …${done}/${uniq.length}\n`);
+  }
+  console.log(`  геокодировано: ${coords.size}/${uniq.length}`);
+
+  // записи
+  const records = [];
+  let seq = 0;
+  for (const o of outages) {
+    const start = isoWall(o.date, o.time.h1, o.time.m1);
+    const end = isoWall(o.date, o.time.h2, o.time.m2);
+    if (new Date(end).getTime() < NOW) continue;                 // прошлые пропускаем
+    const status = new Date(start).getTime() > NOW ? 'future' : 'current';
+    const reason = [o.cause, o.feeder].filter(Boolean).join(' · ').replace(/\s+/g, ' ').trim();
+    for (const s of o.streets) {
+      const g = coords.get(s.name); if (!g) continue;
+      // отбрасываем геокод-выбросы за пределами Павлодара (ошибочные совпадения Nominatim)
+      if (Math.abs(g.lat - CENTER[0]) > 0.22 || Math.abs(g.lng - CENTER[1]) > 0.35) continue;
+      seq++;
+      const jit = () => (((seq * 2654435761) % 1000) / 1000 - 0.5) * 0.0009;
+      records.push({
+        address: s.house ? `улица ${s.name}, ${s.house}` : `улица ${s.name}`,
+        district: g.area || 'Павлодар',
+        lat: +(g.lat + jit()).toFixed(5), lng: +(g.lng + jit()).toFixed(5),
+        resource: 'electricity', type: 'planned', status,
+        start, end, reason, provider: 'АО «Павлодарэнерго»',
+        geom: s.house ? null : (geoms.get(s.name) || null),
+        streetWide: !s.house,
+      });
+    }
+  }
+  return { records, center: CENTER, source: SOURCE };
+}
+
+// Обёртка: агрегируем ВСЕ реальные источники Павлодара.
+//   • электроснабжение — АО «Павлодарэнерго» (.docx)
+//   • водоснабжение   — ТОО «Павлодар-Водоканал» (pvk.pawlodarkz.kz)
+// Никакого демо-домешивания. Демо — только аварийный фолбэк, если оба источника упали.
+async function fetchWithFallback() {
+  const records = [];
+  const parts = [];
+
+  try {
+    const e = await fetchPavlodar();
+    if (e.records.length) { records.push(...e.records); parts.push('электроснабжение (Павлодарэнерго)'); }
+  } catch (e) { console.warn('  электроснабжение недоступно:', e.message); }
+
+  try {
+    console.log('  Павлодар-Водоканал (вода)…');
+    const w = await pvkWater.fetch();
+    if (w.records.length) { records.push(...w.records); parts.push('водоснабжение (Павлодар-Водоканал)'); }
+  } catch (e) { console.warn('  водоснабжение недоступно:', e.message); }
+
+  try {
+    console.log('  Павлодарские тепловые сети (ГВС)…');
+    const h = await ptsHeat.fetch();
+    if (h.records.length) { records.push(...h.records); parts.push('ГВС (Павлодарские тепловые сети)'); }
+  } catch (e) { console.warn('  ГВС недоступно:', e.message); }
+
+  if (records.length) {
+    return { records, center: CENTER, source: 'Реальные источники Павлодара: ' + parts.join(' + ') };
+  }
+  console.warn('  все реальные источники недоступны → фолбэк на демо-набор');
+  const c = await curated.fetchCurated();
+  return { records: c.records, center: CENTER, source: curated.SOURCE_CURATED };
+}
+
+module.exports = { fetch: fetchWithFallback, fetchReal: fetchPavlodar, SOURCE };
