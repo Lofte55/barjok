@@ -430,3 +430,4 @@ body.ads-off [data-ad-slot] { display: none !important; }
 
 /* Подсказка адреса без отключений */
 .suggest .sg .tag.ok { background: rgba(31,157,85,.12); color: #177a43; font-weight: 600; }
+.suggest .sg .tag.warn { background: rgba(232,102,61,.14); color: #b8471f; font-weight: 600; }

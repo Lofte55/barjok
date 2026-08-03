@@ -32,7 +32,9 @@ async function geocode(query, { city = 'Павлодар', country = 'Казах
   lastReq = Date.now();
 
   const q = encodeURIComponent(`${query}, ${city}, ${country}`);
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=0&q=${q}`;
+  // accept-language=ru — иначе Nominatim отдаёт местные названия районов
+  // («Химқалашықтар» вместо «Химгородки») и они попадают в карточку дома.
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=0&accept-language=ru&q=${q}`;
   let result = null;
   try {
     const res = await fetch(url, { headers: { 'User-Agent': UA } });

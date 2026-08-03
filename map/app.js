@@ -76,13 +76,43 @@ const RASTER_FALLBACK = {
 };
 let baseStyle = null, tileLayer = null;
 
-// Подменяем text-field во всех слоях-подписях на нужный язык
+// Подменяем text-field в слоях-подписях на нужный язык + добавляем номера домов.
 function localizeStyle(style, lang) {
   const s = JSON.parse(JSON.stringify(style));
   const field = ['coalesce', ['get', 'name:' + lang], ['get', 'name_' + lang], ['get', 'name']];
   (s.layers || []).forEach((l) => {
-    if (l.layout && l.layout['text-field'] !== undefined) l.layout['text-field'] = field;
+    if (!l.layout || l.layout['text-field'] === undefined) return;
+    // ⚠️ Меняем только подписи-НАЗВАНИЯ. Слои с иными подписями (номера домов,
+    // высоты и т.п.) не трогаем, иначе их текст исчезнет.
+    const cur = JSON.stringify(l.layout['text-field']);
+    if (!/\bname\b/.test(cur)) return;
+    l.layout['text-field'] = field;
   });
+
+  // ⚠️ В стиле liberty НЕТ слоя номеров домов (в растровых тайлах CARTO они были).
+  // Данные в тайлах есть — source-layer «housenumber». Добавляем слой сами.
+  const hasHN = (s.layers || []).some((l) => (l['source-layer'] || '') === 'housenumber');
+  if (!hasHN && s.sources && s.sources.openmaptiles) {
+    s.layers.push({
+      id: 'barjoq-housenumber',
+      type: 'symbol',
+      source: 'openmaptiles',
+      'source-layer': 'housenumber',
+      minzoom: 16,
+      layout: {
+        'text-field': ['get', 'housenumber'],
+        'text-font': ['Noto Sans Italic'],
+        'text-size': 10,
+        'text-padding': 2,
+        'text-allow-overlap': false,
+      },
+      paint: {
+        'text-color': '#7b8794',
+        'text-halo-color': 'rgba(255,255,255,.9)',
+        'text-halo-width': 1.1,
+      },
+    });
+  }
   return s;
 }
 async function setTiles(lang) {
@@ -463,12 +493,24 @@ function buildSuggest(qraw, box) {
   // Адреса города без отключений — показываем как обычные подсказки.
   // Клик → карточка «Отключений нет» (это и есть ответ сервиса).
   if (addrHits.length) {
-    html += `<div class="sg-head">${t().addresses}</div>` + addrHits.map((a) =>
-      `<div class="sg" data-kind="addr" data-street="${encodeURIComponent(a.street)}"
+    html += `<div class="sg-head">${t().addresses}</div>` + addrHits.map((a) => {
+      // ⚠️ Не подписывать «отключений нет» вслепую — сначала реально проверяем адрес.
+      const near = outagesNear(a.lat, a.lng, `${a.street}, ${a.house}`);
+      const outs = [];
+      const seen = new Set();
+      near.forEach((h) => cardOutages(h).forEach((o) => {
+        const k = `${o.resource}|${o.type}|${o.start}|${o.end}`;
+        if (!seen.has(k)) { seen.add(k); outs.push(o); }
+      }));
+      const dot = outs.length ? RESOURCES[outs[0].resource].color : '#cfd6e0';
+      const tag = outs.length
+        ? `<span class="tag warn">${outs.length} ${systemsWord(outs.length)}</span>`
+        : `<span class="tag ok">${t().allOk}</span>`;
+      return `<div class="sg" data-kind="addr" data-street="${encodeURIComponent(a.street)}"
             data-house="${encodeURIComponent(a.house)}" data-lat="${a.lat}" data-lng="${a.lng}">
-        <span class="dot" style="background:#cfd6e0"></span>
-        <span class="tt">${a.street}, ${a.house}</span>
-        <span class="tag ok">${t().allOk}</span></div>`).join('');
+        <span class="dot" style="background:${dot}"></span>
+        <span class="tt">${a.street}, ${a.house}</span>${tag}</div>`;
+    }).join('');
   }
   // Ничего не нашли в данных об отключениях → предлагаем проверить адрес на карте
   // (геокодирование). Это и есть ответ пользователю: «по этому адресу отключений нет».

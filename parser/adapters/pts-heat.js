@@ -8,6 +8,8 @@
  * Возвращает «сырые» записи (resource='hot_water') — геокод улиц делает вызывающий код.
  */
 const { geocode, geocodeGeometry } = require('../lib/geocode');
+const { convexHull, pointInPolygon, expandPolygon, areaKm2 } = require('../lib/geo');
+const buildings = require('../lib/buildings');
 
 const HOME = 'https://toopts.kz/ru/';
 const SOURCE = 'ТОО «Павлодарские тепловые сети» · отключения ГВС (toopts.kz)';
@@ -72,7 +74,10 @@ async function fetchPtsHeat() {
       const seg = text.slice(periods[i].idx, periods[i + 1] ? periods[i + 1].idx : periods[i].idx + 1200);
       const streets = findStreets(seg);
       if (!streets.length) continue;
-      parsed.push({ resource, type, ...periods[i], year, streets });
+      // «в границах улиц» = ОБЛАСТЬ: затронуты и дома внутри контура,
+      // а не только на перечисленных улицах.
+      const isArea = /в\s+границах\s+улиц|в\s+районе\s+улиц|ограниченн\w+\s+улицами/i.test(seg);
+      parsed.push({ resource, type, ...periods[i], year, streets, isArea });
       streets.forEach((s) => streetSet.add(s));
     }
   }
@@ -90,6 +95,30 @@ async function fetchPtsHeat() {
     const end = new Date(Date.UTC(p.year, p.mo, p.d2, 23, 59)).toISOString();
     if (new Date(end).getTime() < NOW || new Date(start).getTime() > KEEP_TO) continue;
     const status = new Date(start).getTime() > NOW ? 'future' : 'current';
+
+    // ОБЛАСТЬ: строим контур по граничным улицам и берём ВСЕ дома внутри
+    if (p.isArea) {
+      const pts = p.streets.map((n) => coords.get(n)).filter(Boolean).map((g) => [g.lat, g.lng]);
+      const hull = expandPolygon(convexHull(pts));
+      const km2 = areaKm2(hull);
+      if (hull.length >= 3 && km2 > 0.2 && km2 < 90) {
+        const inside = await buildings.housesInPolygon(hull, 3000);
+        console.log(`  «в границах улиц» → область ${km2.toFixed(1)} км², домов внутри: ${inside.length}`);
+        for (const h of inside) {
+          seq++;
+          records.push({
+            address: `${h.street}, ${h.house}`, district: 'Павлодар',
+            lat: h.lat, lng: h.lng,
+            resource: p.resource, type: p.type, status, start, end,
+            reason: 'Гидравлические испытания / ремонт теплосети — приостановка ГВС',
+            provider: 'ТОО «Павлодарские тепловые сети»',
+          });
+        }
+        continue;   // область обработана, отдельные улицы не нужны
+      }
+      console.warn(`  контур «в границах улиц» отбракован (${km2.toFixed(1)} км²) — размечаю только улицы`);
+    }
+
     for (const name of p.streets) {
       const g = coords.get(name); if (!g) continue;
       if (Math.abs(g.lat - 52.2871) > 0.22 || Math.abs(g.lng - 76.9674) > 0.35) continue;

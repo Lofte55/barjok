@@ -114,9 +114,25 @@ async function housesOnStreet(name, limit = 400) {
   return sorted.slice(0, limit);
 }
 
+/* Дома внутри полигона (для объявлений «в границах улиц»). */
+async function housesInPolygon(poly, limit = 3000) {
+  const { pointInPolygon } = require('./geo');
+  const idx = await load();
+  const out = [];
+  for (const list of idx.values()) {
+    for (const h of list) {
+      if (pointInPolygon([h.lat, h.lng], poly)) {
+        out.push(h);
+        if (out.length >= limit) return out;
+      }
+    }
+  }
+  return out;
+}
+
 async function refresh() {
   try { fs.unlinkSync(CACHE); } catch (e) {}
   INDEX = null; return load();
 }
 
-module.exports = { housesOnStreet, normStreet, load, refresh };
+module.exports = { housesOnStreet, housesInPolygon, normStreet, load, refresh };
