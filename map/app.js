@@ -145,7 +145,13 @@ async function load() {
   const pts = DATA.houses.filter(passHouse).map((h) => [h.lat, h.lng]);
   if (pts.length) {
     const b = L.latLngBounds(pts).pad(0.05);
+    // ⚠️ fitBounds выполняем ТОЛЬКО пока пользователь не начал двигать карту,
+    // иначе поздние таймеры «откатывают» вид назад во время панорамирования.
+    let userMoved = false;
+    const stop = () => { userMoved = true; };
+    map.once('dragstart zoomstart', stop);
     const doFit = () => {
+      if (userMoved) return;
       map.invalidateSize(false);
       map.fitBounds(b, { animate: false, maxZoom: 13 });
       window.dispatchEvent(new Event('resize')); // догрузка тайлов на первой отрисовке
@@ -173,6 +179,12 @@ function cardOutages(h) {
   let outs = h.outages.filter((o) => o.status !== 'past' && state.resources.has(o.resource) && (state.type === 'all' || o.type === state.type));
   if (!outs.length) outs = h.outages.filter((o) => o.status !== 'past');
   if (!outs.length) outs = h.outages;
+  // дедуп: один и тот же наряд мог прийти из нескольких объявлений
+  const seen = new Set();
+  outs = outs.filter((o) => {
+    const k = `${o.resource}|${o.type}|${o.start}|${o.end}`;
+    if (seen.has(k)) return false; seen.add(k); return true;
+  });
   return outs.sort((a, b) => (a.status === b.status ? 0 : a.status === 'current' ? -1 : 1));
 }
 // Если найденный дом не попадает под текущий фильтр времени — переключаем время,
@@ -383,6 +395,41 @@ function streetMatches(candidate, query) {
   return bw.every((w) => w.length > 2 && aw.some((x) => x.startsWith(w) || w.startsWith(x)));
 }
 
+/* Адресный справочник города (все дома, не только с отключениями).
+   Грузится лениво при первом обращении к поиску — 1 МБ, ~250 КБ в gzip. */
+let ADDR = null, addrLoading = null;
+function loadAddresses() {
+  if (ADDR) return Promise.resolve(ADDR);
+  if (!addrLoading) {
+    addrLoading = fetch('addresses.json').then((r) => r.ok ? r.json() : {})
+      .then((j) => { ADDR = j; return j; }).catch(() => (ADDR = {}));
+  }
+  return addrLoading;
+}
+/* Подсказки из справочника: «Павлова 38» → улица Павлова, 38 / 38/1 / 38а */
+function addressSuggestions(pq, limit = 8) {
+  if (!ADDR) return [];
+  const out = [];
+  for (const street of Object.keys(ADDR)) {
+    if (!streetMatches(street, pq.street)) continue;
+    const houses = ADDR[street];
+    if (pq.house) {
+      // точное совпадение вперёд, затем «начинается с» (38 → 38/1, 38а)
+      const exact = houses.filter((h) => String(h[0]).toLowerCase() === pq.house.toLowerCase());
+      const partial = houses.filter((h) => {
+        const s = String(h[0]).toLowerCase();
+        return s !== pq.house.toLowerCase() && s.startsWith(pq.house.toLowerCase());
+      });
+      [...exact, ...partial].slice(0, limit).forEach(([house, lat, lng]) =>
+        out.push({ street, house, lat, lng }));
+    } else {
+      houses.slice(0, 6).forEach(([house, lat, lng]) => out.push({ street, house, lat, lng }));
+    }
+    if (out.length >= limit) break;
+  }
+  return out.slice(0, limit);
+}
+
 function buildSuggest(qraw, box) {
   const q = qraw.trim().toLowerCase();
   if (!q) { box.classList.remove('show'); return; }
@@ -393,6 +440,10 @@ function buildSuggest(qraw, box) {
     h.address.toLowerCase().includes(q) ||
     (streetMatches(h.address, pq.street) && (!pq.house || h.address.includes(pq.house)))
   ).slice(0, 7);
+  // Подсказки из общегородского справочника (дома без отключений тоже нужны)
+  const known = new Set(houseHits.map((h) => h.address.toLowerCase()));
+  const addrHits = addressSuggestions(pq).filter((a) =>
+    !known.has(`${a.street}, ${a.house}`.toLowerCase())).slice(0, 6);
 
   let html = '';
   if (streetHits.length) {
@@ -409,6 +460,16 @@ function buildSuggest(qraw, box) {
         <span class="tt">${h.address}</span></div>`;
     }).join('');
   }
+  // Адреса города без отключений — показываем как обычные подсказки.
+  // Клик → карточка «Отключений нет» (это и есть ответ сервиса).
+  if (addrHits.length) {
+    html += `<div class="sg-head">${t().addresses}</div>` + addrHits.map((a) =>
+      `<div class="sg" data-kind="addr" data-street="${encodeURIComponent(a.street)}"
+            data-house="${encodeURIComponent(a.house)}" data-lat="${a.lat}" data-lng="${a.lng}">
+        <span class="dot" style="background:#cfd6e0"></span>
+        <span class="tt">${a.street}, ${a.house}</span>
+        <span class="tag ok">${t().allOk}</span></div>`).join('');
+  }
   // Ничего не нашли в данных об отключениях → предлагаем проверить адрес на карте
   // (геокодирование). Это и есть ответ пользователю: «по этому адресу отключений нет».
   if (!html && qraw.trim().length >= 3) {
@@ -422,6 +483,19 @@ function buildSuggest(qraw, box) {
     el.onclick = () => {
       if (el.dataset.kind === 'geo') {
         checkAddress(decodeURIComponent(el.dataset.q));
+        closeSuggests();
+        if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
+        return;
+      }
+      if (el.dataset.kind === 'addr') {   // адрес из городского справочника
+        const street = decodeURIComponent(el.dataset.street);
+        const house = decodeURIComponent(el.dataset.house);
+        const lat = +el.dataset.lat, lng = +el.dataset.lng;
+        setSearchValue(`${street}, ${house}`);
+        state.query = ''; applyFilters();
+        map.setView([lat, lng], 17);
+        setTimeout(() => openAddressCard({ address: `${street}, ${house}`, district: '', lat, lng },
+          outagesNear(lat, lng, `${street}, ${house}`)), 240);
         closeSuggests();
         if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
         return;
@@ -505,8 +579,16 @@ async function checkPoint(lat, lng) {
 }
 /* Карточка произвольного адреса: либо найденные отключения, либо «отключений нет» */
 function openAddressCard(pt, nearHouses) {
+  // ⚠️ Соседние дома часто несут ОДНО И ТО ЖЕ отключение (одна улица — один наряд).
+  // Без дедупликации карточка показывала «6 систем» из трёх копий одной записи.
   const outs = [];
-  nearHouses.forEach((h) => cardOutages(h).forEach((o) => outs.push({ o, h })));
+  const seen = new Set();
+  nearHouses.forEach((h) => cardOutages(h).forEach((o) => {
+    const key = `${o.resource}|${o.type}|${o.start}|${o.end}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    outs.push({ o, h });
+  }));
   let inner;
   if (outs.length) {
     inner = outs.map(({ o, h }) => {
@@ -564,8 +646,10 @@ function submitSearch(box) {
 }
 
 SEARCHES.forEach(({ input, box, clear }) => {
-  input.addEventListener('input', (e) => { setSearchValue(e.target.value); buildSuggest(e.target.value, box); });
-  input.addEventListener('focus', () => buildSuggest(input.value, box));
+  // справочник адресов подгружаем при первом касании поиска, затем обновляем подсказки
+  const ensureAddr = () => loadAddresses().then(() => { if (input.value.trim()) buildSuggest(input.value, box); });
+  input.addEventListener('input', (e) => { setSearchValue(e.target.value); buildSuggest(e.target.value, box); ensureAddr(); });
+  input.addEventListener('focus', () => { ensureAddr(); buildSuggest(input.value, box); });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitSearch(box); });
   if (clear) clear.onclick = () => { setSearchValue(''); state.query = ''; closeSuggests(); applyFilters(); if (DATA.center) map.setView(DATA.center, 12); };
 });
@@ -604,7 +688,23 @@ if (infoBtn && sourcePop) {
 
 /* ---------- Apply / lang ---------- */
 function applyFilters() { renderMarkers(); renderList(); }
-map.on('zoomend moveend', renderMarkers);
+/* ⚠️ 2800+ домов: перерисовка на каждый moveend делает панорамирование рваным.
+   Перерисовываем с задержкой и только когда вид реально изменился (зум или
+   заметный сдвиг центра). Во время перетаскивания не трогаем слой вообще. */
+let lastView = null, renderTimer = null;
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => {
+    const z = map.getZoom(), c = map.getCenter();
+    if (lastView && lastView.z === z) {
+      const moved = Math.abs(lastView.lat - c.lat) + Math.abs(lastView.lng - c.lng);
+      if (moved < 0.004) return;            // мелкий сдвиг — маркеры уже покрывают экран
+    }
+    lastView = { z, lat: c.lat, lng: c.lng };
+    renderMarkers();
+  }, 160);
+}
+map.on('zoomend moveend', scheduleRender);
 
 function applyLang() {
   document.querySelectorAll('[data-lang-btn]').forEach((b) => b.classList.toggle('on', b.dataset.langBtn === LANG));
@@ -631,24 +731,33 @@ document.querySelectorAll('[data-lang-btn]').forEach((b) => b.onclick = () => {
 /* ---------- Mobile sheet ---------- */
 const sheet = document.getElementById('sheet');
 const fab = document.getElementById('fab');
-function expandSheet() { sheet.classList.add('expanded'); sheet.classList.remove('collapsed'); }
-function collapseSheet() { sheet.classList.remove('expanded', 'collapsed'); }
-function fullCollapse() { sheet.classList.add('collapsed'); sheet.classList.remove('expanded'); }
+/* Три состояния шторки: свёрнута (по умолчанию — акцент на карте) / половина / развёрнута */
+function expandSheet() { sheet.classList.add('expanded'); sheet.classList.remove('collapsed', 'half'); }
+function halfSheet() { sheet.classList.add('half'); sheet.classList.remove('expanded', 'collapsed'); }
+function collapseSheet() { sheet.classList.add('collapsed'); sheet.classList.remove('expanded', 'half'); }
+function fullCollapse() { collapseSheet(); }
 if (sheet) {
   const grip = sheet.querySelector('.grip');
   let startY = 0, startH = 0, dragging = false;
   const down = (y) => { dragging = true; startY = y; startH = sheet.getBoundingClientRect().height; sheet.style.transition = 'none'; };
   const move = (y) => { if (!dragging) return; let h = startH + (startY - y); h = Math.max(innerHeight * 0.11, Math.min(innerHeight * 0.88, h)); sheet.style.height = h + 'px'; };
-  const up = () => { if (!dragging) return; dragging = false; sheet.style.transition = ''; const r = sheet.getBoundingClientRect().height / innerHeight; sheet.style.height = ''; if (r > 0.6) expandSheet(); else if (r < 0.25) fullCollapse(); else collapseSheet(); };
+  const up = () => { if (!dragging) return; dragging = false; sheet.style.transition = ''; const r = sheet.getBoundingClientRect().height / innerHeight; sheet.style.height = ''; if (r > 0.62) expandSheet(); else if (r < 0.22) collapseSheet(); else halfSheet(); };
   grip.addEventListener('touchstart', (e) => down(e.touches[0].clientY), { passive: true });
   grip.addEventListener('touchmove', (e) => move(e.touches[0].clientY), { passive: true });
   grip.addEventListener('touchend', up);
   grip.addEventListener('mousedown', (e) => down(e.clientY));
   addEventListener('mousemove', (e) => move(e.clientY));
   addEventListener('mouseup', up);
-  grip.addEventListener('click', () => { if (!sheet.classList.contains('expanded')) expandSheet(); });
+  // тап по «ручке»: свёрнута → половина → развёрнута → свёрнута
+  grip.addEventListener('click', () => {
+    if (sheet.classList.contains('expanded')) collapseSheet();
+    else if (sheet.classList.contains('half')) expandSheet();
+    else halfSheet();
+  });
   const fb = sheet.querySelector('[data-filters-btn]');
-  if (fb) fb.onclick = () => { sheet.classList.toggle('filters-open'); expandSheet(); };
+  if (fb) fb.onclick = () => { sheet.classList.toggle('filters-open'); halfSheet(); };
+  // старт: свёрнута, карта на первом плане
+  collapseSheet();
 }
 if (fab) fab.onclick = () => map.setView(DATA.center, 12);
 

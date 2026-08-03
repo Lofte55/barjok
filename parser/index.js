@@ -92,6 +92,20 @@ async function main() {
 
   const dest = path.join(__dirname, '..', 'map', 'data.json');
   fs.writeFileSync(dest, JSON.stringify(out));
+
+  // Адресный индекс для подсказок в поиске (улица → [[дом, lat, lng]]).
+  // Грузится в браузере лениво, только при первом обращении к поиску.
+  try {
+    const rows = JSON.parse(fs.readFileSync(path.join(__dirname, 'buildings.json'), 'utf8'));
+    const idx = {};
+    for (const [street, house, lat, lng] of rows) {
+      if (!idx[street]) idx[street] = [];
+      idx[street].push([house, lat, lng]);
+    }
+    const addrDest = path.join(__dirname, '..', 'map', 'addresses.json');
+    fs.writeFileSync(addrDest, JSON.stringify(idx));
+    console.log(`Адресный индекс: ${Object.keys(idx).length} улиц / ${rows.length} адресов → map/addresses.json`);
+  } catch (e) { console.warn('Адресный индекс не собран:', e.message); }
   console.log(`Готово: ${out.counts.houses} домов, ${out.counts.outages} отключений (пропущено ${skipped}).`);
   console.log(`Центр: ${c.map((n) => n.toFixed(4)).join(', ')} · файл: map/data.json (${(fs.statSync(dest).size / 1024).toFixed(0)} КБ)`);
 }
