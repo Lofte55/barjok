@@ -3,3 +3,4 @@ node_modules/
 map/data.prev.json
 .DS_Store
 .vercel
+parser/buildings.json

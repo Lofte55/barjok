@@ -65,26 +65,48 @@ let STREETS = [];
 /* ---------- Map ---------- */
 const map = L.map('map', { zoomControl: true, attributionControl: true, preferCanvas: false }).setView(DATA.center, 12);
 
-/* Подложка. Растровые тайлы содержат «вшитые» подписи на местном языке (в Павлодаре — казахский).
-   Чтобы подписи переключались RU/KK, нужен провайдер с параметром языка (MapTiler и т.п. — по ключу).
-   Задайте TILE_KEY, и карта начнёт переключать язык вместе с интерфейсом. Без ключа — CARTO. */
-const TILE_KEY = ''; // ← сюда MapTiler API key, чтобы включить языковые подписи
-const TILES = {
-  keyed: (lang) => ({
-    url: `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${TILE_KEY}&language=${lang}`,
-    attribution: '© MapTiler © OpenStreetMap', maxZoom: 20,
-  }),
-  free: () => ({
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '© OpenStreetMap, © CARTO', maxZoom: 19, subdomains: 'abcd',
-  }),
+/* Подложка — ВЕКТОРНЫЕ тайлы OpenFreeMap (бесплатно, без ключа).
+   Векторные тайлы несут name:ru / name:kk, поэтому подписи карты переключаются
+   вместе с интерфейсом. Растровые тайлы так не умеют — подписи в них «вшиты»
+   на местном языке (в Павлодаре казахский), поэтому от CARTO отказались. */
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const RASTER_FALLBACK = {
+  url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  attribution: '© OpenStreetMap, © CARTO', maxZoom: 19, subdomains: 'abcd',
 };
-let tileLayer = null;
-function setTiles(lang) {
-  const cfg = TILE_KEY ? TILES.keyed(lang) : TILES.free();
-  if (tileLayer) map.removeLayer(tileLayer);
-  tileLayer = L.tileLayer(cfg.url, cfg).addTo(map);
-  if (tileLayer.getContainer) tileLayer.getContainer().classList.add('tiles');
+let baseStyle = null, tileLayer = null;
+
+// Подменяем text-field во всех слоях-подписях на нужный язык
+function localizeStyle(style, lang) {
+  const s = JSON.parse(JSON.stringify(style));
+  const field = ['coalesce', ['get', 'name:' + lang], ['get', 'name_' + lang], ['get', 'name']];
+  (s.layers || []).forEach((l) => {
+    if (l.layout && l.layout['text-field'] !== undefined) l.layout['text-field'] = field;
+  });
+  return s;
+}
+async function setTiles(lang) {
+  try {
+    if (!baseStyle) baseStyle = await (await fetch(STYLE_URL)).json();
+    const styled = localizeStyle(baseStyle, lang);
+    if (tileLayer) map.removeLayer(tileLayer);
+    tileLayer = L.maplibreGL({ style: styled, attribution: '© OpenFreeMap © OpenMapTiles © OpenStreetMap' });
+    tileLayer.addTo(map);
+    // ⚠️ НЕ выставлять z-index контейнеру GL-слоя: он лежит в leaflet-tile-pane,
+    // и любой явный z-index прячет подложку (карта становится белой).
+    const c = tileLayer.getContainer && tileLayer.getContainer();
+    if (c) c.classList.add('tiles');
+    // ⚠️ Слой добавляется АСИНХРОННО (после загрузки стиля), уже после того как
+    // load() отработал свои invalidateSize/fitBounds. Без явного ресайза GL-канвас
+    // остаётся несинхронизированным и карта белая. Пинаем размер после монтирования.
+    const sync = () => { map.invalidateSize(false); window.dispatchEvent(new Event('resize')); };
+    requestAnimationFrame(() => requestAnimationFrame(sync));
+    [80, 300, 800].forEach((ms) => setTimeout(sync, ms));
+  } catch (e) {
+    console.warn('Векторная подложка недоступна, откат на растровую:', e && e.message);
+    if (tileLayer) map.removeLayer(tileLayer);
+    tileLayer = L.tileLayer(RASTER_FALLBACK.url, RASTER_FALLBACK).addTo(map);
+  }
 }
 setTiles(LANG);
 map.zoomControl.setPosition('bottomright');
@@ -194,8 +216,8 @@ function renderMarkers() {
   const z = map.getZoom();
   const individual = z >= 15 || !!state.query.trim();
 
-  // Подсветка ВСЕЙ улицы, если в источнике указана только улица (без номера дома).
-  // Так «отключение ГВС на Кутузова» закрашивает всю Кутузова, а не одну точку.
+  // Фолбэк: если улицы нет в адресном реестре OSM, показываем линию улицы.
+  // Обычно же «уличные» объявления уже развёрнуты парсером в конкретные дома.
   houses.forEach((h) => {
     if (!h.geom) return;
     const outs = matchingOutages(h); if (!outs.length) return;

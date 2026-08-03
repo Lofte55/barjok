@@ -14,6 +14,37 @@ const fs = require('fs');
 const path = require('path');
 const { CITIES, getCity } = require('./cities');
 
+/* Разворачивание «уличных» записей в конкретные дома.
+   Источник пишет «отключение на Кутузова» → показываем ВСЕ дома по Кутузова
+   (адресный реестр OSM), а не линию улицы. */
+const buildings = require('./lib/buildings');
+const MAX_HOUSES_PER_STREET = 300;
+
+async function expandStreetRecords(records) {
+  const out = [];
+  let expanded = 0, kept = 0;
+  for (const r of records) {
+    if (!r.streetWide) { out.push(r); continue; }
+    const streetName = (r.address || '').replace(/^(улица|ул\.?|проспект|пр\.?|переулок|пер\.?)\s*/i, '').trim();
+    let houses = [];
+    try { houses = await buildings.housesOnStreet(streetName, MAX_HOUSES_PER_STREET); } catch (e) {}
+    if (!houses.length) { out.push(r); kept++; continue; }   // нет в реестре — оставляем как есть
+    expanded++;
+    for (const h of houses) {
+      out.push({
+        ...r,
+        address: `${h.street}, ${h.house}`,
+        lat: h.lat, lng: h.lng,
+        geom: null,            // геометрия улицы больше не нужна — есть дома
+        streetWide: false,
+        onStreet: streetName,  // пометка: пришло из «уличного» объявления
+      });
+    }
+  }
+  if (expanded) console.log(`  улиц развёрнуто в дома: ${expanded}${kept ? ` (не найдено в реестре: ${kept})` : ''}`);
+  return out;
+}
+
 function groupHouses(records) {
   const houses = new Map();
   let skipped = 0;
@@ -48,7 +79,8 @@ async function main() {
   const effectiveSource = source || city.source;
   console.log(`Источник: ${effectiveSource} · записей: ${records.length}`);
 
-  const { houses, skipped } = groupHouses(records);
+  const expandedRecords = await expandStreetRecords(records);
+  const { houses, skipped } = groupHouses(expandedRecords);
   const c = center || [median(houses.map((h) => h.lat)), median(houses.map((h) => h.lng))];
 
   const out = {
