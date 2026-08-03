@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "trailingSlash": true,
   "rewrites": [
     { "source": "/", "destination": "/landing/index.html" },
     { "source": "/ads", "destination": "/landing/ads.html" },
-    { "source": "/map", "destination": "/map/index.html" }
+    { "source": "/ads/", "destination": "/landing/ads.html" }
   ],
   "headers": [
     {
