@@ -366,7 +366,7 @@ function openHouseCard(h, latlng) {
   const popup = L.popup({ maxWidth: 320, minWidth: 288, className: 'house-popup', autoPanPadding: [24, 90] })
     .setLatLng(latlng).setContent(html).openOn(map);
   wireCard(popup, h);
-  if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
+  if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
 }
 function houseCardHtml(h) {
   const outs = collapseByResource(cardOutages(h));
@@ -458,11 +458,17 @@ function normStreet(s) {
 function streetMatches(candidate, query) {
   const a = normStreet(candidate), b = normStreet(query);
   if (!b) return false;
-  if (a.includes(b) || b.includes(a)) return true;
-  // сравнение по основе слова (без падежного окончания)
+  if (a === b) return true;
+  // Подстрочный матч — только для достаточно длинных названий, иначе «б» (Проезд Б)
+  // ложно совпадает с «баян батыра» и т.п.
+  if (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a))) return true;
+  // сравнение по основе слова (без падежного окончания); короткие токены (<3) игнорируем,
+  // чтобы одиночная буква улицы не матчила любое слово с этой буквы.
   const stem = (x) => x.replace(/(ой|ая|ые|ого|ому|ым|ых|а|о|у|ы|е|и|я)$/i, '');
-  const aw = a.split(' ').map(stem), bw = b.split(' ').map(stem);
-  return bw.every((w) => w.length > 2 && aw.some((x) => x.startsWith(w) || w.startsWith(x)));
+  const aw = a.split(' ').map(stem).filter((w) => w.length >= 3);
+  const bw = b.split(' ').map(stem).filter((w) => w.length >= 3);
+  if (!aw.length || !bw.length) return false;
+  return bw.every((w) => aw.some((x) => x.startsWith(w) || w.startsWith(x)));
 }
 
 /* Адресный справочник города (все дома, не только с отключениями).
@@ -566,7 +572,7 @@ function buildSuggest(qraw, box) {
       if (el.dataset.kind === 'geo') {
         checkAddress(decodeURIComponent(el.dataset.q));
         closeSuggests();
-        if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
+        if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
         return;
       }
       if (el.dataset.kind === 'addr') {   // адрес из городского справочника
@@ -579,7 +585,7 @@ function buildSuggest(qraw, box) {
         setTimeout(() => openAddressCard({ address: `${street}, ${house}`, district: '', lat, lng },
           outagesNear(lat, lng, `${street}, ${house}`)), 240);
         closeSuggests();
-        if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
+        if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
         return;
       }
       if (el.dataset.kind === 'street') {
@@ -597,7 +603,7 @@ function buildSuggest(qraw, box) {
         setTimeout(() => openHouseCard(h, [h.lat, h.lng]), 250);
       }
       closeSuggests();
-      if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
+      if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
     };
   });
 }
@@ -712,7 +718,7 @@ function openAddressCard(pt, nearHouses) {
   </div>`;
   L.popup({ maxWidth: 330, minWidth: 290, className: 'house-popup', autoPanPadding: [24, 90] })
     .setLatLng([pt.lat, pt.lng]).setContent(html).openOn(map);
-  if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
+  if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
 }
 /* Мини-тост */
 let toastEl = null, toastTimer = null;
