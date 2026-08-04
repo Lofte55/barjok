@@ -227,7 +227,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
 
   <div class="addon">
     <div class="c"><b>Наценка за rich-media</b><div class="p">GIF +20% · видео +40%</div><span>к стоимости места за анимированный или видео-макет</span></div>
-    <div class="c"><b>Оплата за показы (CPM)</b><div class="p">от 500 ₸ / 1000 показов</div><span>альтернатива фиксу, минимум 50 000 показов</span></div>
+    <div class="c"><b>Оплата за показы (CPM)</b><div class="p">от 1 500 ₸ / 1000 показов</div><span>альтернатива фиксу, минимум 50 000 показов</span></div>
   </div>
 
   <p class="price-note">Цены ориентировочные, стартовые — финализируются по фактическому трафику. Опорные ставки Казнета для баннеров: Nur.kz 700–2500 ₸, Kiwi.kz 600 ₸ (300×250), Krisha.kz от 35 ₸ за 1000 показов
@@ -242,7 +242,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
     <h2>Забронировать место</h2>
     <p>Напишите, какой формат и период интересуют — пришлём медиаплан и техтребования, поможем с макетом.</p>
     <div class="mail">reklama@barjoq.kz</div>
-    <div style="margin-top:18px"><a class="btn btn-primary" href="mailto:reklama@barjoq.kz?subject=Реклама на Бар Жоқ">Написать письмо</a></div>
+    <div style="margin-top:18px"><button class="btn btn-primary contact-open" type="button">Связаться</button></div>
   </div>
 </div></section>
 
@@ -276,5 +276,67 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
 </script>
 <noscript><div><img src="https://mc.yandex.ru/watch/111276553" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
+<!-- CONTACTS MODAL -->
+<style>
+  .modal-ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:rgba(10,14,22,.55);backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:.22s}
+  .modal-ov.show{opacity:1;visibility:visible}
+  .modal{position:relative;width:100%;max-width:440px;background:#16181d;border:1px solid rgba(255,255,255,.09);
+    border-radius:22px;padding:30px 26px 26px;box-shadow:0 40px 90px -30px rgba(0,0,0,.7);
+    transform:translateY(14px) scale(.98);transition:.22s cubic-bezier(.16,1,.3,1)}
+  .modal-ov.show .modal{transform:none}
+  .modal-x{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;
+    background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;transition:background .15s}
+  .modal-x:hover{background:rgba(255,255,255,.16)}
+  .modal-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#6ea0ff}
+  .modal-title{color:#fff;font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+  .modal-sub{color:rgba(255,255,255,.6);font-size:14.5px;margin-top:8px;line-height:1.5}
+  .modal-list{display:flex;flex-direction:column;gap:11px;margin-top:22px}
+  .cbtn{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;padding:14px 16px;transition:.15s;text-decoration:none}
+  .cbtn:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
+  .cbtn .ci{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center}
+  .cbtn .ci svg{width:24px;height:24px;color:#fff}
+  .cbtn .ct{flex:1}
+  .cbtn .ct .l{display:block;font-size:12.5px;color:rgba(255,255,255,.6);font-weight:600}
+  .cbtn .ct .v{display:block;font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em}
+  .cbtn .arw{color:rgba(255,255,255,.4)}
+</style>
+<div class="modal-ov" id="contactsModal" aria-hidden="true">
+  <div class="modal">
+    <button class="modal-x" id="contactsClose" aria-label="Закрыть"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div class="modal-eyebrow">Контакты</div>
+    <h3 class="modal-title">Свяжитесь с нами</h3>
+    <p class="modal-sub">Напишите, какой формат и период интересуют — ответим в течение рабочего дня.</p>
+    <div class="modal-list">
+      <a class="cbtn" href="https://wa.me/77083445023" target="_blank" rel="noopener">
+        <span class="ci" style="background:#25d366"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.5-4-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5 0-.2-.6-1.6-.9-2.2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-1.1 2.2 0 .3.9 2.2 2.6 4 2.4 2.6 4.3 3.1 5 3.3.8.2 1.5.2 2.1.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg></span>
+        <span class="ct"><span class="l">WhatsApp</span><span class="v">+7 708 344 50 23</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <a class="cbtn" href="https://t.me/artumikh" target="_blank" rel="noopener">
+        <span class="ci" style="background:#2aabee"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.5 13.1l-4.6-1.4c-1-.3-1-1 .2-1.5L20.6 3c.8-.3 1.5.2 1.3 1.3z"/></svg></span>
+        <span class="ct"><span class="l">Telegram</span><span class="v">@artumikh</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <a class="cbtn" href="mailto:reklama@barjoq.kz?subject=Реклама на Бар Жоқ">
+        <span class="ci" style="background:#2f6bed"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+        <span class="ct"><span class="l">Email</span><span class="v">reklama@barjoq.kz</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
+<script>
+  (function(){
+    var m=document.getElementById('contactsModal');
+    function open(){ m.classList.add('show'); m.setAttribute('aria-hidden','false'); }
+    function close(){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); }
+    document.querySelectorAll('.contact-open').forEach(function(b){ b.addEventListener('click',open); });
+    document.getElementById('contactsClose').addEventListener('click',close);
+    m.addEventListener('click',function(e){ if(e.target===m) close(); });
+    addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+  })();
+</script>
 </body>
 </html>

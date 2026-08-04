@@ -115,6 +115,16 @@
   .capture input{flex:1;border:0;outline:0;font-family:inherit;font-size:15.5px;color:var(--ink);background:transparent;min-width:0}
   .capture input::placeholder{color:var(--ink-3)}
   .cap-note{font-size:13px;color:var(--ink-3);margin-top:12px}
+  .cap-wrap{position:relative;max-width:520px;margin:30px auto 0}
+  .cap-wrap .capture{margin:0}
+  .lsug{position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--canvas);border:1px solid var(--line);
+    border-radius:16px;box-shadow:var(--shadow-lg);padding:6px;z-index:40;display:none;text-align:left;max-height:320px;overflow:auto}
+  .lsug.show{display:block}
+  .lsug a{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;cursor:pointer;color:var(--ink)}
+  .lsug a:hover{background:var(--bg)}
+  .lsug .p{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none}
+  .lsug .nm{font-weight:600;font-size:15px}
+  .lsug .hs{margin-left:auto;font-size:12px;color:var(--ink-3);font-weight:600;white-space:nowrap}
 
   /* sources */
   .sources{padding:34px 0 8px;text-align:center}
@@ -139,6 +149,7 @@
   .mapshot .river{position:absolute;top:-10%;left:-15%;width:60%;height:130%;transform:rotate(18deg);
     background:linear-gradient(90deg,#cfe4f3,#bcd9ee);border-radius:40%;opacity:.9;filter:blur(.3px)}
   .mapshot .park{position:absolute;border-radius:22px;background:#d8ecd6}
+  .mapshot .bld{position:absolute;background:#dfe4ea;border-radius:2px;box-shadow:0 1px 0 rgba(21,32,58,.05)}
   .mapshot .road{position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(21,32,58,.05)}
   .mapshot .road.mj{background:#fdeec2;box-shadow:0 0 0 1px rgba(216,170,40,.25)}
   .mapshot .mpin{position:absolute;width:22px;height:22px;border-radius:50% 50% 50% 2px;background:var(--c);
@@ -177,6 +188,16 @@
   .step .txt p{color:var(--ink-2);margin-top:10px;font-size:15.5px;max-width:42ch}
   .demo{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-lg);min-height:210px;display:flex;flex-direction:column;justify-content:center}
   @media(max-width:760px){.step,.step.rev{grid-template-columns:1fr;direction:ltr;gap:22px}}
+
+  /* feature cards */
+  .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
+  .feat{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:transform .18s,border-color .18s,box-shadow .18s}
+  .feat:hover{border-color:var(--ink-3);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+  .feat .fi{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;margin-bottom:16px}
+  .feat .fi svg{width:24px;height:24px}
+  .feat h3{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .feat p{color:var(--ink-2);margin-top:8px;font-size:14.5px;line-height:1.5}
+  @media(max-width:640px){.feat-grid{grid-template-columns:1fr}}
 
   .ocard{border:1px solid var(--line);border-radius:14px;overflow:hidden}
   .ocard .h{background:var(--accent);color:#fff;padding:12px 15px}
@@ -218,6 +239,41 @@
   .cbtn .ct .v{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em}
   .cbtn .arw{color:rgba(255,255,255,.4)}
   @media(max-width:760px){.contact{padding:36px 22px}.contact .in{grid-template-columns:1fr;gap:26px}}
+
+  /* animated final CTA */
+  .cta-final{position:relative;overflow:hidden;background:linear-gradient(135deg,#2f6bed,#1c4fc4);
+    border-radius:26px;padding:56px 40px;text-align:center;box-shadow:0 30px 60px -30px rgba(47,107,237,.7)}
+  .cta-final .cta-in{position:relative;z-index:2}
+  .cta-final .shine{position:absolute;top:0;left:-60%;width:40%;height:100%;z-index:1;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent);transform:skewX(-18deg);
+    animation:shine 4.5s ease-in-out infinite}
+  @keyframes shine{0%{left:-60%}55%,100%{left:130%}}
+  .cta-final .fpin{position:absolute;left:var(--x);top:var(--y);width:26px;height:26px;z-index:1;pointer-events:none;
+    border-radius:50% 50% 50% 2px;background:var(--c);transform:rotate(45deg);opacity:.9;
+    box-shadow:0 8px 18px -4px rgba(0,0,0,.4);animation:floaty 5s ease-in-out var(--dl) infinite}
+  .cta-final .fpin::after{content:"";position:absolute;top:50%;left:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;transform:rotate(-45deg)}
+  @keyframes floaty{0%,100%{transform:rotate(45deg) translateY(0)}50%{transform:rotate(45deg) translateY(-12px)}}
+  .cta-btn{margin-top:26px;background:#fff;color:var(--accent-ink);font-size:16px;padding:15px 28px;
+    box-shadow:0 12px 26px -8px rgba(0,0,0,.35);animation:ctabeat 2.6s ease-in-out infinite}
+  .cta-btn:hover{transform:translateY(-2px)}
+  @keyframes ctabeat{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+  @media (prefers-reduced-motion:reduce){.cta-final .shine,.cta-final .fpin,.cta-btn{animation:none}}
+
+  /* contacts modal */
+  .modal-ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:rgba(10,14,22,.55);backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:.22s}
+  .modal-ov.show{opacity:1;visibility:visible}
+  .modal{position:relative;width:100%;max-width:440px;background:#16181d;border:1px solid rgba(255,255,255,.09);
+    border-radius:22px;padding:30px 26px 26px;box-shadow:0 40px 90px -30px rgba(0,0,0,.7);
+    transform:translateY(14px) scale(.98);transition:.22s cubic-bezier(.16,1,.3,1)}
+  .modal-ov.show .modal{transform:none}
+  .modal-x{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;
+    background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;transition:background .15s}
+  .modal-x:hover{background:rgba(255,255,255,.16)}
+  .modal-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent-ink);filter:brightness(1.5)}
+  .modal-title{color:#fff;font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+  .modal-sub{color:rgba(255,255,255,.6);font-size:14.5px;margin-top:8px;line-height:1.5}
+  .modal-list{display:flex;flex-direction:column;gap:11px;margin-top:22px}
 
   footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
   .foot-top{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
@@ -297,13 +353,16 @@
     <span class="pill-ann rv"><span class="dot"></span><span data-kk="Павлодардың нақты деректері">Реальные данные Павлодара</span><span class="go" data-kk="бүгін жаңартылды">обновлено сегодня</span></span>
     <h1 class="rv" data-kk-html="Ажыратуды алдын ала біл —<br>кран <span class=&quot;u&quot;>ашылғанша</span>">Узнай об отключении раньше,<br>чем откроешь <span class="u">кран</span></h1>
     <p class="lead rv" data-kk="Мекенжайыңды енгіз — үйің бойынша барлық ажыратуды көресің: су, жарық, жылу. Күні, уақыты, себебі. Жаңалықтар мен чаттарды ақтарудың қажеті жоқ.">Введи адрес — увидишь все отключения по своему дому: вода, свет, отопление. Дата, время, причина. Без поиска по новостям и чатам ЖК.</p>
-    <form class="capture rv" onsubmit="var v=this.querySelector('input').value.trim();location.href='/map/'+(v?('?q='+encodeURIComponent(v)):'');return false">
-      <label class="field">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
-        <input type="text" autocomplete="off" autocorrect="off" spellcheck="false" data-kk-ph="Көше және үй нөмірі — мыс. Естай 38" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес">
-      </label>
-      <button class="btn primary" type="submit" data-kk="Тексеру">Проверить</button>
-    </form>
+    <div class="cap-wrap rv">
+      <form class="capture" id="capForm" onsubmit="var v=this.querySelector('input').value.trim();location.href='/map/'+(v?('?q='+encodeURIComponent(v)):'');return false">
+        <label class="field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+          <input id="capInput" type="text" autocomplete="off" autocorrect="off" spellcheck="false" data-kk-ph="Көше және үй нөмірі — мыс. Естай 38" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес">
+        </label>
+        <button class="btn primary" type="submit" data-kk="Тексеру">Проверить</button>
+      </form>
+      <div class="lsug" id="lsug" role="listbox"></div>
+    </div>
     <p class="cap-note rv" data-kk="Тегін · тіркеусіз · бүкіл Павлодар бойынша">Бесплатно · без регистрации · по всему Павлодару</p>
   </section>
 
@@ -329,6 +388,16 @@
           <span class="river"></span>
           <span class="park" style="left:12%;top:16%;width:12%;height:16%"></span>
           <span class="park" style="left:70%;top:60%;width:14%;height:18%"></span>
+          <span class="bld" style="left:30%;top:24%;width:5%;height:9%"></span>
+          <span class="bld" style="left:37%;top:25%;width:7%;height:6%"></span>
+          <span class="bld" style="left:52%;top:23%;width:6%;height:10%"></span>
+          <span class="bld" style="left:60%;top:26%;width:4%;height:12%"></span>
+          <span class="bld" style="left:30%;top:46%;width:8%;height:6%"></span>
+          <span class="bld" style="left:56%;top:44%;width:6%;height:9%"></span>
+          <span class="bld" style="left:72%;top:30%;width:9%;height:7%"></span>
+          <span class="bld" style="left:20%;top:66%;width:7%;height:8%"></span>
+          <span class="bld" style="left:50%;top:66%;width:10%;height:7%"></span>
+          <span class="bld" style="left:36%;top:52%;width:5%;height:11%"></span>
           <span class="road mj" style="left:0;right:0;top:40%;height:5px"></span>
           <span class="road mj" style="top:0;bottom:0;left:47%;width:5px"></span>
           <span class="road" style="left:0;right:0;top:20%;height:2px"></span>
@@ -446,14 +515,26 @@
       <h2 data-kk="Чаттағы қауесет емес — жеткізушілер деректері">Не слухи из чатов, а данные поставщиков</h2>
       <p class="intro" data-kk="Әр ажырату — ресми дереккөзден, күні мен себебі көрсетілген. Әр 3 сағат сайын автоматты жаңарады, «ауданда бір жерде» емес, нақты үйге байланған.">Каждое отключение — из официального источника, с датой и причиной. Обновляется автоматически каждые 3 часа, привязано к конкретному дому, а не к «где-то на районе».</p>
     </div>
-    <div class="step rv" style="margin-top:34px">
-      <div class="txt">
+    <div class="feat-grid rv">
+      <div class="feat">
+        <span class="fi" style="background:var(--accent-wash);color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.7-7-11a7 7 0 0 1 14 0c0 5.3-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span>
         <h3 data-kk="Үйге нақты байланыс">Точная привязка к дому</h3>
-        <p data-kk="Біз «көшені» нақты үйлерге жаямыз және ажыратуды тек оған қатысты үйлерге көрсетеміз — көрші көшенің бөгде электрін емес.">Мы разворачиваем «улицу» в конкретные дома с номерами и показываем отключение только тем, кого оно реально касается — без чужого электричества с соседней улицы.</p>
+        <p data-kk="«Көшені» нақты үйлерге жаямыз және ажыратуды тек оған қатысты үйлерге көрсетеміз — көрші көшенің бөгде электрін емес.">Разворачиваем «улицу» в конкретные дома и показываем отключение только тем, кого оно реально касается — без чужого электричества с соседней улицы.</p>
       </div>
-      <div class="txt">
+      <div class="feat">
+        <span class="fi" style="background:var(--good-wash,#e4f5ec);color:var(--ok)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/><path d="M12 8v4l3 2"/></svg></span>
+        <h3 data-kk="Әр 3 сағат сайын жаңарту">Обновление каждые 3 часа</h3>
+        <p data-kk="Деректерді жеткізушілердің сайттарынан автоматты жинаймыз — қолмен емес, әрдайым жаңа.">Автоматически собираем данные с сайтов поставщиков — не вручную, всегда свежие.</p>
+      </div>
+      <div class="feat">
+        <span class="fi" style="background:#e9f4fb;color:var(--cold)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg></span>
         <h3 data-kk="Орысша және қазақша">Русский и казахский</h3>
-        <p data-kk="Интерфейс пен карта жазулары RU / KZ болып ауысады. Көше атаулары, аудандар, себептер — түсінікті тілде.">Интерфейс и подписи карты переключаются RU / KZ. Названия улиц, районы, причины — на понятном языке.</p>
+        <p data-kk="Интерфейс пен карта жазулары RU / KZ ауысады. Көше атаулары, аудандар, себептер — түсінікті тілде.">Интерфейс и подписи карты переключаются RU / KZ. Названия улиц, районы, причины — на понятном языке.</p>
+      </div>
+      <div class="feat">
+        <span class="fi" style="background:#fbeee0;color:var(--hot)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 13l9 5 9-5"/><path d="M3 18l9 5 9-5"/></svg></span>
+        <h3 data-kk="Барлық жүйе бір жерде">Все системы сразу</h3>
+        <p data-kk="Ыстық және суық су, жарық, жылу — бәрі бір картада, үй бойынша.">Горячая и холодная вода, свет, отопление — всё на одной карте, по вашему дому.</p>
       </div>
     </div>
   </section>
@@ -468,36 +549,58 @@
           <p data-kk="Ыңғайлы тәсілді таңдаңыз — жұмыс күні ішінде жауап береміз.">Выберите удобный способ — ответим в течение рабочего дня.</p>
         </div>
         <div class="contact-btns">
-          <a class="cbtn" href="https://wa.me/77083445023" target="_blank" rel="noopener">
-            <span class="ci" style="background:var(--wa)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.5-4-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5 0-.2-.6-1.6-.9-2.2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-1.1 2.2 0 .3.9 2.2 2.6 4 2.4 2.6 4.3 3.1 5 3.3.8.2 1.5.2 2.1.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg></span>
-            <span class="ct"><span class="l">WhatsApp</span><span class="v">+7 708 344 50 23</span></span>
-            <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </a>
-          <a class="cbtn" href="https://t.me/artumikh" target="_blank" rel="noopener">
-            <span class="ci" style="background:var(--tg)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.5 13.1l-4.6-1.4c-1-.3-1-1 .2-1.5L20.6 3c.8-.3 1.5.2 1.3 1.3z"/></svg></span>
-            <span class="ct"><span class="l">Telegram</span><span class="v">@artumikh</span></span>
-            <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </a>
-          <a class="cbtn" href="tel:+77083445023">
-            <span class="ci" style="background:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg></span>
-            <span class="ct"><span class="l" data-kk="Қоңырау шалу">Позвонить</span><span class="v">+7 708 344 50 23</span></span>
-            <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </a>
+          <button class="btn lg contact-open" style="background:#fff;color:var(--accent-ink)" data-kk="Байланысу">Связаться</button>
+          <span style="font-size:13px;color:rgba(255,255,255,.55)" data-kk="WhatsApp · Telegram · телефон">WhatsApp · Telegram · телефон</span>
         </div>
       </div>
     </div>
   </section>
 
   <section class="wrap" style="margin-top:22px">
-    <div class="contact rv" style="background:var(--accent);text-align:center;padding:48px 40px">
-      <div style="position:relative;z-index:1">
-        <h2 style="margin:0 auto" data-kk="Үйіңді 5 секундта тексер">Проверь свой дом за 5 секунд</h2>
-        <p style="margin:14px auto 0;color:rgba(255,255,255,.85);max-width:44ch" data-kk="Картаны аш, мекенжайыңды енгіз де, бүгін су мен жарық бола ма — біл.">Открой карту, введи адрес и узнай, будет ли сегодня вода и свет.</p>
-        <a class="btn lg" style="margin-top:24px;background:#fff;color:var(--accent-ink)" href="/map/"><span data-kk="Павлодар картасын ашу →">Открыть карту Павлодара →</span></a>
+    <div class="cta-final rv">
+      <span class="shine"></span>
+      <span class="fpin" style="--x:8%;--y:24%;--c:var(--hot);--dl:0s"></span>
+      <span class="fpin" style="--x:20%;--y:66%;--c:var(--elec);--dl:1.1s"></span>
+      <span class="fpin" style="--x:84%;--y:30%;--c:var(--cold);--dl:.6s"></span>
+      <span class="fpin" style="--x:90%;--y:70%;--c:var(--hot);--dl:1.6s"></span>
+      <span class="fpin" style="--x:70%;--y:18%;--c:var(--elec);--dl:2.1s"></span>
+      <div class="cta-in">
+        <h2 style="margin:0 auto;color:#fff" data-kk="Үйіңді 5 секундта тексер">Проверь свой дом за 5 секунд</h2>
+        <p style="margin:14px auto 0;color:rgba(255,255,255,.9);max-width:44ch" data-kk="Картаны аш, мекенжайыңды енгіз де, бүгін су мен жарық бола ма — біл.">Открой карту, введи адрес и узнай, будет ли сегодня вода и свет.</p>
+        <a class="btn lg cta-btn" href="/map/"><span data-kk="Павлодар картасын ашу →">Открыть карту Павлодара →</span></a>
       </div>
     </div>
   </section>
 </main>
+
+<!-- CONTACTS MODAL -->
+<div class="modal-ov" id="contactsModal" aria-hidden="true">
+  <div class="modal">
+    <button class="modal-x" id="contactsClose" aria-label="Закрыть">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="modal-eyebrow" data-kk="Байланыс">Контакты</div>
+    <h3 class="modal-title" data-kk="Бізбен байланысыңыз">Свяжитесь с нами</h3>
+    <p class="modal-sub" data-kk="Ыңғайлы тәсілді таңдаңыз — жұмыс күні ішінде жауап береміз.">Выберите удобный способ — ответим в течение рабочего дня.</p>
+    <div class="modal-list">
+      <a class="cbtn" href="https://wa.me/77083445023" target="_blank" rel="noopener">
+        <span class="ci" style="background:var(--wa)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.5-4-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5 0-.2-.6-1.6-.9-2.2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-1.1 2.2 0 .3.9 2.2 2.6 4 2.4 2.6 4.3 3.1 5 3.3.8.2 1.5.2 2.1.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg></span>
+        <span class="ct"><span class="l">WhatsApp</span><span class="v">+7 708 344 50 23</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <a class="cbtn" href="https://t.me/artumikh" target="_blank" rel="noopener">
+        <span class="ci" style="background:var(--tg)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.5 13.1l-4.6-1.4c-1-.3-1-1 .2-1.5L20.6 3c.8-.3 1.5.2 1.3 1.3z"/></svg></span>
+        <span class="ct"><span class="l">Telegram</span><span class="v">@artumikh</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <a class="cbtn" href="tel:+77083445023">
+        <span class="ci" style="background:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg></span>
+        <span class="ct"><span class="l" data-kk="Қоңырау шалу">Позвонить</span><span class="v">+7 708 344 50 23</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
 
 <footer>
   <div class="wrap">
@@ -563,6 +666,41 @@
   }
   document.querySelectorAll('#lang button').forEach(function(b){b.addEventListener('click',function(){applyLang(b.dataset.lang);});});
   if(LANG==='kk') applyLang('kk');
+
+  // ---------- landing search suggestions ----------
+  var capInput=document.getElementById('capInput'), lsug=document.getElementById('lsug'), ADDR=null;
+  function loadAddr(){ if(ADDR) return Promise.resolve(ADDR);
+    return fetch('/map/addresses.json').then(function(r){return r.json();}).then(function(d){
+      ADDR=Object.keys(d).map(function(s){return {name:s,n:d[s].length};}); return ADDR; }).catch(function(){return ADDR=[];}); }
+  function norm(s){ return s.toLowerCase().replace(/^(улица|ул\.?|проспект|пр\.?|переулок|пер\.?|мкр\.?|площадь|пл\.?)\s*/,'').replace(/ё/g,'е').trim(); }
+  function renderSug(raw){
+    var q=(raw||'').trim(); if(q.length<2){ lsug.classList.remove('show'); return; }
+    var house=(q.match(/(\d+[а-я]?(?:\/\d+)?)\s*$/i)||[])[1]||'';
+    var nq=norm(q.replace(/[\s,]+\d+[а-я]?(?:\/\d+)?\s*$/i,''));
+    loadAddr().then(function(list){
+      var hits=list.filter(function(s){return norm(s.name).indexOf(nq)>=0;}).sort(function(a,b){return b.n-a.n;}).slice(0,6);
+      if(!hits.length){ lsug.classList.remove('show'); return; }
+      lsug.innerHTML=hits.map(function(s){
+        var qq=s.name+(house?(', '+house):'');
+        return '<a href="/map/?q='+encodeURIComponent(qq)+'"><span class="p"></span><span class="nm">'+s.name+(house?(', '+house):'')+'</span><span class="hs">'+s.n+' адр.</span></a>';
+      }).join('');
+      lsug.classList.add('show');
+    });
+  }
+  if(capInput){
+    capInput.addEventListener('input',function(){ renderSug(this.value); });
+    capInput.addEventListener('focus',function(){ if(this.value.trim().length>=2) renderSug(this.value); });
+    document.addEventListener('click',function(e){ if(!e.target.closest('.cap-wrap')) lsug.classList.remove('show'); });
+  }
+
+  // ---------- contacts modal ----------
+  var cModal=document.getElementById('contactsModal');
+  function openContacts(){ cModal.classList.add('show'); cModal.setAttribute('aria-hidden','false'); }
+  function closeContacts(){ cModal.classList.remove('show'); cModal.setAttribute('aria-hidden','true'); }
+  document.querySelectorAll('.contact-open').forEach(function(b){ b.addEventListener('click',openContacts); });
+  document.getElementById('contactsClose').addEventListener('click',closeContacts);
+  cModal.addEventListener('click',function(e){ if(e.target===cModal) closeContacts(); });
+  addEventListener('keydown',function(e){ if(e.key==='Escape') closeContacts(); });
 </script>
 </body>
 </html>
