@@ -58,7 +58,7 @@ const rName = (r) => RESOURCES[r][LANG] || RESOURCES[r].ru;
 const DATA = { city: 'Павлодар', center: [52.2871, 76.9674], houses: [], source: '' };
 const state = {
   resources: new Set(Object.keys(RESOURCES)),
-  type: 'all', time: 'current', query: '',
+  type: 'all', time: 'all', query: '',
 };
 let STREETS = [];
 
@@ -113,6 +113,24 @@ function localizeStyle(style, lang) {
       },
     });
   }
+  // ⚠️ Убираем коммерческий POI-шум (магазины, аптеки, кафе, банки, АЗС, бренды) —
+  // на карте отключений он мешает. Оставляем школы/вузы/больницы/парки/транзит и т.п.
+  // POI в liberty лежат в слоях poi_r1/r7/r20 (source-layer 'poi'), фильтруются по rank;
+  // добавляем условие «class НЕ в чёрном списке коммерции».
+  const HIDE_POI = [
+    'shop', 'grocery', 'convenience', 'supermarket', 'department_store', 'marketplace',
+    'clothing_store', 'shoes', 'jewelry', 'furniture', 'hardware', 'gift', 'toys', 'pet',
+    'books', 'stationery', 'florist', 'mobile_phone', 'beauty', 'hairdresser', 'optician',
+    'laundry', 'pharmacy', 'chemist', 'fast_food', 'restaurant', 'cafe', 'bar', 'beer',
+    'pub', 'ice_cream', 'bakery', 'butcher', 'alcohol_shop', 'beverages', 'deli', 'bank',
+    'car', 'fuel', 'lodging', 'veterinary', 'sports', 'photo', 'travel_agency',
+  ];
+  (s.layers || []).forEach((l) => {
+    if ((l['source-layer'] || '') !== 'poi' || l.id === 'poi_transit') return;
+    const keep = ['!', ['in', ['get', 'class'], ['literal', HIDE_POI]]];
+    l.filter = l.filter ? ['all', l.filter, keep] : keep;
+  });
+
   return s;
 }
 async function setTiles(lang) {
@@ -199,7 +217,7 @@ function streetName(addr) { return (addr || '').replace(/,\s*[^,]*$/, '').trim()
 function passOutage(o) {
   if (!state.resources.has(o.resource)) return false;
   if (state.type !== 'all' && o.type !== state.type) return false;
-  if (o.status !== state.time) return false;
+  if (state.time !== 'all' && o.status !== state.time) return false;
   return true;
 }
 function matchingOutages(h) { return h.outages.filter(passOutage); }
@@ -216,6 +234,21 @@ function cardOutages(h) {
     if (seen.has(k)) return false; seen.add(k); return true;
   });
   return outs.sort((a, b) => (a.status === b.status ? 0 : a.status === 'current' ? -1 : 1));
+}
+// Для КАРТОЧКИ: один ряд на ресурс. У дома бывает несколько нарядов одного ресурса
+// (разные ТП/фидеры, разные даты) — на экране это читается как дубли и завышает «N систем».
+// Оставляем самый релевантный: current важнее future, при равенстве — ближайший по концу.
+function collapseByResource(outs) {
+  const best = new Map();
+  outs.forEach((o) => {
+    const cur = best.get(o.resource);
+    const better = !cur
+      || (o.status === 'current' && cur.status !== 'current')
+      || (o.status === cur.status && new Date(o.end) < new Date(cur.end));
+    if (better) best.set(o.resource, o);
+  });
+  const order = { current: 0, future: 1, past: 2 };
+  return [...best.values()].sort((a, b) => order[a.status] - order[b.status]);
 }
 // Если найденный дом не попадает под текущий фильтр времени — переключаем время,
 // чтобы дом стал виден и на карте, и в списке.
@@ -329,7 +362,7 @@ function openHouseCard(h, latlng) {
   if (window.matchMedia('(max-width: 780px)').matches) collapseSheet();
 }
 function houseCardHtml(h) {
-  const outs = cardOutages(h);
+  const outs = collapseByResource(cardOutages(h));
   const rows = outs.map((o) => {
     const R = RESOURCES[o.resource]; const rs = relStatus(o);
     return `<div class="hc-row">
@@ -593,15 +626,17 @@ async function reverseGeocode(lat, lng) {
 }
 // Ближайшие известные отключения к точке (в пределах ~250 м)
 function outagesNear(lat, lng, address) {
-  // ⚠️ Совпадение по улице БЕЗ ограничения расстояния давало ложные привязки:
-  // для «Камзина, 37» карточка показывала наряд с «Камзина, 172» — это километры.
-  // Поэтому улица учитывается только в пределах разумного радиуса.
+  // ⚠️ Показываем ТОЛЬКО то, что реально касается адреса: точное совпадение адреса
+  // или отключение на ТОЙ ЖЕ улице в разумном радиусе. Раньше был ещё чисто
+  // дистанционный захват (d < 120 м) без учёта улицы — из-за него для «Лермонтова, 44»
+  // показывалось электричество с «Астана, 55» (соседняя улица, другой дом). Убрали:
+  // электричество/наряд с чужой улицы к дому не относится и в карточку не попадает.
   const near = [];
   DATA.houses.forEach((h) => {
     const d = Math.hypot((h.lat - lat) * 111, (h.lng - lng) * 68); // км
     const exact = address && h.address.toLowerCase() === String(address).toLowerCase();
     const sameStreet = address && streetMatches(h.address, streetName(address));
-    if (exact || d < 0.12 || (sameStreet && d < 0.35)) near.push({ h, d, exact });
+    if (exact || (sameStreet && d < 0.35)) near.push({ h, d, exact });
   });
   // точное совпадение адреса всегда первым
   near.sort((a, b) => (a.exact === b.exact ? a.d - b.d : a.exact ? -1 : 1));
@@ -629,14 +664,17 @@ async function checkPoint(lat, lng) {
 function openAddressCard(pt, nearHouses) {
   // ⚠️ Соседние дома часто несут ОДНО И ТО ЖЕ отключение (одна улица — один наряд).
   // Без дедупликации карточка показывала «6 систем» из трёх копий одной записи.
-  const outs = [];
-  const seen = new Set();
+  // один ряд на ресурс (несколько нарядов одного ресурса на соседних домах = не дубли на экране)
+  const byRes = new Map();
   nearHouses.forEach((h) => cardOutages(h).forEach((o) => {
-    const key = `${o.resource}|${o.type}|${o.start}|${o.end}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    outs.push({ o, h });
+    const cur = byRes.get(o.resource);
+    const better = !cur
+      || (o.status === 'current' && cur.o.status !== 'current')
+      || (o.status === cur.o.status && new Date(o.end) < new Date(cur.o.end));
+    if (better) byRes.set(o.resource, { o, h });
   }));
+  const statusOrder = { current: 0, future: 1, past: 2 };
+  const outs = [...byRes.values()].sort((a, b) => statusOrder[a.o.status] - statusOrder[b.o.status]);
   let inner;
   if (outs.length) {
     inner = outs.map(({ o, h }) => {

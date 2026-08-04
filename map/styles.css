@@ -268,6 +268,16 @@ body {
 
 /* House card popup */
 .house-popup .leaflet-popup-content-wrapper { border-radius: 16px; padding: 0; overflow: hidden; }
+/* крестик закрытия: контрастный, с отступом, на синей шапке */
+.house-popup .leaflet-popup-close-button {
+  top: 12px; right: 12px; width: 30px; height: 30px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  font: 400 22px/1 var(--sans); color: #fff;
+  background: rgba(255, 255, 255, .18); border-radius: 50%;
+  transition: background .15s, transform .1s;
+}
+.house-popup .leaflet-popup-close-button:hover { background: rgba(255, 255, 255, .34); color: #fff; }
+.house-popup .leaflet-popup-close-button:active { transform: scale(.92); }
 .house-popup .leaflet-popup-content { margin: 0; width: 300px !important; }
 .house-card { font-family: var(--sans); }
 .hc-head { background: linear-gradient(135deg, #1f6feb, #4f93ff); color: #fff; padding: 14px 16px 12px; }
