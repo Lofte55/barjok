@@ -20,6 +20,15 @@ const KEEP_TO = NOW + 21 * 86400000;
 const MAX_ARTICLES = 12;
 const MONTHS = ['январ','феврал','март','апрел','ма','июн','июл','август','сентябр','октябр','ноябр','декабр'];
 
+// Микрорайоны Павлодара OSM не знает: нет ни addr:suburb на домах, ни точек-центров
+// (проверено через Overpass/Nominatim). Источник ПТС называет микрорайон как единицу
+// списка «в границах улиц: … Химгородки …», но НЕ перечисляет его внутренние улицы,
+// поэтому они не попадают в findStreets. Разворачиваем вручную в известные внутренние
+// улицы (курируемый список — расширять по мере надобности; альтернатива — OCR списков ПТС).
+const MICRODISTRICTS = [
+  { re: /химгород|хим\.?\s*город/i, streets: ['Павлова', 'Лермонтова', 'Катаева', 'Сураганова'] },
+];
+
 async function getText(url) { const r = await fetch(url, { headers: UA }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }
 function strip(html) { return html.replace(/<script[^>]*>[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim(); }
 function monthIdx(w) { w = w.toLowerCase(); return MONTHS.findIndex((m) => w.startsWith(m)); }
@@ -73,7 +82,10 @@ async function fetchPtsHeat() {
     // сегмент = текст от периода до следующего периода → улицы этого этапа
     for (let i = 0; i < periods.length; i++) {
       const seg = text.slice(periods[i].idx, periods[i + 1] ? periods[i + 1].idx : periods[i].idx + 1200);
-      const streets = findStreets(seg);
+      let streets = findStreets(seg);
+      // микрорайоны (Химгородки и т.п.) → добавляем их внутренние улицы
+      MICRODISTRICTS.forEach((m) => { if (m.re.test(seg)) streets = streets.concat(m.streets); });
+      streets = [...new Set(streets)];
       if (!streets.length) continue;
       // «в границах улиц» = ОБЛАСТЬ: затронуты и дома внутри контура,
       // а не только на перечисленных улицах.

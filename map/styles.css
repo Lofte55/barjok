@@ -53,9 +53,7 @@ body {
   text-decoration: none; color: var(--ink);
 }
 .brand .mark {
-  width: 24px; height: 24px; border-radius: 7px;
-  background: linear-gradient(135deg, var(--brand), #4f93ff);
-  display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 13px;
+  width: 24px; height: 24px; display: grid; place-items: center;
 }
 .brand b { font-size: 15px; letter-spacing: -.2px; }
 .brand .kk { color: var(--ink-3); font-weight: 600; }
@@ -174,8 +172,14 @@ body {
 
 /* ---------- Map markers ---------- */
 .pin {
+  position: relative;
   border-radius: 50%; display: grid; place-items: center; color: #fff;
   font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.28); border: 2px solid #fff;
+}
+.pin-badge {
+  position: absolute; top: -5px; right: -5px; min-width: 15px; height: 15px; padding: 0 3px;
+  border-radius: 999px; background: #15171c; color: #fff; font-size: 9px; font-weight: 800;
+  line-height: 1; display: grid; place-items: center; border: 1.5px solid #fff; box-sizing: border-box;
 }
 .cluster {
   border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800;
@@ -335,8 +339,7 @@ body.ads-off [data-ad-slot] { display: none !important; }
 .panel .head { padding: 14px 16px 10px; }
 .head-row { display: flex; align-items: center; gap: 10px; }
 .head-row .mark {
-  width: 30px; height: 30px; border-radius: 8px; flex: none; text-decoration: none;
-  background: linear-gradient(135deg, var(--brand), #4f93ff); color: #fff; font-weight: 800; font-size: 15px;
+  width: 30px; height: 30px; flex: none; text-decoration: none;
   display: grid; place-items: center;
 }
 .head-row h1 { margin: 0; font-size: 16px; letter-spacing: -.3px; flex: 1; }

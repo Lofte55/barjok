@@ -192,7 +192,11 @@ async function load() {
   buildFilters(); applyLang();
   const pts = DATA.houses.filter(passHouse).map((h) => [h.lat, h.lng]);
   if (pts.length) {
-    const b = L.latLngBounds(pts).pad(0.05);
+    // Начальный вид фитим по ГОРОДУ, а не по всем точкам: адреса ЗПЭС/ВПЭС бывают
+    // в сёлах за 20+ км — если включить их в bounds, карта открывается на весь регион.
+    // Сёла остаются на карте (видно при отдалении), но стартовый вид держим на городе.
+    const cityPts = pts.filter(([la, lo]) => Math.abs(la - DATA.center[0]) < 0.12 && Math.abs(lo - DATA.center[1]) < 0.18);
+    const b = L.latLngBounds(cityPts.length ? cityPts : pts).pad(0.05);
     // ⚠️ fitBounds выполняем ТОЛЬКО пока пользователь не начал двигать карту,
     // иначе поздние таймеры «откатывают» вид назад во время панорамирования.
     let userMoved = false;
@@ -274,9 +278,13 @@ function houseColor(outs) {
 function pinIcon(outs, size = 30) {
   const { color, emerg } = houseColor(outs);
   const ring = emerg ? 'box-shadow:0 0 0 4px rgba(217,67,58,.30),0 2px 8px rgba(0,0,0,.28);' : '';
-  const label = outs.length > 1 ? outs.length : RESOURCES[outs[0].resource].icon;
+  // Всегда показываем ПИКТОГРАММУ ресурса (не число — «2/3» было непонятно).
+  // Если у дома несколько систем — маленький бейдж-счётчик в углу.
+  const icon = RESOURCES[outs[0].resource].icon;
+  const distinct = new Set(outs.map((o) => o.resource)).size;
+  const badge = distinct > 1 ? `<span class="pin-badge">${distinct}</span>` : '';
   return L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
-    html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color};font-size:${outs.length>1?size*.45:size*.5}px;${ring}">${label}</div>` });
+    html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color};font-size:${size * 0.5}px;${ring}">${icon}${badge}</div>` });
 }
 function clusterIcon(count, emerg) {
   const size = count > 80 ? 52 : count > 25 ? 44 : 36;
