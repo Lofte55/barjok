@@ -306,8 +306,12 @@ function clusterIcon(count, emerg) {
 
 function renderMarkers() {
   markerLayer.clearLayers();
-  const houses = visibleHouses();
   const z = map.getZoom();
+  // ⚠️ Отсекаем по вьюпорту: без этого на мобилке рисовались все 3000+ пинов сразу
+  // (сильный лаг). Рендерим только то, что в кадре (+запас); при панораме
+  // scheduleRender перерисует новый участок.
+  const vb = map.getBounds().pad(0.3);
+  const houses = visibleHouses().filter((h) => vb.contains([h.lat, h.lng]));
   const individual = z >= 15 || !!state.query.trim();
 
   // ⚠️ Линии улиц НЕ рисуем — только пиктограммы на домах (у каждого дома есть lat/lng).

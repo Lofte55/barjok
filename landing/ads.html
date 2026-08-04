@@ -18,14 +18,14 @@
 <meta name="twitter:image" content="https://barjok.vercel.app/og-cover.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f3f4f6;--bg-2:#eef0f3;--ink:#15171c;--ink-2:#565d6b;--ink-3:#8b919d;
   --line:#e6e8ec;--line-2:#eef0f3;--accent:#2f6bed;--accent-ink:#1c4fc4;
   --hot:#e05f38;--cold:#2f9bd6;--elec:#d99a1f;--heat:#c0492f;--ok:#1f9e63;
   --white:#fff;--radius:22px;--shadow:0 30px 60px -28px rgba(21,32,58,.28);--shadow-sm:0 10px 30px -12px rgba(21,32,58,.14);
-  --sans:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+  --sans:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--mono:'Manrope',-apple-system,'Segoe UI',sans-serif;
 }
 html[lang="kk"]{--sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -92,7 +92,7 @@ section{padding:44px 0}
 .addon .c{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
 .addon .c b{font-size:15px}.addon .c .p{font-family:var(--mono);color:var(--accent-ink);font-weight:700;margin-top:4px}
 .addon .c span{font-size:13px;color:var(--ink-3)}
-.tbl td.price{font-family:var(--mono);font-weight:700;color:var(--ink);white-space:nowrap}
+.tbl td.price{font-family:var(--sans);font-weight:800;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .tbl td.best{color:var(--accent-ink)}
 
 /* cta */
@@ -208,15 +208,15 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
 <!-- PRICING -->
 <section id="pricing"><div class="wrap">
   <div class="sh"><span class="eyebrow">Стоимость</span><h2>Цены размещения</h2>
-    <p>Фиксированная оплата за период. Неделя, месяц или год (год = 10 месяцев — два в подарок).</p></div>
+    <p>Гибкая оплата за период — от одного дня до года. Год = 10 месяцев (два в подарок).</p></div>
   <table class="tbl">
-    <thead><tr><th>Место</th><th>Размер</th><th>Неделя</th><th>Месяц</th><th>Год</th></tr></thead>
+    <thead><tr><th>Место</th><th>Размер</th><th>День</th><th>Неделя</th><th>Месяц</th><th>Год</th></tr></thead>
     <tbody>
-      <tr><td class="f">Боковой баннер карты (MPU)</td><td class="mono">300×250</td><td class="price">16 000 ₸</td><td class="price best">45 000 ₸</td><td class="price">450 000 ₸</td></tr>
-      <tr><td class="f">Нативный блок в карточке дома</td><td class="mono">спонсор</td><td class="price">11 000 ₸</td><td class="price best">30 000 ₸</td><td class="price">300 000 ₸</td></tr>
-      <tr><td class="f">Мобильный баннер карты</td><td class="mono">320×100</td><td class="price">9 000 ₸</td><td class="price best">25 000 ₸</td><td class="price">250 000 ₸</td></tr>
-      <tr><td class="f">Лидерборд на лендинге</td><td class="mono">970×120</td><td class="price">7 500 ₸</td><td class="price best">20 000 ₸</td><td class="price">200 000 ₸</td></tr>
-      <tr><td class="f">Брендирование сервиса (эксклюзив)</td><td class="mono">весь сервис</td><td class="price">—</td><td class="price best">120 000 ₸</td><td class="price">1 200 000 ₸</td></tr>
+      <tr><td class="f">Нативный блок в карточке дома (спонсор)</td><td class="mono">—</td><td class="price">6 000 ₸</td><td class="price">30 000 ₸</td><td class="price best">85 000 ₸</td><td class="price">850 000 ₸</td></tr>
+      <tr><td class="f">Боковой баннер карты (MPU)</td><td class="mono">300×250</td><td class="price">5 000 ₸</td><td class="price">25 000 ₸</td><td class="price best">70 000 ₸</td><td class="price">700 000 ₸</td></tr>
+      <tr><td class="f">Мобильный баннер карты</td><td class="mono">320×100</td><td class="price">3 000 ₸</td><td class="price">15 000 ₸</td><td class="price best">45 000 ₸</td><td class="price">450 000 ₸</td></tr>
+      <tr><td class="f">Лидерборд на лендинге</td><td class="mono">970×120</td><td class="price">2 500 ₸</td><td class="price">12 000 ₸</td><td class="price best">38 000 ₸</td><td class="price">380 000 ₸</td></tr>
+      <tr><td class="f">Брендирование сервиса (эксклюзив)</td><td class="mono">весь сервис</td><td class="price">—</td><td class="price">—</td><td class="price best">200 000 ₸</td><td class="price">2 000 000 ₸</td></tr>
     </tbody>
   </table>
 
