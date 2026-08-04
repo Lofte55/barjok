@@ -333,7 +333,7 @@ function houseCardHtml(h) {
   const rows = outs.map((o) => {
     const R = RESOURCES[o.resource]; const rs = relStatus(o);
     return `<div class="hc-row">
-      <span class="ic" style="background:${R.color}22;color:${R.color}">${R.icon}</span>
+      <span class="ic" style="background:${R.color};color:#fff">${R.icon}</span>
       <div class="hc-main">
         <div class="hc-r1"><b>${rName(o.resource)}</b>
           <span class="badge ${o.type}">${o.type === 'emergency' ? t().emergency : t().planned}</span></div>
@@ -378,7 +378,7 @@ function listCardHtml(h) {
   const outs = matchingOutages(h);
   const chips = outs.slice(0, 4).map((o) => {
     const R = RESOURCES[o.resource];
-    return `<span class="rc" style="background:${R.color}1e;color:${R.color}" title="${rName(o.resource)}">${R.icon}</span>`;
+    return `<span class="rc" style="background:${R.color};color:#fff" title="${rName(o.resource)}">${R.icon}</span>`;
   }).join('');
   const soonest = outs.map((o) => o.end).filter(Boolean).sort()[0];
   const emerg = outs.some((o) => o.type === 'emergency');
@@ -642,7 +642,7 @@ function openAddressCard(pt, nearHouses) {
     inner = outs.map(({ o, h }) => {
       const R = RESOURCES[o.resource]; const rs = relStatus(o);
       return `<div class="hc-row">
-        <span class="ic" style="background:${R.color}22;color:${R.color}">${R.icon}</span>
+        <span class="ic" style="background:${R.color};color:#fff">${R.icon}</span>
         <div class="hc-main">
           <div class="hc-r1"><b>${rName(o.resource)}</b>
             <span class="badge ${o.type}">${o.type === 'emergency' ? t().emergency : t().planned}</span></div>
@@ -755,6 +755,7 @@ function scheduleRender() {
 map.on('zoomend moveend', scheduleRender);
 
 function applyLang() {
+  document.documentElement.lang = LANG;   // KK → Inter, RU → Manrope (шрифт переключается в CSS по <html lang>)
   document.querySelectorAll('[data-lang-btn]').forEach((b) => b.classList.toggle('on', b.dataset.langBtn === LANG));
   document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t()[el.dataset.t]; });
   document.querySelectorAll('[data-title]').forEach((el) => el.textContent = t().title(DATA.city));

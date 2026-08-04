@@ -1,0 +1,66 @@
+name: Обновление данных отключений
+
+# Прогоняет парсер по расписанию и коммитит свежий map/data.json в репозиторий,
+# чтобы прод на Vercel обновлялся сам (без локальной машины).
+# Раньше это делал только локальный LaunchAgent — на проде data.json был статичен.
+
+on:
+  schedule:
+    # каждые 3 часа (UTC). Совпадает с локальным LaunchAgent (StartInterval 10800).
+    - cron: '0 */3 * * *'
+  workflow_dispatch: {}   # ручной запуск из вкладки Actions
+
+# Разрешаем job'у коммитить в репозиторий (push через встроенный GITHUB_TOKEN,
+# SSH-ключ не нужен — работает независимо от локальной настройки git).
+permissions:
+  contents: write
+
+# Не запускать параллельно: один прогон за раз, лишние в очереди отменяем.
+concurrency:
+  group: parser
+  cancel-in-progress: false
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # buildings.json (~2.6 МБ адресный реестр OSM) в git не хранится и качается
+      # с Overpass. Кэшируем, чтобы не бить Overpass на каждом прогоне.
+      # Реестр меняется редко — при необходимости обновить бампнуть версию ключа (v1 → v2).
+      - name: Restore OSM buildings cache
+        uses: actions/cache@v4
+        with:
+          path: parser/buildings.json
+          key: barjoq-buildings-pavlodar-v1
+
+      # unzip нужен docx.js для распаковки .docx Павлодарэнерго. На ubuntu-latest есть,
+      # но подстрахуемся на случай минимального образа.
+      - name: Ensure unzip
+        run: unzip -v >/dev/null 2>&1 || sudo apt-get update && sudo apt-get install -y unzip
+
+      - name: Run parser
+        # run.sh сам делает бэкап, санити-чек и откат при битых данных —
+        # на проде никогда не окажется пустой/битый data.json.
+        run: bash parser/run.sh pavlodar
+
+      - name: Commit updated data
+        run: |
+          git config user.name "barjoq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          # geocache.json растёт по мере геокодинга — коммитим, чтобы кэш жил между прогонами.
+          git add map/data.json parser/geocache.json
+          if git diff --staged --quiet; then
+            echo "Данные не изменились — коммит не нужен."
+          else
+            git commit -m "chore(data): автообновление отключений (Павлодар)"
+            git push
+          fi

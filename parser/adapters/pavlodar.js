@@ -20,21 +20,30 @@ const PAGE = 'https://pavlodarenergo.kz/ru/informacziya-o-planovyix-otklyucheniy
 const HOST = 'https://pavlodarenergo.kz';
 const SOURCE = 'АО «Павлодарэнерго» · плановые отключения электроэнергии (pavlodarenergo.kz, .docx)';
 const CENTER = [52.2871, 76.9674];
-const NOW = Date.UTC(2026, 7, 3, 12, 0); // «сегодня» продукта — 03.08.2026 (совпадает с неделей графика)
+// «сейчас»: в проде — реальное время; для воспроизводимого локального теста можно зафиксировать
+// через переменную окружения BARJOQ_NOW (напр. BARJOQ_NOW=2026-08-03T12:00:00Z).
+const NOW = process.env.BARJOQ_NOW ? Date.parse(process.env.BARJOQ_NOW) : Date.now();
 const MAX_GEOCODE = 200;
 
 const UA = { 'User-Agent': 'Mozilla/5.0 (BarJoqParser/1.0)' };
 
-async function findCityDocx() {
+// Страница публикует НЕСКОЛЬКО электро-файлов:
+//   • общий городской — имя-даты «03.08.26-07.08.26.docx» (улицы Павлодара);
+//   • районные «planovye-otklyucheniya-zpes-…», «…-vpes-…» (ЗПЭС/ВПЭС — сети района/сёла).
+// Берём ВСЕ три: городской парсится как есть, из районных попадут лишь адреса в черте
+// Павлодара — сельские отсеет bounds-фильтр по координатам (см. ниже). Файлы
+// «grafik-zapuska…gotovnosti…» — это графики запуска ТЕПЛА, не электро → исключаем.
+async function findElectricDocx() {
   const res = await fetch(PAGE, { headers: UA });
   const html = await res.text();
   const links = [...new Set((html.match(/\/assets\/files\/[^"']+\.docx/gi) || []))];
-  // Городской файл: имя-даты «03.08.26-07.08.26.docx».
-  // Допускаем суффиксы вида «(1)» — сайт иногда перезаливает файл.
-  const dated = links.filter((u) => /\/\d{2}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}[^/]*\.docx$/i.test(u));
-  // берём последний (самый свежий перезалив)
-  const city = dated.length ? dated[dated.length - 1] : null;
-  return city ? HOST + city : null;
+  const electric = links.filter((u) => {
+    const name = u.toLowerCase();
+    if (/grafik|gotovnosti/.test(name)) return false;                       // графики запуска тепла — не сюда
+    return /\/\d{2}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}[^/]*\.docx$/i.test(u)  // общий городской (даты в имени)
+        || /otklyucheni/.test(name);                                        // районные ЗПЭС/ВПЭС
+  });
+  return electric.map((u) => HOST + u);
 }
 
 function parseDate(s) { const m = (s || '').match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? { y: +m[3], mo: +m[2], d: +m[1] } : null; }
@@ -72,21 +81,25 @@ function extractStreets(text) {
 }
 
 async function fetchPavlodar() {
-  const url = await findCityDocx();
-  if (!url) throw new Error('городской .docx не найден на странице');
-  console.log('  .docx:', url.split('/').pop());
-  const rows = await fetchDocxRows(url);
+  const urls = await findElectricDocx();
+  if (!urls.length) throw new Error('электро .docx не найдены на странице');
 
-  // строки данных: [дата, фидер, причина, время, потребители...]
+  // строки данных: [дата, фидер, причина, время, потребители...] — из ВСЕХ файлов
   const outages = [];
-  for (const cells of rows) {
-    if (cells.length < 5 || !/^\d{2}\.\d{2}\.\d{4}/.test(cells[0])) continue;
-    const date = parseDate(cells[0]); if (!date) continue;
-    const feeder = cells[1], cause = cells[2], time = parseTime(cells[3]);
-    const consumers = cells.slice(4).join(' ');
-    outages.push({ date, feeder, cause, time, streets: extractStreets(consumers) });
+  for (const url of urls) {
+    console.log('  .docx:', url.split('/').pop());
+    let rows;
+    try { rows = await fetchDocxRows(url); }
+    catch (e) { console.warn('    пропуск (не читается):', e.message); continue; }
+    for (const cells of rows) {
+      if (cells.length < 5 || !/^\d{2}\.\d{2}\.\d{4}/.test(cells[0])) continue;
+      const date = parseDate(cells[0]); if (!date) continue;
+      const feeder = cells[1], cause = cells[2], time = parseTime(cells[3]);
+      const consumers = cells.slice(4).join(' ');
+      outages.push({ date, feeder, cause, time, streets: extractStreets(consumers) });
+    }
   }
-  console.log(`  строк-отключений: ${outages.length}`);
+  console.log(`  строк-отключений (все файлы): ${outages.length}`);
 
   // уникальные улицы → геокод (по частоте, с лимитом)
   const freq = new Map();

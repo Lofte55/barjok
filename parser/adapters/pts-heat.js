@@ -14,7 +14,8 @@ const buildings = require('../lib/buildings');
 const HOME = 'https://toopts.kz/ru/';
 const SOURCE = 'ТОО «Павлодарские тепловые сети» · отключения ГВС (toopts.kz)';
 const UA = { 'User-Agent': 'Mozilla/5.0 (BarJoqParser/1.0)' };
-const NOW = Date.UTC(2026, 7, 3, 12, 0);
+// «сейчас»: в проде — реальное время; BARJOQ_NOW фиксирует его для локального теста.
+const NOW = process.env.BARJOQ_NOW ? Date.parse(process.env.BARJOQ_NOW) : Date.now();
 const KEEP_TO = NOW + 21 * 86400000;
 const MAX_ARTICLES = 12;
 const MONTHS = ['январ','феврал','март','апрел','ма','июн','июл','август','сентябр','октябр','ноябр','декабр'];

@@ -13,7 +13,8 @@ const LIST = BASE + '/otklyuchenie';
 const EMERG = BASE + '/ekstrennyie-uvedomleniya';
 const SOURCE = 'ТОО «Павлодар-Водоканал» · отключения водоснабжения (pvk.pawlodarkz.kz)';
 const UA = { 'User-Agent': 'Mozilla/5.0 (BarJoqParser/1.0)' };
-const NOW = Date.UTC(2026, 7, 3, 12, 0);
+// «сейчас»: в проде — реальное время; BARJOQ_NOW фиксирует его для локального теста.
+const NOW = process.env.BARJOQ_NOW ? Date.parse(process.env.BARJOQ_NOW) : Date.now();
 const KEEP_FROM = NOW - 3 * 86400000;   // объявления не старше 3 дней
 const KEEP_TO = NOW + 14 * 86400000;    // и не дальше 2 недель вперёд
 const MAX_PAGES = 10;
