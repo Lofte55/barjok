@@ -185,6 +185,15 @@ body {
   border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800;
   border: 3px solid #fff; box-shadow: 0 3px 12px rgba(0,0,0,.28);
 }
+/* Крестик закрытия — чёткая круглая кнопка на синей шапке карточки */
+.house-popup .leaflet-popup-close-button {
+  width: 30px !important; height: 30px !important; top: 12px !important; right: 12px !important;
+  padding: 0 !important; border-radius: 50%; background: rgba(255, 255, 255, .22);
+  color: #fff !important; font: 700 20px/28px var(--sans) !important; text-align: center;
+  display: flex; align-items: center; justify-content: center; transition: background .15s, transform .1s;
+}
+.house-popup .leaflet-popup-close-button:hover { background: rgba(255, 255, 255, .4); color: #fff !important; }
+.house-popup .leaflet-popup-close-button:active { transform: scale(.92); }
 .leaflet-popup-content-wrapper { border-radius: 14px; box-shadow: var(--shadow); }
 .leaflet-popup-content { margin: 0; }
 .pop { width: 250px; font-family: var(--sans); }

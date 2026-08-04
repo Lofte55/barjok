@@ -9,7 +9,6 @@
 <meta name="theme-color" content="#2f6bed">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
-<!-- Open Graph / соцсети -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Бар Жоқ">
 <meta property="og:locale" content="ru_KZ">
@@ -33,6 +32,7 @@
     --line:#e6e8ec; --line-2:#eef0f3;
     --accent:#2f6bed; --accent-ink:#1c4fc4; --accent-wash:#eaf1fe;
     --elec:#d99a1f; --hot:#e05f38; --cold:#2f9bd6; --emerg:#e5484d; --ok:#1f9e63;
+    --wa:#25d366; --tg:#2aabee;
     --radius:18px; --radius-sm:12px;
     --shadow-lg:0 30px 60px -28px rgba(21,32,58,.28), 0 8px 20px -12px rgba(21,32,58,.14);
     --shadow-sm:0 2px 10px -4px rgba(21,32,58,.14);
@@ -46,29 +46,25 @@
   .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
   ::selection{background:var(--accent-wash)}
 
-  /* reveal */
   .rv{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1)}
   .rv.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
 
-  /* ---------- logo ---------- */
-  .logo{display:inline-flex;align-items:center;gap:10px}
+  /* logo */
+  .logo{display:inline-flex;align-items:center;gap:10px;flex:none}
   .logo .gl{width:30px;height:30px;flex:none}
-  .logo .wm{font-weight:800;font-size:19px;letter-spacing:-.02em}
+  .logo .wm{font-weight:800;font-size:19px;letter-spacing:-.02em;white-space:nowrap}
   .logo .wm b{color:var(--accent)}
 
-  /* ---------- nav ---------- */
-  header.nav{position:sticky;top:0;z-index:50;background:rgba(243,244,246,.8);backdrop-filter:blur(14px);
+  /* nav */
+  header.nav{position:sticky;top:0;z-index:60;background:rgba(243,244,246,.82);backdrop-filter:blur(14px);
     border-bottom:1px solid transparent;transition:border-color .3s}
   header.nav.stuck{border-color:var(--line)}
-  .nav-in{display:flex;align-items:center;justify-content:space-between;height:66px}
-  .nav-links{display:flex;gap:26px;font-size:14px;font-weight:600;color:var(--ink-2)}
+  .nav-in{display:flex;align-items:center;gap:14px;height:66px}
+  .nav-links{display:flex;gap:24px;font-size:14px;font-weight:600;color:var(--ink-2);margin-left:10px}
   .nav-links a:hover{color:var(--ink)}
-  .nav-right{display:flex;align-items:center;gap:12px}
-  .lang{display:flex;font-size:12.5px;font-weight:700;background:var(--canvas);border:1px solid var(--line);border-radius:999px;overflow:hidden}
-  .lang a{padding:6px 11px;color:var(--ink-3)}
-  .lang a.on{background:var(--ink);color:#fff}
-  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px;border-radius:999px;padding:11px 20px;
+  .nav-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:700;font-size:14px;border-radius:999px;padding:11px 20px;
     border:1px solid transparent;cursor:pointer;font-family:inherit;transition:transform .12s, background .2s, box-shadow .2s;white-space:nowrap}
   .btn:active{transform:translateY(1px)}
   .btn.primary{background:var(--accent);color:#fff;box-shadow:0 6px 16px -6px rgba(47,107,237,.6)}
@@ -76,37 +72,60 @@
   .btn.ghost{background:var(--canvas);color:var(--ink);border-color:var(--line)}
   .btn.ghost:hover{border-color:var(--ink-3)}
   .btn.lg{padding:14px 24px;font-size:15px}
-  @media(max-width:760px){.nav-links{display:none}}
 
-  /* ---------- hero ---------- */
+  /* city selector */
+  .city{position:relative}
+  .city-btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px;color:var(--ink);
+    background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:9px 14px;cursor:pointer;font-family:inherit}
+  .city-btn:hover{border-color:var(--ink-3)}
+  .city-btn .pin{width:15px;height:15px;color:var(--accent)}
+  .city-btn .chev{transition:transform .2s}
+  .city[data-open="1"] .city-btn .chev{transform:rotate(180deg)}
+  .city-menu{position:absolute;top:calc(100% + 8px);left:0;min-width:210px;background:var(--canvas);border:1px solid var(--line);
+    border-radius:14px;box-shadow:var(--shadow-lg);padding:6px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:.18s;z-index:70}
+  .city[data-open="1"] .city-menu{opacity:1;visibility:visible;transform:none}
+  .city-menu button{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;background:none;border:0;
+    font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);padding:10px 12px;border-radius:9px;cursor:pointer;text-align:left}
+  .city-menu button:hover:not(:disabled){background:var(--bg)}
+  .city-menu button.on{color:var(--accent-ink)}
+  .city-menu button:disabled{color:var(--ink-3);cursor:default}
+  .city-menu .soon{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);
+    background:var(--line-2);border-radius:999px;padding:2px 8px}
+  .city-menu button.on .soon{color:#fff;background:var(--accent)}
+
+  /* lang */
+  .lang{display:flex;font-size:13px;font-weight:800;background:var(--canvas);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .lang button{padding:9px 13px;color:var(--ink-3);background:none;border:0;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer}
+  .lang button.on{background:var(--ink);color:#fff}
+
+  /* hero */
   .hero{text-align:center;padding:74px 0 34px;position:relative}
   .pill-ann{display:inline-flex;align-items:center;gap:9px;background:var(--canvas);border:1px solid var(--line);
     border-radius:999px;padding:6px 8px 6px 14px;font-size:13px;font-weight:600;color:var(--ink-2);box-shadow:var(--shadow-sm)}
   .pill-ann .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(31,158,99,.5);animation:beat 2s infinite}
   .pill-ann .go{background:var(--accent-wash);color:var(--accent-ink);border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
   @keyframes beat{0%{box-shadow:0 0 0 0 rgba(31,158,99,.45)}70%{box-shadow:0 0 0 6px rgba(31,158,99,0)}100%{box-shadow:0 0 0 0 rgba(31,158,99,0)}}
-  h1{font-size:clamp(34px,6.2vw,68px);font-weight:800;letter-spacing:-.035em;line-height:1.02;margin:22px auto 0;max-width:15ch;text-wrap:balance}
-  h1 .u{position:relative;white-space:nowrap;color:var(--accent)}
-  .lead{font-size:clamp(16px,2vw,19px);color:var(--ink-2);max-width:52ch;margin:20px auto 0;line-height:1.55}
-  /* address capture */
+  h1{font-size:clamp(32px,6.2vw,68px);font-weight:800;letter-spacing:-.035em;line-height:1.03;margin:22px auto 0;max-width:15ch;text-wrap:balance}
+  h1 .u{white-space:nowrap;color:var(--accent)}
+  .lead{font-size:clamp(15.5px,2vw,19px);color:var(--ink-2);max-width:52ch;margin:20px auto 0;line-height:1.55}
   .capture{display:flex;gap:8px;max-width:520px;margin:30px auto 0;background:var(--canvas);border:1px solid var(--line);
     border-radius:999px;padding:7px 7px 7px 8px;box-shadow:var(--shadow-lg)}
-  .capture .field{flex:1;display:flex;align-items:center;gap:9px;padding-left:12px}
+  .capture .field{flex:1;display:flex;align-items:center;gap:9px;padding-left:12px;min-width:0}
   .capture svg{color:var(--ink-3);flex:none}
   .capture input{flex:1;border:0;outline:0;font-family:inherit;font-size:15.5px;color:var(--ink);background:transparent;min-width:0}
   .capture input::placeholder{color:var(--ink-3)}
   .cap-note{font-size:13px;color:var(--ink-3);margin-top:12px}
 
-  /* ---------- source strip ---------- */
+  /* sources */
   .sources{padding:34px 0 8px;text-align:center}
   .sources .lbl{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3)}
   .src-row{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 30px;margin-top:18px;align-items:center}
   .src{display:inline-flex;align-items:center;gap:9px;color:var(--ink-2);font-weight:700;font-size:15px;opacity:.72;
     filter:grayscale(1);transition:opacity .2s, filter .2s}
   .src:hover{opacity:1;filter:none}
-  .src .m{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:#fff;font-size:13px}
+  .src .m{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:#fff;font-size:13px;flex:none}
 
-  /* ---------- map screen ---------- */
+  /* map facade */
   .screen-sec{padding:34px 0 0}
   .browser{background:var(--canvas);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg)}
   .browser .bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line-2);background:var(--ivory)}
@@ -114,28 +133,27 @@
   .browser .bar .dots i{width:11px;height:11px;border-radius:50%;background:#dfe2e7;display:block}
   .browser .bar .url{flex:1;text-align:center;font-size:12.5px;color:var(--ink-3);font-weight:600}
   .browser .bar .url b{color:var(--ink-2)}
-  .frame{position:relative;height:min(58vh,500px);background:#eef1f4}
-  .frame iframe{width:100%;height:100%;border:0;display:block}
-  .mapfacade{position:absolute;inset:0;overflow:hidden;cursor:pointer;
-    background:
-      radial-gradient(140% 100% at 50% 120%, rgba(47,107,237,.06), transparent 60%),
-      repeating-linear-gradient(0deg,transparent 0 46px,rgba(21,32,58,.03) 46px 47px),
-      repeating-linear-gradient(90deg,transparent 0 46px,rgba(21,32,58,.03) 46px 47px),
-      #eef1f5}
-  .mapfacade .road{position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(21,32,58,.04)}
-  .mpin{position:absolute;width:24px;height:24px;border-radius:50% 50% 50% 2px;background:var(--c);transform:rotate(45deg) scale(0);
-    box-shadow:0 6px 14px -4px rgba(21,32,58,.4);opacity:0}
-  .mpin::after{content:"";position:absolute;top:50%;left:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;transform:rotate(-45deg)}
-  .screen-sec.in .mpin{animation:pinpop .55s var(--d) cubic-bezier(.2,1.5,.4,1) forwards}
+  .mapshot{position:relative;display:block;height:min(58vh,500px);overflow:hidden;cursor:pointer;text-decoration:none;
+    background:#eaf0f4}
+  .mapshot .layer{position:absolute;inset:0}
+  .mapshot .river{position:absolute;top:-10%;left:-15%;width:60%;height:130%;transform:rotate(18deg);
+    background:linear-gradient(90deg,#cfe4f3,#bcd9ee);border-radius:40%;opacity:.9;filter:blur(.3px)}
+  .mapshot .park{position:absolute;border-radius:22px;background:#d8ecd6}
+  .mapshot .road{position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(21,32,58,.05)}
+  .mapshot .road.mj{background:#fdeec2;box-shadow:0 0 0 1px rgba(216,170,40,.25)}
+  .mapshot .mpin{position:absolute;width:22px;height:22px;border-radius:50% 50% 50% 2px;background:var(--c);
+    transform:rotate(45deg) scale(0);box-shadow:0 5px 12px -3px rgba(21,32,58,.45);opacity:0}
+  .mapshot .mpin::after{content:"";position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#fff;transform:rotate(-45deg)}
+  .screen-sec.in .mpin{animation:pinpop .5s var(--d) cubic-bezier(.2,1.5,.4,1) forwards}
   @keyframes pinpop{0%{opacity:0;transform:rotate(45deg) scale(0) translateY(-8px)}100%{opacity:1;transform:rotate(45deg) scale(1)}}
   .map-cta{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-    background:radial-gradient(60% 60% at 50% 50%, rgba(238,241,245,.5), rgba(238,241,245,.05))}
+    background:radial-gradient(70% 60% at 50% 50%, rgba(234,240,244,.55), rgba(234,240,244,0))}
   .map-hint{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);
-    background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:999px;padding:6px 14px;box-shadow:var(--shadow-sm)}
+    background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:999px;padding:6px 14px;box-shadow:var(--shadow-sm)}
   .map-hint .ld{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:beat 2s infinite}
   @media (prefers-reduced-motion:reduce){.screen-sec.in .mpin{animation:none;opacity:1;transform:rotate(45deg) scale(1)}}
 
-  /* ---------- stats ---------- */
+  /* stats */
   .stats{padding:56px 0 8px}
   .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--canvas);border:1px solid var(--line);
     border-radius:var(--radius);overflow:hidden}
@@ -146,13 +164,11 @@
   .stat.a .n{color:var(--ink)} .stat.b .n{color:var(--elec)} .stat.c .n{color:var(--hot)} .stat.d .n{color:var(--accent)}
   @media(max-width:760px){.stat-row{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--line-2)}}
 
-  /* ---------- section head ---------- */
   .sec{padding:80px 0 0}
   .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent-ink)}
-  h2{font-size:clamp(26px,3.6vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.08;margin-top:12px;max-width:20ch;text-wrap:balance}
+  h2{font-size:clamp(25px,3.6vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.08;margin-top:12px;max-width:20ch;text-wrap:balance}
   .sec p.intro{color:var(--ink-2);font-size:16.5px;margin-top:14px;max-width:56ch}
 
-  /* ---------- zig-zag steps ---------- */
   .step{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;margin-top:44px}
   .step.rev{direction:rtl}.step.rev>*{direction:ltr}
   .step .txt .k{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;
@@ -162,7 +178,6 @@
   .demo{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-lg);min-height:210px;display:flex;flex-direction:column;justify-content:center}
   @media(max-width:760px){.step,.step.rev{grid-template-columns:1fr;direction:ltr;gap:22px}}
 
-  /* mini outage card (пример из карты) */
   .ocard{border:1px solid var(--line);border-radius:14px;overflow:hidden}
   .ocard .h{background:var(--accent);color:#fff;padding:12px 15px}
   .ocard .h b{font-size:15px;font-weight:800}
@@ -185,17 +200,26 @@
   .fchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:700;color:var(--ink-2)}
   .fchip .d{width:9px;height:9px;border-radius:3px}
 
-  /* ---------- cta banner ---------- */
-  .cta{margin-top:88px;background:var(--ink);border-radius:26px;padding:56px 40px;text-align:center;position:relative;overflow:hidden;color:#fff}
-  .cta::after{content:"";position:absolute;right:-10%;bottom:-40%;width:60%;height:120%;
-    background:radial-gradient(circle at center, rgba(47,107,237,.5), transparent 62%)}
-  .cta h2{color:#fff;margin:0 auto;max-width:18ch}
-  .cta p{color:rgba(255,255,255,.7);margin:14px auto 0;max-width:46ch;font-size:16px;position:relative;z-index:1}
-  .cta .btn{margin-top:26px;position:relative;z-index:1}
-  .cta .btn.primary{box-shadow:0 10px 30px -8px rgba(47,107,237,.7)}
+  /* contact / cooperation */
+  .contact{margin-top:88px;background:var(--ink);border-radius:26px;padding:52px 40px;position:relative;overflow:hidden;color:#fff}
+  .contact::after{content:"";position:absolute;right:-8%;bottom:-50%;width:55%;height:150%;
+    background:radial-gradient(circle at center, rgba(47,107,237,.45), transparent 62%)}
+  .contact .in{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+  .contact h2{color:#fff;max-width:16ch}
+  .contact p{color:rgba(255,255,255,.72);margin-top:14px;font-size:16px;max-width:42ch}
+  .contact-btns{display:flex;flex-direction:column;gap:12px}
+  .cbtn{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;padding:14px 16px;transition:.15s}
+  .cbtn:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
+  .cbtn .ci{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center}
+  .cbtn .ci svg{width:24px;height:24px;color:#fff}
+  .cbtn .ct{flex:1}
+  .cbtn .ct .l{font-size:12.5px;color:rgba(255,255,255,.6);font-weight:600}
+  .cbtn .ct .v{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em}
+  .cbtn .arw{color:rgba(255,255,255,.4)}
+  @media(max-width:760px){.contact{padding:36px 22px}.contact .in{grid-template-columns:1fr;gap:26px}}
 
-  /* ---------- footer ---------- */
-  footer{margin-top:72px;border-top:1px solid var(--line);padding:40px 0 60px}
+  footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
   .foot-top{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
   .foot-top p{color:var(--ink-3);font-size:13.5px;margin-top:12px;max-width:38ch}
   .foot-links{display:flex;gap:48px;flex-wrap:wrap}
@@ -204,11 +228,29 @@
   .fcol a:hover{color:var(--ink)}
   .foot-bot{margin-top:32px;padding-top:20px;border-top:1px solid var(--line-2);display:flex;justify-content:space-between;
     gap:12px;flex-wrap:wrap;color:var(--ink-3);font-size:13px}
+
+  /* ---------- MOBILE ---------- */
+  @media(max-width:760px){
+    .wrap{padding:0 18px}
+    .nav-links{display:none}
+    .nav-in{height:60px;gap:8px}
+    .logo .wm{font-size:17px}
+    .city-btn{padding:8px 11px;font-size:13px}
+    .city-btn .cityname{max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .nav-right{gap:7px}
+    .lang button{padding:8px 11px}
+    .nav-right .btn.primary{padding:9px 14px;font-size:13px}
+    .hero{padding:48px 0 26px}
+    .contact,.stats{ }
+  }
+  @media(max-width:400px){
+    .nav-right .btn.primary .full{display:none}
+    .city-btn .cityname{max-width:60px}
+  }
 </style>
 </head>
 <body>
 
-<!-- reusable logo glyph: капля (вода) + молния-вырез (свет) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <symbol id="glyph" viewBox="0 0 32 32">
     <path d="M16 2.5C16 2.5 5.5 13.4 5.5 21a10.5 10.5 0 0 0 21 0C26.5 13.4 16 2.5 16 2.5Z" fill="currentColor"/>
@@ -222,38 +264,51 @@
       <svg class="gl" style="color:var(--accent)"><use href="#glyph"/></svg>
       <span class="wm">Бар <b>Жоқ</b></span>
     </a>
+
+    <!-- выбор города -->
+    <div class="city" id="city">
+      <button class="city-btn" id="cityBtn" aria-haspopup="true">
+        <svg class="pin" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+        <span class="cityname">Павлодар</span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="city-menu" id="cityMenu">
+        <button class="on"><span>Павлодар</span></button>
+        <button disabled><span>Экибастуз</span><span class="soon" data-kk="жақында">скоро</span></button>
+        <button disabled><span>Аксу</span><span class="soon" data-kk="жақында">скоро</span></button>
+      </div>
+    </div>
+
     <nav class="nav-links">
-      <a href="#how">Как работает</a>
-      <a href="#what">Что показываем</a>
-      <a href="#sources">Источники</a>
-      <a href="/ads">Реклама</a>
+      <a href="#how" data-kk="Қалай жұмыс істейді">Как работает</a>
+      <a href="#what" data-kk="Не көрсетеміз">Что показываем</a>
+      <a href="/ads" data-kk="Жарнама">Реклама</a>
     </nav>
+
     <div class="nav-right">
-      <span class="lang"><a href="#" class="on">RU</a><a href="#">KK</a></span>
-      <a class="btn primary" href="/map/">Открыть карту</a>
+      <span class="lang" id="lang"><button data-lang="ru" class="on">RU</button><button data-lang="kk">KZ</button></span>
+      <a class="btn primary" href="/map/"><span class="full" data-kk="Картаны ашу">Открыть карту</span></a>
     </div>
   </div>
 </header>
 
 <main>
-  <!-- HERO -->
   <section class="hero wrap">
-    <span class="pill-ann rv"><span class="dot"></span>Реальные данные Павлодара<span class="go">обновлено сегодня</span></span>
-    <h1 class="rv">Узнай об отключении раньше,<br>чем откроешь <span class="u">кран</span></h1>
-    <p class="lead rv">Введи адрес — увидишь все отключения по своему дому: вода, свет, отопление. Дата, время, причина. Без поиска по новостям и чатам ЖК.</p>
-    <form class="capture rv" onsubmit="location.href='/map/';return false">
+    <span class="pill-ann rv"><span class="dot"></span><span data-kk="Павлодардың нақты деректері">Реальные данные Павлодара</span><span class="go" data-kk="бүгін жаңартылды">обновлено сегодня</span></span>
+    <h1 class="rv" data-kk-html="Ажыратуды алдын ала біл —<br>кран <span class=&quot;u&quot;>ашылғанша</span>">Узнай об отключении раньше,<br>чем откроешь <span class="u">кран</span></h1>
+    <p class="lead rv" data-kk="Мекенжайыңды енгіз — үйің бойынша барлық ажыратуды көресің: су, жарық, жылу. Күні, уақыты, себебі. Жаңалықтар мен чаттарды ақтарудың қажеті жоқ.">Введи адрес — увидишь все отключения по своему дому: вода, свет, отопление. Дата, время, причина. Без поиска по новостям и чатам ЖК.</p>
+    <form class="capture rv" onsubmit="var v=this.querySelector('input').value.trim();location.href='/map/'+(v?('?q='+encodeURIComponent(v)):'');return false">
       <label class="field">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
-        <input type="text" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес">
+        <input type="text" autocomplete="off" autocorrect="off" spellcheck="false" data-kk-ph="Көше және үй нөмірі — мыс. Естай 38" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес">
       </label>
-      <button class="btn primary" type="submit">Проверить</button>
+      <button class="btn primary" type="submit" data-kk="Тексеру">Проверить</button>
     </form>
-    <p class="cap-note rv">Бесплатно · без регистрации · по всему Павлодару</p>
+    <p class="cap-note rv" data-kk="Тегін · тіркеусіз · бүкіл Павлодар бойынша">Бесплатно · без регистрации · по всему Павлодару</p>
   </section>
 
-  <!-- SOURCES -->
   <section class="sources wrap rv" id="sources">
-    <div class="lbl">Данные напрямую от поставщиков</div>
+    <div class="lbl" data-kk="Деректер тікелей жеткізушілерден">Данные напрямую от поставщиков</div>
     <div class="src-row">
       <span class="src"><span class="m" style="background:var(--elec)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>Павлодарэнерго</span>
       <span class="src"><span class="m" style="background:var(--cold)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c3.2 4.2 6 7.6 6 11a6 6 0 1 1-12 0c0-3.4 2.8-6.8 6-11z"/></svg></span>Павлодар-Водоканал</span>
@@ -261,7 +316,7 @@
     </div>
   </section>
 
-  <!-- MAP PREVIEW (facade — живая карта грузится по клику) -->
+  <!-- MAP: превью-иллюстрация карты, клик/кнопка → полноразмерная карта /map/ -->
   <section class="screen-sec wrap rv" id="mapsec">
     <div class="browser">
       <div class="bar">
@@ -269,56 +324,62 @@
         <span class="url">barjoq.kz<b>/map</b></span>
         <span style="width:44px"></span>
       </div>
-      <div class="frame" id="mapFrame">
-        <div class="mapfacade" id="mapFacade">
-          <span class="road" style="left:0;right:0;top:34%;height:2px"></span>
-          <span class="road" style="left:0;right:0;top:66%;height:2px"></span>
-          <span class="road" style="top:0;bottom:0;left:26%;width:2px"></span>
-          <span class="road" style="top:0;bottom:0;left:58%;width:2px"></span>
-          <span class="road" style="top:0;bottom:0;left:81%;width:2px"></span>
-          <span class="mpin" style="left:15%;top:26%;--c:var(--hot);--d:.15s"></span>
-          <span class="mpin" style="left:38%;top:44%;--c:var(--elec);--d:.30s"></span>
-          <span class="mpin" style="left:22%;top:60%;--c:var(--hot);--d:.42s"></span>
-          <span class="mpin" style="left:52%;top:30%;--c:var(--cold);--d:.24s"></span>
-          <span class="mpin" style="left:66%;top:54%;--c:var(--elec);--d:.54s"></span>
-          <span class="mpin" style="left:74%;top:32%;--c:var(--hot);--d:.36s"></span>
-          <span class="mpin" style="left:44%;top:70%;--c:var(--hot);--d:.60s"></span>
-          <span class="mpin" style="left:88%;top:64%;--c:var(--elec);--d:.48s"></span>
-          <div class="map-cta">
-            <button class="btn primary lg" id="openMap" type="button">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 7v13M15 4v13"/></svg>
-              Открыть живую карту
-            </button>
-            <span class="map-hint"><span class="ld"></span>2096 адресов затронуто · обновлено сегодня</span>
-          </div>
+      <a class="mapshot" href="/map/" aria-label="Открыть карту">
+        <div class="layer">
+          <span class="river"></span>
+          <span class="park" style="left:12%;top:16%;width:12%;height:16%"></span>
+          <span class="park" style="left:70%;top:60%;width:14%;height:18%"></span>
+          <span class="road mj" style="left:0;right:0;top:40%;height:5px"></span>
+          <span class="road mj" style="top:0;bottom:0;left:47%;width:5px"></span>
+          <span class="road" style="left:0;right:0;top:20%;height:2px"></span>
+          <span class="road" style="left:0;right:0;top:62%;height:2px"></span>
+          <span class="road" style="left:0;right:0;top:80%;height:2px"></span>
+          <span class="road" style="top:0;bottom:0;left:24%;width:2px"></span>
+          <span class="road" style="top:0;bottom:0;left:68%;width:2px"></span>
+          <span class="road" style="top:0;bottom:0;left:86%;width:2px"></span>
+          <span class="mpin" style="left:29%;top:26%;--c:var(--hot);--d:.10s"></span>
+          <span class="mpin" style="left:38%;top:31%;--c:var(--hot);--d:.18s"></span>
+          <span class="mpin" style="left:33%;top:50%;--c:var(--elec);--d:.26s"></span>
+          <span class="mpin" style="left:55%;top:28%;--c:var(--cold);--d:.34s"></span>
+          <span class="mpin" style="left:60%;top:47%;--c:var(--elec);--d:.42s"></span>
+          <span class="mpin" style="left:74%;top:33%;--c:var(--hot);--d:.50s"></span>
+          <span class="mpin" style="left:52%;top:70%;--c:var(--hot);--d:.58s"></span>
+          <span class="mpin" style="left:78%;top:72%;--c:var(--elec);--d:.66s"></span>
+          <span class="mpin" style="left:18%;top:70%;--c:var(--hot);--d:.30s"></span>
+          <span class="mpin" style="left:43%;top:52%;--c:var(--elec);--d:.46s"></span>
         </div>
-      </div>
+        <div class="map-cta">
+          <span class="btn primary lg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 7v13M15 4v13"/></svg>
+            <span data-kk="Картаны ашу">Открыть карту</span>
+          </span>
+          <span class="map-hint"><span class="ld"></span><span data-kk="2096 мекенжай қамтылған · бүгін жаңартылды">2096 адресов затронуто · обновлено сегодня</span></span>
+        </div>
+      </a>
     </div>
   </section>
 
-  <!-- STATS -->
   <section class="stats wrap rv">
     <div class="stat-row">
-      <div class="stat a"><div class="n" data-to="2096">0</div><div class="l">адресов затронуто сейчас</div></div>
-      <div class="stat b"><div class="n" data-to="1460">0</div><div class="l">домов без света</div></div>
-      <div class="stat c"><div class="n" data-to="941">0</div><div class="l">без горячей воды</div></div>
-      <div class="stat d"><div class="n" data-to="3539">0</div><div class="l">плановых отключений</div></div>
+      <div class="stat a"><div class="n" data-to="2096">0</div><div class="l" data-kk="мекенжай қамтылды">адресов затронуто</div></div>
+      <div class="stat b"><div class="n" data-to="1460">0</div><div class="l" data-kk="үй жарықсыз">домов без света</div></div>
+      <div class="stat c"><div class="n" data-to="941">0</div><div class="l" data-kk="ыстық сусыз">без горячей воды</div></div>
+      <div class="stat d"><div class="n" data-to="3539">0</div><div class="l" data-kk="жоспарлы ажырату">плановых отключений</div></div>
     </div>
   </section>
 
-  <!-- HOW IT WORKS (zig-zag) -->
   <section class="sec wrap" id="how">
     <div class="rv">
-      <div class="eyebrow">Как это работает</div>
-      <h2>Три шага до ответа «есть или нет»</h2>
-      <p class="intro">Информация об отключениях уже существует — она просто разбросана по сайтам поставщиков и чатам. Мы собираем её каждые 3 часа и показываем по твоему дому.</p>
+      <div class="eyebrow" data-kk="Қалай жұмыс істейді">Как это работает</div>
+      <h2 data-kk="«Бар ма, жоқ па» дегенге дейін үш қадам">Три шага до ответа «есть или нет»</h2>
+      <p class="intro" data-kk="Ажыратулар туралы ақпарат бар — ол жай ғана жеткізушілердің сайттары мен чаттарға шашырап жатыр. Біз оны әр 3 сағат сайын жинап, үйің бойынша көрсетеміз.">Информация об отключениях уже существует — она просто разбросана по сайтам поставщиков и чатам. Мы собираем её каждые 3 часа и показываем по твоему дому.</p>
     </div>
 
     <div class="step rv">
       <div class="txt">
         <span class="k">1</span>
-        <h3>Введи адрес</h3>
-        <p>Улица и номер дома. Подсказки помогут — в базе 39 623 адреса Павлодара.</p>
+        <h3 data-kk="Мекенжайды енгіз">Введи адрес</h3>
+        <p data-kk="Көше мен үй нөмірі. Ұсыныстар көмектеседі — базада Павлодардың 39 623 мекенжайы.">Улица и номер дома. Подсказки помогут — в базе 39 623 адреса Павлодара.</p>
       </div>
       <div class="demo">
         <div class="searchbox">
@@ -326,10 +387,10 @@
           Естая, 38<span class="cur"></span>
         </div>
         <div class="filters">
-          <span class="fchip"><span class="d" style="background:var(--hot)"></span>Горячая вода</span>
-          <span class="fchip"><span class="d" style="background:var(--elec)"></span>Свет</span>
-          <span class="fchip"><span class="d" style="background:var(--cold)"></span>Холодная вода</span>
-          <span class="fchip"><span class="d" style="background:var(--hot)"></span>Отопление</span>
+          <span class="fchip"><span class="d" style="background:var(--hot)"></span><span data-kk="Ыстық су">Горячая вода</span></span>
+          <span class="fchip"><span class="d" style="background:var(--elec)"></span><span data-kk="Жарық">Свет</span></span>
+          <span class="fchip"><span class="d" style="background:var(--cold)"></span><span data-kk="Суық су">Холодная вода</span></span>
+          <span class="fchip"><span class="d" style="background:var(--hot)"></span><span data-kk="Жылу">Отопление</span></span>
         </div>
       </div>
     </div>
@@ -337,22 +398,22 @@
     <div class="step rev rv">
       <div class="txt">
         <span class="k">2</span>
-        <h3>Увидь, что отключено</h3>
-        <p>Карточка по дому: какая система, когда отключили, когда восстановят и почему. Ничего лишнего с чужих улиц.</p>
+        <h3 data-kk="Не өшкенін көр">Увидь, что отключено</h3>
+        <p data-kk="Үй бойынша карточка: қай жүйе, қашан өшті, қашан қосады және неге. Бөгде көшелерден артық ештеңе жоқ.">Карточка по дому: какая система, когда отключили, когда восстановят и почему. Ничего лишнего с чужих улиц.</p>
       </div>
       <div class="demo">
         <div class="ocard">
-          <div class="h"><b>улица Естая, 38</b><span>Химгородки · отключено 2 системы</span></div>
+          <div class="h"><b>улица Естая, 38</b><span>Химгородки · <span data-kk="2 жүйе өшкен">отключено 2 системы</span></span></div>
           <div class="row">
             <span class="ic" style="background:var(--hot)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/></svg></span>
-            <div class="rt"><b>Горячая вода</b><span class="tag">Плановое</span>
-              <div class="when">Восстановят <b>06.08, чт 23:59</b></div>
-              <div class="meta">Гидравлические испытания теплосети</div></div>
+            <div class="rt"><b data-kk="Ыстық су">Горячая вода</b><span class="tag" data-kk="Жоспарлы">Плановое</span>
+              <div class="when"><span data-kk="Қосады">Восстановят</span> <b>06.08, чт 23:59</b></div>
+              <div class="meta" data-kk="Гидравликалық сынақ">Гидравлические испытания теплосети</div></div>
           </div>
           <div class="row">
             <span class="ic" style="background:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>
-            <div class="rt"><b>Электричество</b><span class="tag">Плановое</span>
-              <div class="when">Восстановят <b>04.08, вт 17:00</b></div>
+            <div class="rt"><b data-kk="Электр">Электричество</b><span class="tag" data-kk="Жоспарлы">Плановое</span>
+              <div class="when"><span data-kk="Қосады">Восстановят</span> <b>04.08, вт 17:00</b></div>
               <div class="meta">Капитальный ремонт · ТП-5РУ</div></div>
           </div>
         </div>
@@ -362,48 +423,78 @@
     <div class="step rv">
       <div class="txt">
         <span class="k">3</span>
-        <h3>Планируй день</h3>
-        <p>Набрать воды заранее, зарядить технику, перенести стирку. Видно и текущие, и будущие отключения на карте города.</p>
+        <h3 data-kk="Күніңді жоспарла">Планируй день</h3>
+        <p data-kk="Суды алдын ала жинау, техниканы зарядтау, кірді кейінге қалдыру. Ағымдағы да, болашақ ажыратулар да қала картасында көрінеді.">Набрать воды заранее, зарядить технику, перенести стирку. Видно и текущие, и будущие отключения на карте города.</p>
       </div>
       <div class="demo" style="padding:0;overflow:hidden">
         <div style="padding:18px 20px;border-bottom:1px solid var(--line-2);display:flex;gap:10px;align-items:center">
           <span class="ic" style="background:var(--accent);width:30px;height:30px"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M5 12l5 5 9-11"/></svg></span>
-          <div><b style="font-weight:800">По вашему адресу всё в порядке</b><div style="font-size:12.5px;color:var(--ink-3)">Вода и свет в норме</div></div>
+          <div><b style="font-weight:800" data-kk="Мекенжайыңызда бәрі ретінде">По вашему адресу всё в порядке</b><div style="font-size:12.5px;color:var(--ink-3)" data-kk="Су мен жарық қалыпты">Вода и свет в норме</div></div>
         </div>
         <div style="padding:14px 20px;display:flex;gap:22px">
-          <div><div style="font-size:22px;font-weight:800;color:var(--accent)">927</div><div style="font-size:12px;color:var(--ink-3);font-weight:600">сейчас</div></div>
-          <div><div style="font-size:22px;font-weight:800;color:var(--ink)">2 612</div><div style="font-size:12px;color:var(--ink-3);font-weight:600">скоро</div></div>
-          <div><div style="font-size:22px;font-weight:800;color:var(--hot)">941</div><div style="font-size:12px;color:var(--ink-3);font-weight:600">без гор. воды</div></div>
+          <div><div style="font-size:22px;font-weight:800;color:var(--accent)">927</div><div style="font-size:12px;color:var(--ink-3);font-weight:600" data-kk="қазір">сейчас</div></div>
+          <div><div style="font-size:22px;font-weight:800;color:var(--ink)">2 612</div><div style="font-size:12px;color:var(--ink-3);font-weight:600" data-kk="жақында">скоро</div></div>
+          <div><div style="font-size:22px;font-weight:800;color:var(--hot)">941</div><div style="font-size:12px;color:var(--ink-3);font-weight:600" data-kk="ыстық сусыз">без гор. воды</div></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- WHAT (trust) -->
   <section class="sec wrap" id="what">
     <div class="rv">
-      <div class="eyebrow">Почему нам можно верить</div>
-      <h2>Не слухи из чатов, а данные поставщиков</h2>
-      <p class="intro">Каждое отключение — из официального источника, с датой и причиной. Обновляется автоматически каждые 3 часа, привязано к конкретному дому, а не к «где-то на районе».</p>
+      <div class="eyebrow" data-kk="Неге бізге сенуге болады">Почему нам можно верить</div>
+      <h2 data-kk="Чаттағы қауесет емес — жеткізушілер деректері">Не слухи из чатов, а данные поставщиков</h2>
+      <p class="intro" data-kk="Әр ажырату — ресми дереккөзден, күні мен себебі көрсетілген. Әр 3 сағат сайын автоматты жаңарады, «ауданда бір жерде» емес, нақты үйге байланған.">Каждое отключение — из официального источника, с датой и причиной. Обновляется автоматически каждые 3 часа, привязано к конкретному дому, а не к «где-то на районе».</p>
     </div>
     <div class="step rv" style="margin-top:34px">
       <div class="txt">
-        <h3>Точная привязка к дому</h3>
-        <p>Мы разворачиваем «улицу» в конкретные дома с номерами и показываем отключение только тем, кого оно реально касается — без чужого электричества с соседней улицы.</p>
+        <h3 data-kk="Үйге нақты байланыс">Точная привязка к дому</h3>
+        <p data-kk="Біз «көшені» нақты үйлерге жаямыз және ажыратуды тек оған қатысты үйлерге көрсетеміз — көрші көшенің бөгде электрін емес.">Мы разворачиваем «улицу» в конкретные дома с номерами и показываем отключение только тем, кого оно реально касается — без чужого электричества с соседней улицы.</p>
       </div>
       <div class="txt">
-        <h3>Русский и казахский</h3>
-        <p>Интерфейс и подписи карты переключаются RU / KK. Названия улиц, районы, причины — на понятном языке.</p>
+        <h3 data-kk="Орысша және қазақша">Русский и казахский</h3>
+        <p data-kk="Интерфейс пен карта жазулары RU / KZ болып ауысады. Көше атаулары, аудандар, себептер — түсінікті тілде.">Интерфейс и подписи карты переключаются RU / KZ. Названия улиц, районы, причины — на понятном языке.</p>
       </div>
     </div>
   </section>
 
-  <!-- CTA -->
-  <section class="wrap">
-    <div class="cta rv">
-      <h2>Проверь свой дом за 5 секунд</h2>
-      <p>Открой карту, введи адрес и узнай, будет ли сегодня вода и свет. Бесплатно и без регистрации.</p>
-      <a class="btn primary lg" href="/map/">Открыть карту Павлодара →</a>
+  <!-- CONTACT / сотрудничество -->
+  <section class="wrap" id="contact">
+    <div class="contact rv">
+      <div class="in">
+        <div>
+          <div class="eyebrow" style="color:var(--accent);opacity:.9" data-kk="Ынтымақтастық">Сотрудничество</div>
+          <h2 data-kk="Жарнама және серіктестік туралы жазыңыз">Напишите по рекламе и партнёрству</h2>
+          <p data-kk="Ыңғайлы тәсілді таңдаңыз — жұмыс күні ішінде жауап береміз.">Выберите удобный способ — ответим в течение рабочего дня.</p>
+        </div>
+        <div class="contact-btns">
+          <a class="cbtn" href="https://wa.me/77083445023" target="_blank" rel="noopener">
+            <span class="ci" style="background:var(--wa)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.5-4-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5 0-.2-.6-1.6-.9-2.2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-1.1 2.2 0 .3.9 2.2 2.6 4 2.4 2.6 4.3 3.1 5 3.3.8.2 1.5.2 2.1.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg></span>
+            <span class="ct"><span class="l">WhatsApp</span><span class="v">+7 708 344 50 23</span></span>
+            <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </a>
+          <a class="cbtn" href="https://t.me/artumikh" target="_blank" rel="noopener">
+            <span class="ci" style="background:var(--tg)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.5 13.1l-4.6-1.4c-1-.3-1-1 .2-1.5L20.6 3c.8-.3 1.5.2 1.3 1.3z"/></svg></span>
+            <span class="ct"><span class="l">Telegram</span><span class="v">@artumikh</span></span>
+            <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </a>
+          <a class="cbtn" href="tel:+77083445023">
+            <span class="ci" style="background:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg></span>
+            <span class="ct"><span class="l" data-kk="Қоңырау шалу">Позвонить</span><span class="v">+7 708 344 50 23</span></span>
+            <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" style="margin-top:22px">
+    <div class="contact rv" style="background:var(--accent);text-align:center;padding:48px 40px">
+      <div style="position:relative;z-index:1">
+        <h2 style="margin:0 auto" data-kk="Үйіңді 5 секундта тексер">Проверь свой дом за 5 секунд</h2>
+        <p style="margin:14px auto 0;color:rgba(255,255,255,.85);max-width:44ch" data-kk="Картаны аш, мекенжайыңды енгіз де, бүгін су мен жарық бола ма — біл.">Открой карту, введи адрес и узнай, будет ли сегодня вода и свет.</p>
+        <a class="btn lg" style="margin-top:24px;background:#fff;color:var(--accent-ink)" href="/map/"><span data-kk="Павлодар картасын ашу →">Открыть карту Павлодара →</span></a>
+      </div>
     </div>
   </section>
 </main>
@@ -413,64 +504,65 @@
     <div class="foot-top">
       <div>
         <a class="logo" href="/"><svg class="gl" style="color:var(--accent)"><use href="#glyph"/></svg><span class="wm">Бар <b>Жоқ</b></span></a>
-        <p>Сервис отключений воды, света и тепла в Павлодаре. Информация уже существует — мы делаем так, чтобы её нашли за 5 секунд.</p>
+        <p data-kk="Павлодардағы су, жарық және жылу ажыратулары сервисі. Ақпарат бар — біз оны 5 секундта табуға көмектесеміз.">Сервис отключений воды, света и тепла в Павлодаре. Информация уже существует — мы делаем так, чтобы её нашли за 5 секунд.</p>
       </div>
       <div class="foot-links">
-        <div class="fcol"><h4>Сервис</h4><a href="/map/">Карта отключений</a><a href="#how">Как работает</a><a href="#sources">Источники данных</a></div>
-        <div class="fcol"><h4>Бизнесу</h4><a href="/ads">Реклама</a><a href="/ads">Тарифы</a></div>
-        <div class="fcol"><h4>Языки</h4><a href="#">Русский</a><a href="#">Қазақша</a></div>
+        <div class="fcol"><h4 data-kk="Сервис">Сервис</h4><a href="/map/" data-kk="Ажыратулар картасы">Карта отключений</a><a href="#how" data-kk="Қалай жұмыс істейді">Как работает</a><a href="#contact" data-kk="Байланыс">Контакты</a></div>
+        <div class="fcol"><h4 data-kk="Бизнеске">Бизнесу</h4><a href="/ads" data-kk="Жарнама">Реклама</a><a href="/ads" data-kk="Тарифтер">Тарифы</a></div>
+        <div class="fcol"><h4 data-kk="Қалалар">Города</h4><a href="/">Павлодар</a><a href="#" style="color:var(--ink-3)">Экибастуз · <span data-kk="жақында">скоро</span></a><a href="#" style="color:var(--ink-3)">Аксу · <span data-kk="жақында">скоро</span></a></div>
       </div>
     </div>
     <div class="foot-bot">
       <span>© 2026 Бар Жоқ · Павлодар</span>
-      <span>Данные: Павлодарэнерго, Павлодар-Водоканал, ПТС</span>
+      <span data-kk="Деректер: Павлодарэнерго, Павлодар-Водоканал, ПТС">Данные: Павлодарэнерго, Павлодар-Водоканал, ПТС</span>
     </div>
   </div>
 </footer>
 
 <script>
-  // reveal on scroll (staggered)
+  // ---------- reveal ----------
   var rvs=[].slice.call(document.querySelectorAll('.rv'));
   if('IntersectionObserver' in window){
-    var io=new IntersectionObserver(function(es){
-      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
-    },{threshold:.12, rootMargin:'0px 0px -6% 0px'});
-    rvs.forEach(function(el,i){ el.style.transitionDelay=(Math.min(i,6)*60)+'ms'; io.observe(el); });
-  } else rvs.forEach(function(el){el.classList.add('in')});
-  // страховка: контент виден даже если observer не сработал
-  setTimeout(function(){ rvs.forEach(function(el){ el.classList.add('in'); }); }, 1400);
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12,rootMargin:'0px 0px -6% 0px'});
+    rvs.forEach(function(el,i){el.style.transitionDelay=(Math.min(i,6)*60)+'ms';io.observe(el);});
+  } else rvs.forEach(function(el){el.classList.add('in');});
+  setTimeout(function(){rvs.forEach(function(el){el.classList.add('in');});},1400);
 
-  // count-up
-  function countUp(el){
-    var to=+el.dataset.to, s=performance.now(), d=1500;
-    (function step(t){ var p=Math.min((t-s)/d,1), e=1-Math.pow(1-p,3);
-      el.textContent=Math.round(to*e).toLocaleString('ru-RU'); if(p<1)requestAnimationFrame(step); })(s);
-  }
-  var statsDone=false, statEls=document.querySelectorAll('.stat .n');
-  if('IntersectionObserver' in window){
-    var io2=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting&&!statsDone){statsDone=true;statEls.forEach(countUp);} }); },{threshold:.3});
-    var sr=document.querySelector('.stat-row'); if(sr)io2.observe(sr);
-  } else statEls.forEach(countUp);
+  // ---------- count-up ----------
+  function countUp(el){var to=+el.dataset.to,s=performance.now(),d=1500;(function step(t){var p=Math.min((t-s)/d,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e).toLocaleString('ru-RU');if(p<1)requestAnimationFrame(step);})(s);}
+  var statsDone=false,statEls=document.querySelectorAll('.stat .n');
+  if('IntersectionObserver' in window){var io2=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting&&!statsDone){statsDone=true;statEls.forEach(countUp);}});},{threshold:.3});var sr=document.querySelector('.stat-row');if(sr)io2.observe(sr);}else statEls.forEach(countUp);
 
-  // nav border on scroll
+  // ---------- nav border ----------
   var nav=document.getElementById('nav');
-  addEventListener('scroll',function(){ nav.classList.toggle('stuck', scrollY>10); },{passive:true});
+  addEventListener('scroll',function(){nav.classList.toggle('stuck',scrollY>10);},{passive:true});
 
-  // facade → живая карта грузится только по клику (лёгкий первый экран)
-  var openMap=document.getElementById('openMap'),
-      mapFrame=document.getElementById('mapFrame'),
-      mapFacade=document.getElementById('mapFacade');
-  function loadLiveMap(){
-    if(!mapFrame || mapFrame.querySelector('iframe')) return;
-    var f=document.createElement('iframe');
-    f.src='/map/'; f.title='Живая карта отключений Павлодара';
-    f.style.cssText='width:100%;height:100%;border:0;display:block';
-    mapFrame.appendChild(f);
-    if(mapFacade){ mapFacade.style.transition='opacity .35s'; mapFacade.style.opacity='0';
-      setTimeout(function(){ if(mapFacade)mapFacade.remove(); },400); }
+  // ---------- city dropdown ----------
+  var city=document.getElementById('city'),cityBtn=document.getElementById('cityBtn');
+  cityBtn.addEventListener('click',function(e){e.stopPropagation();city.dataset.open=city.dataset.open==='1'?'0':'1';});
+  document.addEventListener('click',function(){city.dataset.open='0';});
+
+  // ---------- i18n RU/KZ ----------
+  var LANG=localStorage.getItem('barjoq_lang')||'ru';
+  function applyLang(l){
+    LANG=l; localStorage.setItem('barjoq_lang',l);
+    document.documentElement.lang = l==='kk'?'kk':'ru';
+    document.querySelectorAll('#lang button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===l);});
+    document.querySelectorAll('[data-kk]').forEach(function(el){
+      if(!el.dataset.ru) el.dataset.ru=el.textContent;
+      el.textContent = l==='kk'?el.dataset.kk:el.dataset.ru;
+    });
+    document.querySelectorAll('[data-kk-html]').forEach(function(el){
+      if(!el.dataset.ruHtml) el.dataset.ruHtml=el.innerHTML;
+      el.innerHTML = l==='kk'?el.dataset.kkHtml:el.dataset.ruHtml;
+    });
+    document.querySelectorAll('[data-kk-ph]').forEach(function(el){
+      if(!el.dataset.ruPh) el.dataset.ruPh=el.getAttribute('placeholder')||'';
+      el.setAttribute('placeholder', l==='kk'?el.dataset.kkPh:el.dataset.ruPh);
+    });
   }
-  if(openMap) openMap.addEventListener('click',function(e){ e.stopPropagation(); loadLiveMap(); });
-  if(mapFacade) mapFacade.addEventListener('click', loadLiveMap);
+  document.querySelectorAll('#lang button').forEach(function(b){b.addEventListener('click',function(){applyLang(b.dataset.lang);});});
+  if(LANG==='kk') applyLang('kk');
 </script>
 </body>
 </html>

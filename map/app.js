@@ -212,6 +212,14 @@ async function load() {
     requestAnimationFrame(doFit);
     [120, 400, 900].forEach((ms) => setTimeout(doFit, ms));
   } else { fixSize(); }
+
+  // Проброс адреса с лендинга: /map/?q=Лермонтова+44 → сразу ищем и показываем карточку.
+  const q0 = new URLSearchParams(location.search).get('q');
+  if (q0 && q0.trim()) {
+    const v = q0.trim();
+    setSearchValue(v);
+    setTimeout(() => submitSearch(SEARCHES[0]), 300);
+  }
 }
 
 // «проспект Димитрова, 19» → «проспект Димитрова»
@@ -263,9 +271,12 @@ function ensureVisible(h) {
 }
 function passHouse(h) {
   if (!matchingOutages(h).length) return false;
-  const q = state.query.trim().toLowerCase();
-  if (q && !h.address.toLowerCase().includes(q)) return false;
-  return true;
+  const q = state.query.trim();
+  if (!q) return true;
+  // ⚠️ Не просто includes: «Баян батыра 6» не входит подстрокой в «улица Баян батыра»
+  // (нет номера у streetWide-узла + запятая в адресе). Матчим по улице.
+  if (h.address.toLowerCase().includes(q.toLowerCase())) return true;
+  return streetMatches(h.address, parseQuery(q).street);
 }
 function visibleHouses() { return DATA.houses.filter(passHouse); }
 
@@ -299,25 +310,9 @@ function renderMarkers() {
   const z = map.getZoom();
   const individual = z >= 15 || !!state.query.trim();
 
-  // Фолбэк: если улицы нет в адресном реестре OSM, показываем линию улицы.
-  // Обычно же «уличные» объявления уже развёрнуты парсером в конкретные дома.
-  houses.forEach((h) => {
-    if (!h.geom) return;
-    const outs = matchingOutages(h); if (!outs.length) return;
-    const color = RESOURCES[outs[0].resource].color;
-    const emerg = outs.some((o) => o.type === 'emergency');
-    h.geom.forEach((path) => {
-      if (!path || path.length < 2) return;
-      // «подложка» + основная линия — чтобы улица читалась на любом фоне
-      markerLayer.addLayer(L.polyline(path, { color: '#fff', weight: 11, opacity: .55, interactive: false }));
-      const line = L.polyline(path, {
-        color, weight: 6, opacity: .95, lineCap: 'round', lineJoin: 'round',
-        dashArray: emerg ? '10 7' : null, className: 'street-hl',
-      });
-      line.on('click', (e) => { L.DomEvent.stop(e); openHouseCard(h, e.latlng); });
-      markerLayer.addLayer(line);
-    });
-  });
+  // ⚠️ Линии улиц НЕ рисуем — только пиктограммы на домах (у каждого дома есть lat/lng).
+  // Раньше для streetWide-домов рисовалась линия геометрии улицы — она путала карту
+  // («где-то осталась линия»). Теперь везде точечные пины.
 
   if (individual) {
     houses.forEach((h) => addHouseMarker(h));
