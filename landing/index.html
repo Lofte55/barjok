@@ -5,23 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Бар Жоқ — карта отключений воды и света в Павлодаре</title>
 <meta name="description" content="Введите адрес — узнайте, когда отключат воду, свет и отопление по вашему дому в Павлодаре. Дата, время, причина. Данные от Павлодарэнерго, Водоканала и ПТС, обновляются каждые 3 часа.">
-<link rel="canonical" href="https://barjok.vercel.app/">
+<link rel="canonical" href="https://barjok.kz/">
 <meta name="theme-color" content="#2f6bed">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Бар Жоқ">
 <meta property="og:locale" content="ru_KZ">
-<meta property="og:url" content="https://barjok.vercel.app/">
+<meta property="og:url" content="https://barjok.kz/">
 <meta property="og:title" content="Бар Жоқ — есть вода, есть свет по вашему адресу">
 <meta property="og:description" content="Карта отключений воды, света и отопления в Павлодаре. Введите адрес — узнайте, когда отключат и когда включат.">
-<meta property="og:image" content="https://barjok.vercel.app/og-cover.png">
+<meta property="og:image" content="https://barjok.kz/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Бар Жоқ — отключения воды и света в Павлодаре">
 <meta name="twitter:description" content="Введите адрес — узнайте, когда отключат воду и свет по вашему дому.">
-<meta name="twitter:image" content="https://barjok.vercel.app/og-cover.png">
+<meta name="twitter:image" content="https://barjok.kz/og-cover.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -307,6 +307,78 @@
     .city-btn .cityname{max-width:60px}
   }
 </style>
+
+<!-- Schema.org: сайт + сервис отключений для Павлодара (сигнал гео-релевантности) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://barjok.kz/#website",
+      "url": "https://barjok.kz/",
+      "name": "Бар Жоқ",
+      "description": "Карта отключений воды, света и отопления в Павлодаре по адресам.",
+      "inLanguage": ["ru", "kk"],
+      "publisher": { "@id": "https://barjok.kz/#org" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://barjok.kz/#org",
+      "name": "Бар Жоқ",
+      "url": "https://barjok.kz/",
+      "logo": "https://barjok.kz/favicon.svg",
+      "areaServed": {
+        "@type": "City",
+        "name": "Павлодар",
+        "address": { "@type": "PostalAddress", "addressLocality": "Павлодар", "addressCountry": "KZ" }
+      }
+    },
+    {
+      "@type": "Service",
+      "name": "Отключения воды, света и отопления в Павлодаре",
+      "serviceType": "Информирование о плановых и аварийных отключениях ЖКХ",
+      "provider": { "@id": "https://barjok.kz/#org" },
+      "areaServed": { "@type": "City", "name": "Павлодар", "containedInPlace": { "@type": "Country", "name": "Казахстан" } },
+      "url": "https://barjok.kz/map/pavlodar",
+      "description": "Введите адрес — узнайте, когда отключат воду, свет или отопление по вашему дому в Павлодаре. Данные от Павлодарэнерго, Водоканала и ПТС."
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Как узнать об отключении воды по адресу в Павлодаре?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Введите свою улицу и дом на карте Бар Жоқ (barjok.kz/map/pavlodar) — сервис покажет, запланировано ли отключение холодной или горячей воды, дату, время и причину. Данные берутся из официальных источников — Водоканала и ПТС — и обновляются каждые 3 часа." }
+        },
+        {
+          "@type": "Question",
+          "name": "Когда отключат свет в моём доме в Павлодаре?",
+          "acceptedAnswer": { "@type": "Answer", "text": "На карте Бар Жоқ найдите свой адрес — если по нему запланировано отключение электричества от Павлодарэнерго, вы увидите дату и время начала и окончания работ." }
+        },
+        {
+          "@type": "Question",
+          "name": "Откуда берутся данные об отключениях?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Из официальных источников по Павлодару: Павлодарэнерго (электричество), Водоканал (холодная вода) и ПТС (горячая вода и отопление). Данные автоматически обновляются каждые 3 часа." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=111276553', 'ym');
+    ym(111276553, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/111276553" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
 </head>
 <body>
 
@@ -383,7 +455,7 @@
     <div class="browser">
       <div class="bar">
         <span class="dots"><i></i><i></i><i></i></span>
-        <span class="url">barjoq.kz<b>/map</b></span>
+        <span class="url">barjok.kz<b>/map</b></span>
         <span style="width:44px"></span>
       </div>
       <a class="mapshot" href="/map/" aria-label="Открыть карту">

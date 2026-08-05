@@ -5,11 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Бар Жоқ — карта отключений · Павлодар</title>
   <meta name="description" content="Живая карта отключений воды, света и отопления в Павлодаре. Введите адрес — узнайте, что отключено по вашему дому.">
+  <link rel="canonical" href="https://barjok.kz/map/pavlodar">
   <meta name="theme-color" content="#2f6bed">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+  <link rel="dns-prefetch" href="https://nominatim.openstreetmap.org">
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
@@ -26,6 +30,7 @@
       <button class="clear" id="clearSearch" aria-label="Очистить"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       <div class="suggest" id="suggest"></div>
     </div>
+    <div class="tb-right">
     <div class="mapcity" id="mapCity">
       <button class="mapcity-btn" id="mapCityBtn" aria-haspopup="true">
         <svg viewBox="0 0 24 24" fill="currentColor" class="cpin"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
@@ -41,6 +46,7 @@
     <div class="lang">
       <button data-lang-btn="ru">RU</button>
       <button data-lang-btn="kk">KZ</button>
+    </div>
     </div>
   </div>
 
