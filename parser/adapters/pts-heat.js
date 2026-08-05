@@ -20,13 +20,23 @@ const KEEP_TO = NOW + 21 * 86400000;
 const MAX_ARTICLES = 12;
 const MONTHS = ['январ','феврал','март','апрел','ма','июн','июл','август','сентябр','октябр','ноябр','декабр'];
 
-// Микрорайоны Павлодара OSM не знает: нет ни addr:suburb на домах, ни точек-центров
-// (проверено через Overpass/Nominatim). Источник ПТС называет микрорайон как единицу
-// списка «в границах улиц: … Химгородки …», но НЕ перечисляет его внутренние улицы,
-// поэтому они не попадают в findStreets. Разворачиваем вручную в известные внутренние
-// улицы (курируемый список — расширять по мере надобности; альтернатива — OCR списков ПТС).
+// ⚠️ МИКРОРАЙОНЫ: почему НЕ автогенерим `улица→ПТС-район` из OSM (проверено 2026-08-05).
+// Reverse-geocode домов стабильно отдаёт OSM-suburb, НО это ДРУГОЕ разбиение города, не
+// совпадающее с микрорайонами ПТС: Павлова→Сарыарка/Телецентр, Сураганова→Телецентр,
+// Катаева→Горторг — слова «Химгородки» у них нет. `улица→ПТС-район` из OSM не выводится.
+// Что делаем вместо этого — ДВА слоя (union):
+//  1) streets — курируемые улицы ПТС (ground-truth от ПТС), разворачиваются штатно в дома;
+//  2) MEMBERSHIP — дома ядра микрорайона по OSM-suburb (parser/microdistricts.json, строит
+//     build-microdistricts.js): плотное жильё, что OSM реально метит этим suburb. Уровень ДОМА,
+//     т.к. улицы Химгородков разбросаны/коллизируют (Луговая на 9.6 км) — целыми улицами нельзя.
+// id связывает MICRODISTRICTS с ключом в microdistricts.json.
+let MEMBERSHIP = {};
+try { MEMBERSHIP = require('../microdistricts.json'); } catch (e) { /* файл не собран — только streets */ }
+
 const MICRODISTRICTS = [
-  { re: /химгород|хим\.?\s*город/i, streets: ['Павлова', 'Лермонтова', 'Катаева', 'Сураганова', 'Баян батыра', 'Айманова'] },
+  { id: 'himgorod', suburb: 'Химгородки', re: /химгород|хим\.?\s*город/i, streets: ['Павлова', 'Лермонтова', 'Катаева', 'Сураганова', 'Баян батыра', 'Айманова'] },
+  // 🔜 остальные микрорайоны ПТС (частный сектор, улиц в OSM-реестре нет — ждём список от ПТС):
+  // Усольский, Сарыарка, Дачный, Достык, Зеленстрой, 2-й Павлодар, Восточный, пос. Лесозавод.
 ];
 
 async function getText(url) { const r = await fetch(url, { headers: UA }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }
@@ -86,14 +96,15 @@ async function fetchPtsHeat() {
     for (let i = 0; i < periods.length; i++) {
       const seg = text.slice(periods[i].idx, periods[i + 1] ? periods[i + 1].idx : periods[i].idx + 1200);
       let streets = findStreets(seg);
-      // микрорайоны (Химгородки и т.п.) → добавляем их внутренние улицы
-      MICRODISTRICTS.forEach((m) => { if (m.re.test(seg)) streets = streets.concat(m.streets); });
+      // микрорайоны (Химгородки и т.п.): курируемые улицы ПТС + мембершип домов по OSM-suburb
+      const micros = [];
+      MICRODISTRICTS.forEach((m) => { if (m.re.test(seg)) { streets = streets.concat(m.streets); micros.push(m); } });
       streets = [...new Set(streets)];
-      if (!streets.length) continue;
+      if (!streets.length && !micros.length) continue;
       // «в границах улиц» = ОБЛАСТЬ: затронуты и дома внутри контура,
       // а не только на перечисленных улицах.
       const isArea = /в\s+границах\s+улиц|в\s+районе\s+улиц|ограниченн\w+\s+улицами/i.test(seg);
-      parsed.push({ resource, type, ...periods[i], year, streets, isArea });
+      parsed.push({ resource, type, ...periods[i], year, streets, micros, isArea });
       streets.forEach((s) => streetSet.add(s));
     }
   }
@@ -138,6 +149,25 @@ async function fetchPtsHeat() {
         geom: geoms.get(name) || null,      // вся улица подсвечивается
         streetWide: true,
       });
+    }
+
+    // Мембершип домов микрорайона (уровень ДОМА, без разворота улиц) — «весь Химгородки».
+    // Дубли с уличным разворотом схлопнет groupHouses по адресу.
+    for (const m of (p.micros || [])) {
+      for (const [street, house, lat, lng] of (MEMBERSHIP[m.id] || [])) {
+        if (Math.abs(lat - 52.2871) > 0.22 || Math.abs(lng - 76.9674) > 0.35) continue;
+        records.push({
+          address: `${street}, ${house}`,
+          district: m.suburb || 'Павлодар',
+          lat, lng,
+          resource: p.resource, type: p.type, status,
+          start, end,
+          reason: 'Гидравлические испытания / ремонт теплосети — приостановка ГВС',
+          provider: 'ТОО «Павлодарские тепловые сети»',
+          geom: null,
+          streetWide: false,     // уже конкретный дом — index.js не разворачивает
+        });
+      }
     }
   }
   return { records, source: SOURCE };
