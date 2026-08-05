@@ -41,7 +41,10 @@ function streetTokens(s) {
   let words = x.split(/\s+/).filter(Boolean);
   words = words.map((w) => (ABBR[w] !== undefined ? ABBR[w] : w)).filter(Boolean);
   words = words.filter((w) => !TYPE_WORDS.includes(w));
-  words = words.map(stem).filter((w) => w.length >= 3 && !STOP.has(w));
+  // ⚠️ Короткие названия («Абая» → stem «аб») не укорачиваем ниже 3 символов,
+  // иначе ключ пустеет и улица не разворачивается в дома (был баг: Абая = 0 домов).
+  words = words.map((w) => { const st = stem(w); return st.length >= 3 ? st : w; })
+    .filter((w) => w.length >= 3 && !STOP.has(w));
   return words;
 }
 // Ключ = самое длинное значимое слово (обычно фамилия) — устойчиво к вариантам записи

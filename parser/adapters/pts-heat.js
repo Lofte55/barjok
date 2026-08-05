@@ -52,7 +52,10 @@ function findStreets(seg) {
     let name = m[1].replace(/\s+/g, ' ').trim();
     name = name.replace(/\s*(будет|в границах|с уважением|запитанных|года)\b.*$/i, '');
     name = name.replace(/[.;,\s]+$/, '').trim();
-    if (name.length >= 3 && name.length <= 40 && /^[А-ЯЁ]/.test(name) && !/границ|улиц|город|дом|этап/i.test(name)) set.add(name);
+    // Разрешаем названия, начинающиеся с цифры («29 Ноября», «2-й Павлодар»),
+    // но требуем наличие кириллической буквы (чтобы не ловить голые числа).
+    if (name.length >= 3 && name.length <= 40 && /^[А-ЯЁ0-9]/.test(name) && /[А-ЯЁ]/.test(name)
+        && !/границ|улиц|город|дом|этап/i.test(name)) set.add(name);
   }
   return [...set];
 }
