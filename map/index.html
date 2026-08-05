@@ -17,7 +17,42 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="/map/styles.css?v=1786300000" />
+  <link rel="stylesheet" href="/map/styles.css?v=1786400000" />
+
+  <!-- Schema.org: карта-приложение отключений для Павлодара + хлебные крошки -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": "https://barjok.kz/map/pavlodar#app",
+        "name": "Карта отключений воды, света и отопления в Павлодаре",
+        "url": "https://barjok.kz/map/pavlodar",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": ["ru", "kk"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KZT" },
+        "description": "Живая карта отключений по адресам Павлодара: введите улицу и дом — узнайте, отключены ли вода, свет или отопление, дату, время и причину. Источники: Павлодарэнерго, Водоканал, ПТС. Обновление каждые 3 часа.",
+        "provider": { "@id": "https://barjok.kz/#org" },
+        "areaServed": {
+          "@type": "City",
+          "name": "Павлодар",
+          "containedInPlace": { "@type": "Country", "name": "Казахстан" }
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Бар Жоқ", "item": "https://barjok.kz/" },
+          { "@type": "ListItem", "position": 2, "name": "Карта отключений · Павлодар", "item": "https://barjok.kz/map/pavlodar" }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body class="ads-off"><!-- ads-off: рекламные слоты скрыты до запуска рекламы. Убрать класс, чтобы вернуть. См. barjok.md §13 -->
   <div id="map"></div>
