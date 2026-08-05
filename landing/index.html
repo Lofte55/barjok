@@ -590,13 +590,14 @@
 
   <!-- FAQ -->
   <style>
+    #faq h2{text-align:center}
     #faq .faq-list{max-width:760px;margin:26px auto 0;display:flex;flex-direction:column;gap:12px}
     #faq .faq-item{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
-    #faq .faq-item summary{list-style:none;cursor:pointer;padding:17px 20px;font-weight:700;font-size:16px;color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:14px}
+    #faq .faq-item summary{position:relative;list-style:none;cursor:pointer;padding:17px 52px;font-weight:700;font-size:16px;color:var(--ink);text-align:center}
     #faq .faq-item summary::-webkit-details-marker{display:none}
-    #faq .faq-item summary::after{content:"+";font-weight:500;font-size:24px;line-height:1;color:var(--accent);transition:transform .2s;flex:none}
-    #faq .faq-item[open] summary::after{transform:rotate(45deg)}
-    #faq .faq-item .faq-a{padding:0 20px 18px;color:var(--ink-2);line-height:1.62;font-size:15px}
+    #faq .faq-item summary::after{content:"+";position:absolute;right:20px;top:50%;transform:translateY(-50%);font-weight:500;font-size:24px;line-height:1;color:var(--accent);transition:transform .2s}
+    #faq .faq-item[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+    #faq .faq-item .faq-a{padding:0 24px 18px;color:var(--ink-2);line-height:1.62;font-size:15px;text-align:center}
   </style>
   <section class="sec wrap" id="faq">
     <div class="rv" style="text-align:center">
