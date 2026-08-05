@@ -44,14 +44,6 @@
       <div class="source-pop" id="sourcePop"><span data-source></span></div>
     </div>
 
-    <!-- мини-поиск (дублирует основной) -->
-    <div class="mini-search search" id="searchMiniWrap">
-      <span class="ico"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg></span>
-      <input id="searchMini" type="text" autocomplete="off" placeholder="Поиск по адресу…" />
-      <button class="clear" id="clearSearchMini" aria-label="Очистить"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-      <div class="suggest" id="suggestMini"></div>
-    </div>
-
     <!-- фильтры: пиктограммы ресурсов всегда видны, тип/время — под кнопкой -->
     <div class="filterbar">
       <div class="res-row" data-resource-chips></div>
@@ -76,6 +68,14 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- мини-поиск (дублирует основной) — под фильтр-табами -->
+    <div class="mini-search search" id="searchMiniWrap">
+      <span class="ico"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg></span>
+      <input id="searchMini" type="text" autocomplete="off" placeholder="Поиск по адресу…" />
+      <button class="clear" id="clearSearchMini" aria-label="Очистить"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <div class="suggest" id="suggestMini"></div>
     </div>
 
     <div class="list"></div>

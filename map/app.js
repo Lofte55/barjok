@@ -699,7 +699,7 @@ function openAddressCard(pt, nearHouses) {
             <span class="badge ${o.type}">${o.type === 'emergency' ? t().emergency : t().planned}</span></div>
           <div class="hc-when"><span class="st ${rs.cls}"></span>${t().to} <b>${fmtDate(o.end)}</b></div>
           <div class="hc-period">${t().from}: ${fmtDate(o.start)}</div>
-          ${h.address !== pt.address ? `<div class="hc-period">${t().nearby}: ${h.address}</div>` : ''}
+          ${streetName(h.address) !== streetName(pt.address) ? `<div class="hc-period">${t().nearby}: ${h.address}</div>` : ''}
           ${o.reason ? `<div class="hc-reason">${o.reason}</div>` : ''}
         </div></div>`;
     }).join('');
