@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="styles.css?v=1786250000" />
+  <link rel="stylesheet" href="/map/styles.css?v=1786270000" />
 </head>
 <body class="ads-off"><!-- ads-off: рекламные слоты скрыты до запуска рекламы. Убрать класс, чтобы вернуть. См. barjok.md §13 -->
   <div id="map"></div>
@@ -25,6 +25,18 @@
       <input id="search" type="text" autocomplete="off" placeholder="Улица или адрес…" />
       <button class="clear" id="clearSearch" aria-label="Очистить"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       <div class="suggest" id="suggest"></div>
+    </div>
+    <div class="mapcity" id="mapCity">
+      <button class="mapcity-btn" id="mapCityBtn" aria-haspopup="true">
+        <svg viewBox="0 0 24 24" fill="currentColor" class="cpin"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+        <span id="mapCityName">Павлодар</span>
+        <svg class="cchev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="mapcity-menu" id="mapCityMenu">
+        <a class="on" href="/map/pavlodar"><span>Павлодар</span></a>
+        <button disabled><span>Экибастуз</span><span class="soon">скоро</span></button>
+        <button disabled><span>Аксу</span><span class="soon">скоро</span></button>
+      </div>
     </div>
     <div class="lang">
       <button data-lang-btn="ru">RU</button>
@@ -131,8 +143,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
-  <script src="data.js?v=1786250000"></script>
-  <script src="app.js?v=1786250000"></script>
+  <script src="/map/data.js?v=1786270000"></script>
+  <script src="/map/app.js?v=1786270000"></script>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){

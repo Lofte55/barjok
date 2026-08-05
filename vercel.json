@@ -4,7 +4,9 @@
   "rewrites": [
     { "source": "/", "destination": "/landing/index.html" },
     { "source": "/ads", "destination": "/landing/ads.html" },
-    { "source": "/ads/", "destination": "/landing/ads.html" }
+    { "source": "/ads/", "destination": "/landing/ads.html" },
+    { "source": "/map/pavlodar", "destination": "/map/index.html" },
+    { "source": "/map/pavlodar/", "destination": "/map/index.html" }
   ],
   "headers": [
     {

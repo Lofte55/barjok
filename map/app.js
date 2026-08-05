@@ -170,7 +170,7 @@ const markerLayer = L.layerGroup().addTo(map);
 async function load() {
   let d;
   try {
-    const res = await fetch('data.json', { cache: 'no-store' });
+    const res = await fetch('/map/data.json', { cache: 'no-store' });
     if (!res.ok) throw 0;
     d = await res.json();
     if (!d.houses || !d.houses.length) throw 0;
@@ -477,7 +477,7 @@ let ADDR = null, addrLoading = null;
 function loadAddresses() {
   if (ADDR) return Promise.resolve(ADDR);
   if (!addrLoading) {
-    addrLoading = fetch('addresses.json').then((r) => r.ok ? r.json() : {})
+    addrLoading = fetch('/map/addresses.json').then((r) => r.ok ? r.json() : {})
       .then((j) => { ADDR = j; return j; }).catch(() => (ADDR = {}));
   }
   return addrLoading;
@@ -827,6 +827,19 @@ document.querySelectorAll('[data-lang-btn]').forEach((b) => b.onclick = () => {
   setTiles(LANG);            // подложка (при наличии TILE_KEY переключит язык подписей)
   applyLang();
 });
+
+/* ---------- Выбор города ----------
+   Пока один город (Павлодар). URL /map/ и /map/pavlodar ведут на одну карту.
+   Когда появятся другие города, /map/<city> будет грузить данные конкретного города. */
+const mapCity = document.getElementById('mapCity');
+const mapCityBtn = document.getElementById('mapCityBtn');
+if (mapCityBtn) {
+  mapCityBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    mapCity.dataset.open = mapCity.dataset.open === '1' ? '0' : '1';
+  });
+  document.addEventListener('click', () => { mapCity.dataset.open = '0'; });
+}
 
 /* ---------- Mobile sheet ---------- */
 const sheet = document.getElementById('sheet');
