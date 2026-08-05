@@ -44,9 +44,10 @@ body {
   display: flex; justify-content: center; align-items: flex-start; gap: 12px; pointer-events: none;
 }
 .topbar > * { pointer-events: auto; }
-.topbar .lang { position: absolute; right: 0; top: 0; }
-.mapcity { position: absolute; right: 90px; top: 0; }
-.mapcity-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 13px;
+.topbar .tb-right { position: absolute; right: 0; top: 0; display: flex; gap: 10px; align-items: flex-start; }
+.topbar .lang { position: static; }
+.mapcity { position: relative; }
+.mapcity-btn { display: inline-flex; align-items: center; gap: 6px; height: 46px; padding: 0 14px;
   background: #fff; border: 1px solid var(--line); border-radius: 999px; font-family: var(--sans);
   font-weight: 700; font-size: 13.5px; color: var(--ink); cursor: pointer; box-shadow: var(--shadow-sm); }
 .mapcity-btn:hover { border-color: var(--ink-3); }
@@ -66,7 +67,7 @@ body {
 .mapcity-menu .soon { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
   color: var(--ink-3); background: var(--line-2); border-radius: 999px; padding: 2px 7px; }
 @media (max-width: 900px) {
-  .mapcity { position: static; order: 2; }
+  .topbar .tb-right { position: static; margin-left: auto; gap: 8px; }
   .mapcity-btn { height: 42px; }
   .mapcity-menu { left: 0; right: auto; }
 }
