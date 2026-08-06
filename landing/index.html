@@ -322,14 +322,19 @@
     .mobile-menu a{font-size:16px;font-weight:700;color:var(--ink);padding:13px 4px;text-align:center}
     .mobile-menu a.btn{margin-top:8px;padding:15px 20px;color:#fff}
 
-    /* Отступы между блоками — единый ритм. ВАЖНО: только top/bottom,
+    /* Плашка «Реальные данные Павлодара» — в одну строку (не переносить) */
+    .pill-ann{font-size:12px;gap:7px;padding:6px 7px 6px 12px}
+    .pill-ann>span{white-space:nowrap}
+    .pill-ann .go{font-size:10.5px;padding:3px 8px}
+
+    /* Отступы между смысловыми блоками — больше воздуха. ВАЖНО: только top/bottom,
        иначе shorthand обнулит горизонтальный padding из .wrap (бока прилипнут). */
-    .hero{padding-top:26px;padding-bottom:30px}
-    .sources{padding-top:34px;padding-bottom:34px}
-    .screen-sec{padding-top:34px;padding-bottom:0}
-    .stats{padding-top:46px;padding-bottom:46px}
-    .sec{padding-top:52px;padding-bottom:0}
-    .contact{margin-top:52px}
+    .hero{padding-top:28px;padding-bottom:36px}
+    .sources{padding-top:44px;padding-bottom:44px}
+    .screen-sec{padding-top:44px;padding-bottom:0}
+    .stats{padding-top:60px;padding-bottom:56px}
+    .sec{padding-top:68px;padding-bottom:0}
+    .contact{margin-top:68px}
 
     /* Центрируем текстовый контент (мокапы/карточки не трогаем) */
     .sec .eyebrow,.sec h2,.sec p.intro,.step .txt,.feat{text-align:center}
@@ -340,6 +345,8 @@
     .logo .wm{font-size:16px}
     .city-btn{padding:8px 11px;font-size:13px}
     .burger{width:42px;height:42px}
+    .pill-ann{font-size:11px;gap:6px;padding:6px 6px 6px 11px}
+    .pill-ann .go{font-size:10px;padding:3px 7px}
   }
 </style>
 
@@ -787,10 +794,28 @@
   } else rvs.forEach(function(el){el.classList.add('in');});
   setTimeout(function(){rvs.forEach(function(el){el.classList.add('in');});},1400);
 
-  // ---------- count-up ----------
-  function countUp(el){var to=+el.dataset.to,s=performance.now(),d=1500;(function step(t){var p=Math.min((t-s)/d,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e).toLocaleString('ru-RU');if(p<1)requestAnimationFrame(step);})(s);}
+  // ---------- count-up + ДИНАМИЧЕСКАЯ статистика (сверка с картой /map/data.json) ----------
+  function countUp(el){var to=+el.dataset.to||0,s=performance.now(),d=1500;(function step(t){var p=Math.min((t-s)/d,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e).toLocaleString('ru-RU');if(p<1)requestAnimationFrame(step);})(s);}
   var statsDone=false,statEls=document.querySelectorAll('.stat .n');
-  if('IntersectionObserver' in window){var io2=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting&&!statsDone){statsDone=true;statEls.forEach(countUp);}});},{threshold:.3});var sr=document.querySelector('.stat-row');if(sr)io2.observe(sr);}else statEls.forEach(countUp);
+  if('IntersectionObserver' in window){var io2=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting&&!statsDone){statsDone=true;statEls.forEach(countUp);}});},{threshold:.3});var sr=document.querySelector('.stat-row');if(sr)io2.observe(sr);}else{statsDone=true;statEls.forEach(countUp);}
+
+  // Реальные цифры из того же data.json, что рисует карту. Пока грузится — стоят
+  // числа-заглушки (data-to в разметке); после загрузки заменяем на актуальные.
+  fetch('/map/data.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var H=d.houses||[];
+    var by=function(res){return H.filter(function(h){return (h.outages||[]).some(function(o){return o.resource===res;});}).length;};
+    var planned=0;H.forEach(function(h){(h.outages||[]).forEach(function(o){if(o.type==='planned')planned++;});});
+    var addr=(d.counts&&d.counts.houses)||H.length;
+    var vals={a:addr,b:by('electricity'),c:by('hot_water'),d:planned};
+    ['a','b','c','d'].forEach(function(k){var el=document.querySelector('.stat.'+k+' .n');
+      if(el){el.dataset.to=vals[k];if(statsDone)countUp(el);}});
+    // синхронизируем «N адресов затронуто» в превью карты (тот же показатель)
+    document.querySelectorAll('.map-hint span[data-kk]').forEach(function(e){
+      var t=addr.toLocaleString('ru-RU');
+      e.textContent=e.textContent.replace(/\d[\d   ]*\d|\d/,t);
+      if(e.dataset.kk)e.dataset.kk=e.dataset.kk.replace(/\d[\d   ]*\d|\d/,t);
+    });
+  }).catch(function(){/* оффлайн/ошибка — остаются числа-заглушки */});
 
   // ---------- nav border ----------
   var nav=document.getElementById('nav');
