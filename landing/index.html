@@ -590,17 +590,32 @@
 
   <!-- FAQ -->
   <style>
-    #faq h2{text-align:center}
-    #faq .faq-list{max-width:760px;margin:26px auto 0;display:flex;flex-direction:column;gap:12px}
-    #faq .faq-item{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
-    #faq .faq-item summary{position:relative;list-style:none;cursor:pointer;padding:17px 52px;font-weight:700;font-size:16px;color:var(--ink);text-align:center}
+    /* FAQ — единая левофлаговая колонка: eyebrow/заголовок/вопросы/ответы по левому краю */
+    #faq .faq-col{max-width:760px;margin:0 auto;text-align:left}
+    #faq .eyebrow{text-align:left}
+    #faq h2{text-align:left}
+    #faq .faq-list{margin:28px 0 0;display:flex;flex-direction:column;gap:12px}
+    #faq .faq-item{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);
+      overflow:hidden;transition:border-color .2s,box-shadow .2s}
+    #faq .faq-item:hover{border-color:var(--ink-3)}
+    #faq .faq-item[open]{border-color:var(--accent);box-shadow:0 8px 24px rgba(31,111,235,.09)}
+    #faq .faq-item summary{position:relative;list-style:none;cursor:pointer;padding:18px 56px 18px 22px;
+      font-weight:700;font-size:16px;line-height:1.4;color:var(--ink);text-align:left;user-select:none}
     #faq .faq-item summary::-webkit-details-marker{display:none}
-    #faq .faq-item summary::after{content:"+";position:absolute;right:20px;top:50%;transform:translateY(-50%);font-weight:500;font-size:24px;line-height:1;color:var(--accent);transition:transform .2s}
-    #faq .faq-item[open] summary::after{transform:translateY(-50%) rotate(45deg)}
-    #faq .faq-item .faq-a{padding:0 24px 18px;color:var(--ink-2);line-height:1.62;font-size:15px;text-align:center}
+    /* «+» выключен вправо, привязан к верху — не съезжает, когда вопрос в две строки */
+    #faq .faq-item summary::after{content:"+";position:absolute;right:20px;top:15px;
+      font-weight:400;font-size:26px;line-height:1;color:var(--accent);transition:transform .25s}
+    #faq .faq-item[open] summary::after{transform:rotate(45deg)}
+    #faq .faq-item .faq-a{padding:2px 22px 20px;color:var(--ink-2);line-height:1.62;font-size:15px;text-align:left}
+    @media(max-width:560px){
+      #faq .faq-item summary{padding:16px 48px 16px 18px;font-size:15px}
+      #faq .faq-item .faq-a{padding:2px 18px 18px}
+      #faq .faq-item summary::after{right:16px}
+    }
   </style>
   <section class="sec wrap" id="faq">
-    <div class="rv" style="text-align:center">
+    <div class="faq-col">
+    <div class="rv">
       <div class="eyebrow" data-kk="Жиі қойылатын сұрақтар">Частые вопросы</div>
       <h2 data-kk="Павлодардағы су мен жарық ажыратулары — ең бастысы қысқаша">Отключения воды и света в Павлодаре — коротко о главном</h2>
     </div>
@@ -625,6 +640,7 @@
         <summary data-kk="Бар Жоқ қай қалаларда жұмыс істейді?">В каких городах работает Бар Жоқ?</summary>
         <div class="faq-a" data-kk="Қазір сервис Павлодарда жұмыс істейді. Қазақстанның басқа қалаларына — Екібастұз, Ақсу және әрі қарай кеңейудеміз. Картаны тегін пайдалануға болады.">Сейчас сервис работает в Павлодаре. Мы расширяемся на другие города Казахстана — Экибастуз, Аксу и далее. Пользоваться картой бесплатно.</div>
       </details>
+    </div>
     </div>
   </section>
 
