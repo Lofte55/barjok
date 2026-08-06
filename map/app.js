@@ -205,7 +205,10 @@ async function load() {
     const doFit = () => {
       if (userMoved) return;
       map.invalidateSize(false);
-      map.fitBounds(b, { animate: false, maxZoom: 13 });
+      map.fitBounds(b, { animate: false, maxZoom: 14 });
+      // «чуть приблизить» стартовый вид (десктоп+мобилка): на шаг плотнее fit,
+      // но не глубже 14 — центр города крупнее, дальние точки видны при отдалении.
+      map.setZoom(Math.min(map.getZoom() + 1, 14));
       window.dispatchEvent(new Event('resize')); // догрузка тайлов на первой отрисовке
     };
     doFit();

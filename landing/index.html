@@ -758,22 +758,47 @@
 
   // ---------- landing search suggestions ----------
   var capInput=document.getElementById('capInput'), lsug=document.getElementById('lsug'), ADDR=null;
+  // ADDR — полный справочник: улица → [[номер,lat,lng], …] (как на карте /map/).
   function loadAddr(){ if(ADDR) return Promise.resolve(ADDR);
     return fetch('/map/addresses.json').then(function(r){return r.json();}).then(function(d){
-      ADDR=Object.keys(d).map(function(s){return {name:s,n:d[s].length};}); return ADDR; }).catch(function(){return ADDR=[];}); }
-  function norm(s){ return s.toLowerCase().replace(/^(улица|ул\.?|проспект|пр\.?|переулок|пер\.?|мкр\.?|площадь|пл\.?)\s*/,'').replace(/ё/g,'е').trim(); }
+      ADDR=d; return d; }).catch(function(){return ADDR={};}); }
+  function norm(s){ return (s||'').toLowerCase().replace(/^(улица|ул\.?|проспект|пр\.?|переулок|пер\.?|мкр\.?|площадь|пл\.?)\s*/,'').replace(/ё/g,'е').replace(/[.,]/g,' ').replace(/\s+/g,' ').trim(); }
+  // «Сатпаева 1» → {street:'сатпаева', house:'1'}
+  function parseQ(raw){
+    var s=(raw||'').trim().replace(/^(ул|улица|пр|проспект|пер|переулок|мкр|пл)\.?\s+/i,'');
+    var m=s.match(/^(.*?)[\s,]+(\d+[а-я]?(?:\/\d+)?)\s*$/i);
+    return { street: norm(m?m[1]:s), house: m?m[2].toLowerCase():'' };
+  }
   function renderSug(raw){
     var q=(raw||'').trim(); if(q.length<2){ lsug.classList.remove('show'); return; }
-    var house=(q.match(/(\d+[а-я]?(?:\/\d+)?)\s*$/i)||[])[1]||'';
-    var nq=norm(q.replace(/[\s,]+\d+[а-я]?(?:\/\d+)?\s*$/i,''));
-    loadAddr().then(function(list){
-      var hits=list.filter(function(s){return norm(s.name).indexOf(nq)>=0;}).sort(function(a,b){return b.n-a.n;}).slice(0,6);
-      if(!hits.length){ lsug.classList.remove('show'); return; }
-      lsug.innerHTML=hits.map(function(s){
-        var qq=s.name+(house?(', '+house):'');
-        return '<a href="/map/?q='+encodeURIComponent(qq)+'"><span class="p"></span><span class="nm">'+s.name+(house?(', '+house):'')+'</span><span class="hs">'+s.n+' адр.</span></a>';
-      }).join('');
-      lsug.classList.add('show');
+    var pq=parseQ(q);
+    loadAddr().then(function(d){
+      var streets=Object.keys(d).filter(function(s){return norm(s).indexOf(pq.street)>=0;})
+        .sort(function(a,b){return d[b].length-d[a].length;});
+      var html='';
+      if(pq.house){
+        // Дома на совпадающих улицах: точное совпадение → «начинается с» (1 → 1, 10, 11, 1/5…)
+        var rows=[];
+        for(var i=0;i<streets.length && rows.length<7;i++){
+          var st=streets[i], hs=d[st];
+          var exact=[], part=[];
+          for(var j=0;j<hs.length;j++){ var hn=String(hs[j][0]).toLowerCase();
+            if(hn===pq.house) exact.push(hs[j][0]); else if(hn.indexOf(pq.house)===0) part.push(hs[j][0]); }
+          part.sort(function(a,b){ var na=parseInt(a,10),nb=parseInt(b,10);
+            return (na-nb)|| (String(a)<String(b)?-1:1); });
+          exact.concat(part).slice(0,7-rows.length).forEach(function(h){ rows.push({street:st,house:h}); });
+        }
+        html=rows.map(function(r){ var qq=r.street+', '+r.house;
+          return '<a href="/map/?q='+encodeURIComponent(qq)+'"><span class="p"></span><span class="nm">'+r.street+', '+r.house+'</span></a>'; }).join('');
+      }
+      if(!html){
+        // Номер не введён (или не нашли дом) → улицы с числом адресов
+        var hits=streets.slice(0,6);
+        if(!hits.length){ lsug.classList.remove('show'); return; }
+        html=hits.map(function(s){ var qq=s+(pq.house?(', '+pq.house):'');
+          return '<a href="/map/?q='+encodeURIComponent(qq)+'"><span class="p"></span><span class="nm">'+s+'</span><span class="hs">'+d[s].length+' адр.</span></a>'; }).join('');
+      }
+      lsug.innerHTML=html; lsug.classList.add('show');
     });
   }
   if(capInput){
