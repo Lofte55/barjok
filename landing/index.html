@@ -64,6 +64,14 @@
   .nav-links{display:flex;gap:24px;font-size:14px;font-weight:600;color:var(--ink-2);margin-left:10px}
   .nav-links a:hover{color:var(--ink)}
   .nav-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+  /* бургер + мобильное меню — по умолчанию скрыты (десктоп) */
+  .burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;
+    background:var(--canvas);border:1px solid var(--line);border-radius:12px;cursor:pointer;padding:0}
+  .burger span{display:block;width:20px;height:2px;margin:0 auto;background:var(--ink);border-radius:2px;transition:transform .22s,opacity .22s}
+  .burger[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+  .burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  .mobile-menu{display:none}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:700;font-size:14px;border-radius:999px;padding:11px 20px;
     border:1px solid transparent;cursor:pointer;font-family:inherit;transition:transform .12s, background .2s, box-shadow .2s;white-space:nowrap}
   .btn:active{transform:translateY(1px)}
@@ -290,21 +298,48 @@
 
   /* ---------- MOBILE ---------- */
   @media(max-width:760px){
-    .wrap{padding:0 18px}
-    .nav-links{display:none}
-    .nav-in{height:60px;gap:8px}
-    .logo .wm{font-size:17px}
-    .city-btn{padding:8px 11px;font-size:13px}
-    .city-btn .cityname{max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .nav-right{gap:7px}
-    .lang button{padding:8px 11px}
-    .nav-right .btn.primary{padding:9px 14px;font-size:13px}
-    .hero{padding:48px 0 26px}
-    .contact,.stats{ }
+    .wrap{padding:0 20px}
+
+    /* Шапка 2×2: строка 1 — город слева / язык справа; строка 2 — логотип / бургер */
+    .nav-in{display:grid;grid-template-columns:1fr auto;align-items:center;row-gap:11px;column-gap:8px;
+      height:auto;padding-top:11px;padding-bottom:11px}
+    .nav-right{display:contents}          /* .lang выходит прямо в грид, .nav-cta прячем */
+    .city{grid-column:1;grid-row:1;justify-self:start}
+    .lang{grid-column:2;grid-row:1;justify-self:end}
+    .logo{grid-column:1;grid-row:2;justify-self:start}
+    .burger{grid-column:2;grid-row:2;justify-self:end;display:flex}
+    .nav-links,.nav-cta{display:none}
+    .logo .wm{font-size:18px}
+    .city-btn{padding:9px 13px;font-size:14px}
+    .city-btn .cityname{max-width:none}
+    .lang button{padding:8px 12px}
+
+    /* мобильное меню — выпадает под шапкой (ссылки + Открыть карту) */
+    .mobile-menu{display:flex;flex-direction:column;gap:2px;position:absolute;top:100%;left:0;right:0;
+      background:var(--canvas);border-top:1px solid var(--line);box-shadow:var(--shadow-lg);
+      padding:0 20px;max-height:0;overflow:hidden;transition:max-height .28s ease,padding .28s ease}
+    header.nav.menu-open .mobile-menu{max-height:360px;padding-top:12px;padding-bottom:18px}
+    .mobile-menu a{font-size:16px;font-weight:700;color:var(--ink);padding:13px 4px;text-align:center}
+    .mobile-menu a.btn{margin-top:8px;padding:15px 20px;color:#fff}
+
+    /* Отступы между блоками — единый ритм. ВАЖНО: только top/bottom,
+       иначе shorthand обнулит горизонтальный padding из .wrap (бока прилипнут). */
+    .hero{padding-top:26px;padding-bottom:30px}
+    .sources{padding-top:34px;padding-bottom:34px}
+    .screen-sec{padding-top:34px;padding-bottom:0}
+    .stats{padding-top:46px;padding-bottom:46px}
+    .sec{padding-top:52px;padding-bottom:0}
+    .contact{margin-top:52px}
+
+    /* Центрируем текстовый контент (мокапы/карточки не трогаем) */
+    .sec .eyebrow,.sec h2,.sec p.intro,.step .txt,.feat{text-align:center}
+    .sec h2,.sec p.intro,.step .txt p{margin-left:auto;margin-right:auto}
+    .feat .fi{margin-left:auto;margin-right:auto}
   }
   @media(max-width:400px){
-    .nav-right .btn.primary .full{display:none}
-    .city-btn .cityname{max-width:60px}
+    .logo .wm{font-size:16px}
+    .city-btn{padding:8px 11px;font-size:13px}
+    .burger{width:42px;height:42px}
   }
 </style>
 
@@ -424,8 +459,21 @@
 
     <div class="nav-right">
       <span class="lang" id="lang"><button data-lang="ru" class="on">RU</button><button data-lang="kk">KZ</button></span>
-      <a class="btn primary" href="/map/"><span class="full" data-kk="Картаны ашу">Открыть карту</span></a>
+      <a class="btn primary nav-cta" href="/map/"><span class="full" data-kk="Картаны ашу">Открыть карту</span></a>
     </div>
+
+    <!-- бургер (только мобилка) -->
+    <button class="burger" id="burger" aria-label="Меню" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <!-- мобильное меню: ссылки + кнопка карты -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#how" data-kk="Қалай жұмыс істейді">Как работает</a>
+    <a href="#what" data-kk="Не көрсетеміз">Что показываем</a>
+    <a href="/ads" data-kk="Жарнама">Реклама</a>
+    <a class="btn primary" href="/map/"><span data-kk="Картаны ашу">Открыть карту</span></a>
   </div>
 </header>
 
@@ -607,9 +655,12 @@
       font-weight:400;font-size:26px;line-height:1;color:var(--accent);transition:transform .25s}
     #faq .faq-item[open] summary::after{transform:rotate(45deg)}
     #faq .faq-item .faq-a{padding:2px 22px 20px;color:var(--ink-2);line-height:1.62;font-size:15px;text-align:left}
-    @media(max-width:560px){
-      #faq .faq-item summary{padding:16px 48px 16px 18px;font-size:15px}
-      #faq .faq-item .faq-a{padding:2px 18px 18px}
+    /* Мобилка: центрируем весь FAQ. Симметричный padding — чтобы текст был честно по центру,
+       «+» сидит в правом gutter'е. (Перебивает базовые left-правила выше — тот же блок, ниже по коду.) */
+    @media(max-width:760px){
+      #faq .faq-col,#faq .eyebrow,#faq h2,#faq .faq-item .faq-a{text-align:center}
+      #faq .faq-item summary{padding:16px 44px;font-size:15px;text-align:center}
+      #faq .faq-item .faq-a{padding:2px 20px 18px}
       #faq .faq-item summary::after{right:16px}
     }
   </style>
@@ -749,6 +800,14 @@
   var city=document.getElementById('city'),cityBtn=document.getElementById('cityBtn');
   cityBtn.addEventListener('click',function(e){e.stopPropagation();city.dataset.open=city.dataset.open==='1'?'0':'1';});
   document.addEventListener('click',function(){city.dataset.open='0';});
+
+  // ---------- бургер-меню (мобилка) ----------
+  var burger=document.getElementById('burger'),mm=document.getElementById('mobileMenu');
+  function closeMenu(){nav.classList.remove('menu-open');burger.setAttribute('aria-expanded','false');}
+  burger.addEventListener('click',function(e){e.stopPropagation();
+    var open=nav.classList.toggle('menu-open');burger.setAttribute('aria-expanded',open?'true':'false');});
+  mm.querySelectorAll('a').forEach(function(a){a.addEventListener('click',closeMenu);});
+  document.addEventListener('click',function(e){if(!e.target.closest('#burger')&&!e.target.closest('#mobileMenu'))closeMenu();});
 
   // ---------- i18n RU/KZ ----------
   var LANG=localStorage.getItem('barjoq_lang')||'ru';
