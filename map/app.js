@@ -854,22 +854,74 @@ function collapseSheet() { sheet.classList.add('collapsed'); sheet.classList.rem
 function fullCollapse() { collapseSheet(); }
 if (sheet) {
   const grip = sheet.querySelector('.grip');
-  let startY = 0, startH = 0, dragging = false;
-  const down = (y) => { dragging = true; startY = y; startH = sheet.getBoundingClientRect().height; sheet.style.transition = 'none'; };
-  const move = (y) => { if (!dragging) return; let h = startH + (startY - y); h = Math.max(innerHeight * 0.11, Math.min(innerHeight * 0.88, h)); sheet.style.height = h + 'px'; };
-  const up = () => { if (!dragging) return; dragging = false; sheet.style.transition = ''; const r = sheet.getBoundingClientRect().height / innerHeight; sheet.style.height = ''; if (r > 0.62) expandSheet(); else if (r < 0.22) collapseSheet(); else halfSheet(); };
-  grip.addEventListener('touchstart', (e) => down(e.touches[0].clientY), { passive: true });
-  grip.addEventListener('touchmove', (e) => move(e.touches[0].clientY), { passive: true });
-  grip.addEventListener('touchend', up);
-  grip.addEventListener('mousedown', (e) => down(e.clientY));
+  const shead = sheet.querySelector('.shead');
+  const handles = [grip, shead];
+  const vh = () => innerHeight;
+  // снап-высоты (px): свёрнута / половина / развёрнута — совпадают с CSS
+  const snaps = () => [vh() * 0.13, vh() * 0.46, vh() * 0.88];
+  const MIN = () => vh() * 0.11, MAX = () => vh() * 0.9;
+
+  let startY = 0, startH = 0, dragging = false, moved = 0, lastY = 0, lastT = 0, vel = 0;
+
+  const applyState = (cls) => { sheet.classList.remove('collapsed', 'half', 'expanded'); sheet.classList.add(cls); };
+  const cycle = () => {
+    if (sheet.classList.contains('collapsed')) applyState('half');
+    else if (sheet.classList.contains('half')) applyState('expanded');
+    else applyState('collapsed');
+  };
+
+  const down = (y) => {
+    dragging = true; moved = 0; startY = y; lastY = y; lastT = Date.now(); vel = 0;
+    startH = sheet.getBoundingClientRect().height;
+    sheet.classList.add('dragging');
+  };
+  const move = (y) => {
+    if (!dragging) return;
+    const dy = startY - y;                       // вверх → выше
+    moved = Math.max(moved, Math.abs(dy));
+    let h = startH + dy;
+    // «резинка» за пределами — сопротивление 0.4
+    if (h > MAX()) h = MAX() + (h - MAX()) * 0.4;
+    else if (h < MIN()) h = MIN() - (MIN() - h) * 0.4;
+    sheet.style.height = h + 'px';
+    const now = Date.now();
+    vel = (lastY - y) / Math.max(1, now - lastT); // px/мс, >0 = раскрываем
+    lastY = y; lastT = now;
+  };
+  const up = () => {
+    if (!dragging) return;
+    dragging = false; sheet.classList.remove('dragging');
+    const h = sheet.getBoundingClientRect().height;
+    sheet.style.height = '';                      // снап делает CSS-класс
+    if (moved < 6) { cycle(); return; }           // это тап, а не перетаскивание
+    const [c, hf, f] = snaps();
+    let state;
+    if (vel > 0.5) state = h > (c + hf) / 2 ? 'expanded' : 'half';        // флик вверх
+    else if (vel < -0.5) state = h < (hf + f) / 2 ? 'collapsed' : 'half'; // флик вниз
+    else {                                        // медленно — ближайшая точка
+      const d = [[Math.abs(h - c), 'collapsed'], [Math.abs(h - hf), 'half'], [Math.abs(h - f), 'expanded']];
+      d.sort((a, b) => a[0] - b[0]); state = d[0][1];
+    }
+    applyState(state);
+  };
+
+  handles.forEach((el) => {
+    el.addEventListener('touchstart', (e) => {
+      if (e.target.closest('[data-filters-btn]')) return; // кнопка «Фильтры» — не драг
+      down(e.touches[0].clientY);
+    }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      e.preventDefault();                          // гасим прокрутку страницы/карты под шторкой
+      move(e.touches[0].clientY);
+    }, { passive: false });
+    el.addEventListener('touchend', up);
+    el.addEventListener('touchcancel', up);
+    el.addEventListener('mousedown', (e) => { if (e.target.closest('[data-filters-btn]')) return; down(e.clientY); });
+  });
   addEventListener('mousemove', (e) => move(e.clientY));
   addEventListener('mouseup', up);
-  // тап по «ручке»: свёрнута → половина → развёрнута → свёрнута
-  grip.addEventListener('click', () => {
-    if (sheet.classList.contains('expanded')) collapseSheet();
-    else if (sheet.classList.contains('half')) expandSheet();
-    else halfSheet();
-  });
+
   const fb = sheet.querySelector('[data-filters-btn]');
   if (fb) fb.onclick = () => { sheet.classList.toggle('filters-open'); halfSheet(); };
   // старт: свёрнута, карта на первом плане

@@ -255,14 +255,23 @@ body {
     display: flex; flex-direction: column;
     position: absolute; z-index: 18; left: 0; right: 0; bottom: 0;
     background: var(--panel); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(20,30,50,.16);
-    height: 108px; transition: height .25s ease; touch-action: none;
+    height: 108px; overflow: hidden;
+    /* плавный «резиновый» снап; во время перетаскивания transition снимается классом .dragging */
+    transition: height .38s cubic-bezier(.22, 1, .36, 1);
   }
+  .sheet.dragging { transition: none; }
   .sheet.half { height: 46vh; }
   .sheet.expanded { height: 88vh; }
   .sheet.collapsed { height: 108px; }
-  .sheet .grip { padding: 9px 0 5px; display: grid; place-items: center; cursor: grab; }
-  .sheet .grip .bar { width: 40px; height: 5px; border-radius: 999px; background: #d7dde5; }
-  .sheet .shead { padding: 2px 16px 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line-2); }
+  /* шапка (ручка + заголовок) — зона перетаскивания: тач-скролл гасим здесь,
+     а списку ниже разрешаем pan-y, иначе он не прокручивался (был touch-action:none на всей шторке). */
+  .sheet .grip, .sheet .shead { touch-action: none; }
+  .sheet .list { touch-action: pan-y; }
+  .sheet .grip { padding: 10px 0 6px; display: grid; place-items: center; cursor: grab; }
+  .sheet.dragging .grip { cursor: grabbing; }
+  .sheet .grip .bar { width: 42px; height: 5px; border-radius: 999px; background: #cfd6e0; transition: background .2s; }
+  .sheet .grip:active .bar { background: #aeb7c4; }
+  .sheet .shead { padding: 2px 16px 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line-2); cursor: grab; }
   .sheet .shead h1 { margin: 0; font-size: 15px; }
   .sheet .shead .count { color: var(--brand-ink); font-weight: 700; }
   .sheet .shead .fbtn {
