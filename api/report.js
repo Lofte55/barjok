@@ -15,8 +15,22 @@ const CATS = {
 };
 const esc = (s) => String(s).replace(/[<&>]/g, (c) => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;' }[c]));
 
+// Разрешённые источники запроса — только наш сайт (защита от чужих форм/спама).
+const ALLOWED = ['https://barjok.kz', 'https://www.barjok.kz', 'https://barjok.vercel.app'];
+function originOk(req) {
+  const o = req.headers.origin || '';
+  if (o) {
+    if (ALLOWED.includes(o)) return true;
+    try { return /\.vercel\.app$/.test(new URL(o).hostname); } catch (e) { return false; }
+  }
+  const ref = req.headers.referer || '';
+  return ALLOWED.some((a) => ref.startsWith(a)) || /^https:\/\/[^/]+\.vercel\.app\//.test(ref);
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method' });
+  // отсекаем запросы не с нашего сайта (curl/боты без Origin тоже отсекаются)
+  if (!originOk(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chat = process.env.TELEGRAM_CHAT_ID;
@@ -26,6 +40,8 @@ module.exports = async (req, res) => {
   if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }
   b = b || {};
   if (b.website) return res.status(200).json({ ok: true }); // honeypot: боты заполняют — тихо игнорим
+  // жёсткий лимит размера полей — защита от гигантских payload'ов
+  if (JSON.stringify(b).length > 8000) return res.status(413).json({ ok: false, error: 'too_large' });
 
   const isSuggest = b.kind === 'suggestion';
   const kind = isSuggest ? 'Предложение' : 'Жалоба';

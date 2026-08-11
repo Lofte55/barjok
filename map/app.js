@@ -2,6 +2,13 @@
 (function () {
 const { RESOURCES, FALLBACK } = window.BARJOQ;
 
+/* Экранирование пользовательского текста (сообщения жителей, адреса) перед вставкой в innerHTML.
+   Защита от XSS: даже одобренная модератором строка не должна исполнять HTML. */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 /* ---------- i18n ---------- */
 const I18N = {
   ru: {
@@ -387,14 +394,14 @@ function houseCardHtml(h) {
           <span class="badge ${o.citizen ? 'citizen' : o.type}">${o.citizen ? 'Сообщение жителя' : (o.type === 'emergency' ? t().emergency : t().planned)}</span></div>
         <div class="hc-when"><span class="st ${rs.cls}"></span>${t().to} <b>${fmtDate(o.end)}</b></div>
         <div class="hc-period">${t().from}: ${fmtDate(o.start)}</div>
-        ${o.reason ? `<div class="hc-reason">${o.reason}</div>` : ''}
+        ${o.reason ? `<div class="hc-reason">${esc(o.reason)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
   return `<div class="house-card">
     <div class="hc-head">
-      <div class="hc-addr">${h.address}</div>
-      ${h.district ? `<div class="hc-district">${h.district}</div>` : ''}
+      <div class="hc-addr">${esc(h.address)}</div>
+      ${h.district ? `<div class="hc-district">${esc(h.district)}</div>` : ''}
     </div>
     <div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>
     <div class="hc-list">${rows}</div>
@@ -436,8 +443,8 @@ function listCardHtml(h) {
       <div class="lc-chips">${chips}${outs.length > 4 ? `<span class="rc more">+${outs.length - 4}</span>` : ''}</div>
       ${emerg ? `<span class="badge emergency">${t().emergency}</span>` : ''}
     </div>
-    <div class="lc-addr">${h.address}</div>
-    <div class="lc-meta">${h.district ? h.district + ' · ' : ''}${t().to} ${fmtDate(soonest)}</div>
+    <div class="lc-addr">${esc(h.address)}</div>
+    <div class="lc-meta">${h.district ? esc(h.district) + ' · ' : ''}${t().to} ${fmtDate(soonest)}</div>
   </div>`;
 }
 
@@ -708,8 +715,8 @@ function openAddressCard(pt, nearHouses) {
             <span class="badge ${o.citizen ? 'citizen' : o.type}">${o.citizen ? 'Сообщение жителя' : (o.type === 'emergency' ? t().emergency : t().planned)}</span></div>
           <div class="hc-when"><span class="st ${rs.cls}"></span>${t().to} <b>${fmtDate(o.end)}</b></div>
           <div class="hc-period">${t().from}: ${fmtDate(o.start)}</div>
-          ${streetName(h.address) !== streetName(pt.address) ? `<div class="hc-period">${t().nearby}: ${h.address}</div>` : ''}
-          ${o.reason ? `<div class="hc-reason">${o.reason}</div>` : ''}
+          ${streetName(h.address) !== streetName(pt.address) ? `<div class="hc-period">${t().nearby}: ${esc(h.address)}</div>` : ''}
+          ${o.reason ? `<div class="hc-reason">${esc(o.reason)}</div>` : ''}
         </div></div>`;
     }).join('');
   } else {
@@ -719,8 +726,8 @@ function openAddressCard(pt, nearHouses) {
   }
   const html = `<div class="house-card">
     <div class="hc-head">
-      <div class="hc-addr">${pt.address}</div>
-      ${pt.district ? `<div class="hc-district">${pt.district}</div>` : ''}
+      <div class="hc-addr">${esc(pt.address)}</div>
+      ${pt.district ? `<div class="hc-district">${esc(pt.district)}</div>` : ''}
     </div>
     ${outs.length ? `<div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>` : ''}
     <div class="hc-list">${inner}</div>

@@ -53,7 +53,9 @@ jobs:
         # CITIZEN_CSV_URL (опц.) — опубликованный CSV Google-таблицы одобренных сообщений жителей.
         # Задать: GitHub → Settings → Secrets and variables → Actions → Variables → CITIZEN_CSV_URL.
         env:
-          CITIZEN_CSV_URL: ${{ vars.CITIZEN_CSV_URL }}
+          # приватный JSON-фид одобренных сообщений (Apps Script /exec, doGet). Задать:
+          # GitHub → Settings → Secrets and variables → Actions → Variables → CITIZEN_FEED_URL.
+          CITIZEN_FEED_URL: ${{ vars.CITIZEN_FEED_URL }}
         run: bash parser/run.sh pavlodar
 
       - name: Commit updated data
