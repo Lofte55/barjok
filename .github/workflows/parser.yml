@@ -50,6 +50,10 @@ jobs:
       - name: Run parser
         # run.sh сам делает бэкап, санити-чек и откат при битых данных —
         # на проде никогда не окажется пустой/битый data.json.
+        # CITIZEN_CSV_URL (опц.) — опубликованный CSV Google-таблицы одобренных сообщений жителей.
+        # Задать: GitHub → Settings → Secrets and variables → Actions → Variables → CITIZEN_CSV_URL.
+        env:
+          CITIZEN_CSV_URL: ${{ vars.CITIZEN_CSV_URL }}
         run: bash parser/run.sh pavlodar
 
       - name: Commit updated data

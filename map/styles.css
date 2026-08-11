@@ -182,6 +182,7 @@ body {
   font-size: 15px; flex: none;
 }
 .card .rname { font-weight: 700; font-size: 14px; }
+.badge.citizen { background: #efeaff; color: #5b3fd6; }
 .card .badge {
   margin-left: auto; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
   text-transform: uppercase; letter-spacing: .3px;
@@ -206,6 +207,18 @@ body {
   position: absolute; top: -5px; right: -5px; min-width: 15px; height: 15px; padding: 0 3px;
   border-radius: 999px; background: #15171c; color: #fff; font-size: 9px; font-weight: 800;
   line-height: 1; display: grid; place-items: center; border: 1.5px solid #fff; box-sizing: border-box;
+}
+/* Пин «сообщение жителя» — белый, пунктирная рамка цвета ресурса + уголковая метка */
+.pin.pin-citizen {
+  background: #fff; border: 2px dashed currentColor;
+  box-shadow: 0 2px 8px rgba(0,0,0,.22);
+}
+.pin.pin-citizen .pin-cz {
+  position: absolute; bottom: -4px; right: -4px; width: 13px; height: 13px; border-radius: 50%;
+  background: #7c5cff; border: 1.5px solid #fff; box-sizing: border-box;
+}
+.pin.pin-citizen .pin-cz::after {
+  content: ''; position: absolute; inset: 3px; border-radius: 50% 50% 50% 2px; background: #fff;
 }
 .cluster {
   border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800;

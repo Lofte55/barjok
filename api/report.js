@@ -44,6 +44,21 @@ module.exports = async (req, res) => {
     message ? `\n${esc(message)}` : '',
   ].filter(Boolean);
 
+  // Дописываем строку в Google-таблицу (Apps Script webhook) — модерация + слой на карте.
+  // Не критично: если упало/не настроено, жалоба всё равно уйдёт в Telegram.
+  const sheetUrl = process.env.SHEET_WEBHOOK_URL;
+  if (sheetUrl) {
+    const row = {
+      ts: new Date().toISOString(),
+      kind: isSuggest ? 'suggestion' : 'complaint',
+      category: isSuggest ? '' : (b.category || ''),
+      address, message, status: 'new', lat: '', lng: '',
+    };
+    try {
+      await fetch(sheetUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(row) });
+    } catch (e) { /* таблица недоступна — не блокируем отправку в Telegram */ }
+  }
+
   try {
     const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',

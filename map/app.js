@@ -291,12 +291,17 @@ function houseColor(outs) {
 }
 function pinIcon(outs, size = 30) {
   const { color, emerg } = houseColor(outs);
-  const ring = emerg ? 'box-shadow:0 0 0 4px rgba(217,67,58,.30),0 2px 8px rgba(0,0,0,.28);' : '';
-  // Всегда показываем ПИКТОГРАММУ ресурса (не число — «2/3» было непонятно).
-  // Если у дома несколько систем — маленький бейдж-счётчик в углу.
+  // Сообщение жителя (весь дом — только citizen-наряды) рисуем ОТДЕЛЬНЫМ стилем:
+  // белый пин с пунктирной рамкой цвета ресурса + уголковая метка «житель».
+  const citizen = outs.every((o) => o.citizen);
   const icon = RESOURCES[outs[0].resource].icon;
   const distinct = new Set(outs.map((o) => o.resource)).size;
   const badge = distinct > 1 ? `<span class="pin-badge">${distinct}</span>` : '';
+  if (citizen) {
+    return L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+      html: `<div class="pin pin-citizen" style="width:${size}px;height:${size}px;color:${color};border-color:${color};font-size:${size * 0.5}px;">${icon}${badge}<span class="pin-cz" aria-hidden="true"></span></div>` });
+  }
+  const ring = emerg ? 'box-shadow:0 0 0 4px rgba(217,67,58,.30),0 2px 8px rgba(0,0,0,.28);' : '';
   return L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
     html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color};font-size:${size * 0.5}px;${ring}">${icon}${badge}</div>` });
 }
@@ -379,7 +384,7 @@ function houseCardHtml(h) {
       <span class="ic" style="background:${R.color};color:#fff">${R.icon}</span>
       <div class="hc-main">
         <div class="hc-r1"><b>${rName(o.resource)}</b>
-          <span class="badge ${o.type}">${o.type === 'emergency' ? t().emergency : t().planned}</span></div>
+          <span class="badge ${o.citizen ? 'citizen' : o.type}">${o.citizen ? 'Сообщение жителя' : (o.type === 'emergency' ? t().emergency : t().planned)}</span></div>
         <div class="hc-when"><span class="st ${rs.cls}"></span>${t().to} <b>${fmtDate(o.end)}</b></div>
         <div class="hc-period">${t().from}: ${fmtDate(o.start)}</div>
         ${o.reason ? `<div class="hc-reason">${o.reason}</div>` : ''}
@@ -700,7 +705,7 @@ function openAddressCard(pt, nearHouses) {
         <span class="ic" style="background:${R.color};color:#fff">${R.icon}</span>
         <div class="hc-main">
           <div class="hc-r1"><b>${rName(o.resource)}</b>
-            <span class="badge ${o.type}">${o.type === 'emergency' ? t().emergency : t().planned}</span></div>
+            <span class="badge ${o.citizen ? 'citizen' : o.type}">${o.citizen ? 'Сообщение жителя' : (o.type === 'emergency' ? t().emergency : t().planned)}</span></div>
           <div class="hc-when"><span class="st ${rs.cls}"></span>${t().to} <b>${fmtDate(o.end)}</b></div>
           <div class="hc-period">${t().from}: ${fmtDate(o.start)}</div>
           ${streetName(h.address) !== streetName(pt.address) ? `<div class="hc-period">${t().nearby}: ${h.address}</div>` : ''}

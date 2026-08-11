@@ -15,6 +15,7 @@ const { geocode, geocodeGeometry } = require('../lib/geocode');
 const curated = require('./pavlodar-curated');
 const pvkWater = require('./pvk-water');
 const ptsHeat = require('./pts-heat');
+const citizen = require('./citizen');
 
 const PAGE = 'https://pavlodarenergo.kz/ru/informacziya-o-planovyix-otklyucheniyax.html';
 const HOST = 'https://pavlodarenergo.kz';
@@ -170,6 +171,13 @@ async function fetchWithFallback() {
     const h = await ptsHeat.fetch();
     if (h.records.length) { records.push(...h.records); parts.push('ГВС (Павлодарские тепловые сети)'); }
   } catch (e) { console.warn('  ГВС недоступно:', e.message); }
+
+  // Сообщения жителей (подтверждённые модератором в таблице) — ОТДЕЛЬНЫЙ слой.
+  // Не влияет на фолбэк: даже если официальные источники пусты, демо не подменяем при наличии citizen.
+  try {
+    const cz = await citizen.fetch();
+    if (cz.records.length) { records.push(...cz.records); parts.push('сообщения жителей'); }
+  } catch (e) { console.warn('  сообщения жителей недоступны:', e.message); }
 
   if (records.length) {
     return { records, center: CENTER, source: 'Реальные источники Павлодара: ' + parts.join(' + ') };

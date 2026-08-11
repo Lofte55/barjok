@@ -58,6 +58,7 @@ function groupHouses(records) {
       resource: r.resource, type: r.type || 'planned', status: r.status || 'current',
       start: r.start || null, end: r.end || null, reason: r.reason || '',
       ...(r.provider ? { provider: r.provider } : {}),
+      ...(r.citizen ? { citizen: true } : {}),   // сообщение жителя — отдельный слой на карте
     });
     // геометрия улицы (для подсветки всей улицы, когда в источнике только название)
     if (r.geom && !houses.get(key).geom) houses.get(key).geom = r.geom;
