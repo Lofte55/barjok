@@ -393,6 +393,7 @@ function houseCardHtml(h) {
     </div>
     <div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>
     <div class="hc-list">${rows}</div>
+    <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(h.address)}">Сообщить о проблеме</button>
   </div>`;
   // Кнопка «Подписаться» временно скрыта — подписки будут позже.
 }
@@ -718,6 +719,7 @@ function openAddressCard(pt, nearHouses) {
     </div>
     ${outs.length ? `<div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>` : ''}
     <div class="hc-list">${inner}</div>
+    <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(pt.address)}">Сообщить о проблеме</button>
   </div>`;
   L.popup({ maxWidth: 330, minWidth: 290, className: 'house-popup', autoPanPadding: [24, 90] })
     .setLatLng([pt.lat, pt.lng]).setContent(html).openOn(map);
@@ -934,6 +936,106 @@ const mapEl = document.getElementById('map');
 function fixSize() { map.invalidateSize(false); }
 if ('ResizeObserver' in window) new ResizeObserver(fixSize).observe(mapEl);
 addEventListener('load', fixSize); addEventListener('resize', fixSize);
+
+/* ---------- Report modal (жалоба/предложение → /api/report → Telegram) ---------- */
+(function reportModule() {
+  const modal = document.getElementById('reportModal');
+  if (!modal) return;
+  const openBtn = document.getElementById('reportBtn');
+  const kindSeg = modal.querySelector('[data-rm-kind]');
+  const catWrap = modal.querySelector('[data-rm-catwrap]');
+  const catSel = document.getElementById('rmCategory');
+  const addrInput = document.getElementById('rmAddress');
+  const addrReq = modal.querySelector('[data-rm-req]');
+  const addrHint = modal.querySelector('[data-rm-addrhint]');
+  const suggestBox = document.getElementById('rmSuggest');
+  const msgEl = document.getElementById('rmMessage');
+  const hp = document.getElementById('rmHp');
+  const errBox = document.getElementById('rmErr');
+  const submit = document.getElementById('rmSubmit');
+  let kind = 'complaint';
+
+  function setKind(k) {
+    kind = k;
+    kindSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.kind === k));
+    catWrap.style.display = k === 'complaint' ? '' : 'none';
+    addrReq.style.display = k === 'complaint' ? '' : 'none';   // адрес обязателен только для жалобы
+    addrHint.textContent = k === 'complaint' ? 'Начните вводить — подскажем улицу и дом' : 'Адрес по желанию';
+  }
+  function showErr(m) { errBox.textContent = m; errBox.classList.add('show'); }
+  function open(prefill) {
+    errBox.textContent = ''; errBox.classList.remove('show');
+    submit.disabled = false; submit.textContent = 'Отправить';
+    setKind('complaint');
+    catSel.value = ''; msgEl.value = ''; hp.value = '';
+    addrInput.value = prefill || '';
+    suggestBox.classList.remove('show');
+    modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    if (!prefill) setTimeout(() => addrInput.focus(), 60);
+  }
+  function close() {
+    modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = ''; suggestBox.classList.remove('show');
+  }
+
+  if (openBtn) openBtn.onclick = () => open('');
+  // из карточек дома/адреса — с автоподстановкой адреса (делегирование: попапы пересоздаются)
+  document.addEventListener('click', (e) => {
+    const rb = e.target.closest('.hc-report');
+    if (rb) { e.preventDefault(); open(decodeURIComponent(rb.dataset.reportAddr || '')); }
+  });
+  kindSeg.querySelectorAll('button').forEach((b) => (b.onclick = () => setKind(b.dataset.kind)));
+  modal.querySelectorAll('[data-rm-close]').forEach((el) => (el.onclick = close));
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
+
+  // ---- подсказки адреса: переиспуем реестр адресов и матчинг улиц из поиска карты ----
+  let sugT = null;
+  function renderRmSuggest(q) {
+    loadAddresses().then(() => {
+      const pq = parseQuery(q);
+      const addrHits = addressSuggestions(pq, 7);
+      const streetHits = STREETS.filter((s) => streetMatches(s.name, pq.street)).slice(0, 5);
+      const items = [];
+      addrHits.forEach((a) => items.push({ label: `${a.street}, ${a.house}`, val: `${a.street}, ${a.house}` }));
+      streetHits.forEach((s) => { if (!items.some((i) => i.val === s.name)) items.push({ label: s.name, val: s.name }); });
+      if (!items.length) { suggestBox.classList.remove('show'); return; }
+      suggestBox.innerHTML = items.slice(0, 7).map((i) =>
+        `<div class="rm-sg" data-val="${encodeURIComponent(i.val)}"><span class="d"></span>${i.label}</div>`).join('');
+      suggestBox.classList.add('show');
+      suggestBox.querySelectorAll('.rm-sg').forEach((el) => (el.onclick = () => {
+        addrInput.value = decodeURIComponent(el.dataset.val); suggestBox.classList.remove('show');
+      }));
+    });
+  }
+  addrInput.addEventListener('input', () => {
+    clearTimeout(sugT); const q = addrInput.value.trim();
+    if (q.length < 2) { suggestBox.classList.remove('show'); return; }
+    sugT = setTimeout(() => renderRmSuggest(q), 120);
+  });
+  addrInput.addEventListener('focus', () => { if (addrInput.value.trim().length >= 2) renderRmSuggest(addrInput.value.trim()); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.rm-addr')) suggestBox.classList.remove('show'); });
+
+  submit.onclick = async () => {
+    errBox.classList.remove('show');
+    const category = catSel.value, address = addrInput.value.trim(), message = msgEl.value.trim();
+    if (kind === 'complaint' && !category) return showErr('Выберите, что случилось');
+    if (kind === 'complaint' && !address) return showErr('Укажите адрес');
+    if (kind === 'suggestion' && !message) return showErr('Напишите сообщение');
+    submit.disabled = true; submit.textContent = 'Отправляем…';
+    try {
+      const r = await fetch('/api/report', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind, category, address, message, website: hp.value }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) { close(); showToast('Спасибо! Сообщение отправлено.', 3500); }
+      else if (j.error === 'not_configured') showErr('Отправка ещё не настроена — сообщите администратору.');
+      else showErr('Не удалось отправить. Попробуйте ещё раз.');
+    } catch (e) { showErr('Нет связи. Проверьте интернет и повторите.'); }
+    finally { submit.disabled = false; submit.textContent = 'Отправить'; }
+  };
+})();
 
 /* ---------- Go ---------- */
 load();
