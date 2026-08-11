@@ -7,6 +7,10 @@
  * Возвращает «сырые» записи (resource='cold_water') — геокод улиц делает вызывающий код.
  */
 const { geocode, geocodeGeometry } = require('../lib/geocode');
+const buildings = require('../lib/buildings');
+
+// нормализация номера дома для сопоставления с OSM-реестром: «58/1» «58 А» → «58/1» «58а»
+function normHouse(h) { return String(h || '').toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е'); }
 
 const BASE = 'https://pvk.pawlodarkz.kz';
 const LIST = BASE + '/otklyuchenie';
@@ -71,11 +75,16 @@ function parseStreets(block) {
   }
   const streets = [];
   for (const it of items) {
-    const sm = it.match(/(?:ул|улица|пр|проспект|пер|переулок|мкр|пл)\.?\s*([А-ЯЁ][А-Яа-яЁё.\- ]*?)\s*(\d[\d/а-я]*)?(?:,|$)/i);
+    // улица = слова после префикса до первой цифры; дальше — СПИСОК номеров через запятую
+    const sm = it.match(/(?:ул|улица|пр|проспект|пер|переулок|мкр|пл)\.?\s*([А-ЯЁ][А-Яа-яЁё.\- ]*?)\s*(\d.*)?$/i);
     if (!sm) continue;
     const name = sm[1].replace(/\s+/g, ' ').trim().replace(/[.,\-]+$/, '');
-    const house = sm[2] || null;
-    if (name.length >= 3) streets.push({ name, house });
+    if (name.length < 3) continue;
+    // «58, 58/1, 58/2, 60» → ['58','58/1','58/2','60']; ЦТП/мусор отсекаем
+    const houses = (sm[2] || '').split(/[,;]/)
+      .map((s) => (s.trim().match(/^\d+\s*[а-я]?(?:\s*\/\s*\d+\s*[а-я]?)?/i) || [''])[0].replace(/\s+/g, ''))
+      .filter(Boolean);
+    streets.push({ name, houses });
   }
   return streets;
 }
@@ -113,6 +122,17 @@ async function fetchPvkWater() {
     const gm = await geocodeGeometry(`улица ${name}`); if (gm) geoms.set(name, gm);
   }
 
+  // реестр домов по улицам — для ТОЧНЫХ координат каждого перечисленного номера
+  const regCache = new Map();
+  async function registry(name) {
+    if (regCache.has(name)) return regCache.get(name);
+    let list = [];
+    try { list = await buildings.housesOnStreet(name, 800); } catch (e) {}
+    const byNum = new Map(list.map((h) => [normHouse(h.house), h]));
+    regCache.set(name, byNum); return byNum;
+  }
+  const inBounds = (lat, lng) => Math.abs(lat - 52.2871) <= 0.22 && Math.abs(lng - 76.9674) <= 0.35;
+
   let seq = 0;
   for (const p of parsed) {
     const start = iso(p.date, p.time.h1, p.time.m1);
@@ -120,19 +140,29 @@ async function fetchPvkWater() {
     if (new Date(end).getTime() < NOW) continue;
     const status = new Date(start).getTime() > NOW ? 'future' : 'current';
     for (const s of p.streets) {
-      const g = coords.get(s.name); if (!g) continue;
-      if (Math.abs(g.lat - 52.2871) > 0.22 || Math.abs(g.lng - 76.9674) > 0.35) continue;
-      seq++;
-      const jit = () => (((seq * 2654435761) % 1000) / 1000 - 0.5) * 0.0008;
-      records.push({
-        address: s.house ? `улица ${s.name}, ${s.house}` : `улица ${s.name}`,
-        district: g.area || 'Павлодар',
-        lat: +(g.lat + jit()).toFixed(5), lng: +(g.lng + jit()).toFixed(5),
+      const g = coords.get(s.name);
+      const base = {
+        district: (g && g.area) || 'Павлодар',
         resource: 'cold_water', type: p.emerg ? 'emergency' : 'planned', status,
         start, end, reason: p.reason, provider: 'ТОО «Павлодар-Водоканал»',
-        geom: s.house ? null : (geoms.get(s.name) || null),
-        streetWide: !s.house,
-      });
+      };
+      if (!s.houses.length) {
+        // номеров нет — размечаем улицу целиком (index.js развернёт в дома реестра)
+        if (!g || !inBounds(g.lat, g.lng)) continue;
+        records.push({ ...base, address: `улица ${s.name}`, lat: g.lat, lng: g.lng,
+          geom: geoms.get(s.name) || null, streetWide: true });
+        continue;
+      }
+      const reg = await registry(s.name);       // точные координаты домов улицы
+      for (const hn of s.houses) {
+        const hit = reg.get(normHouse(hn));
+        let lat, lng;
+        if (hit) { lat = hit.lat; lng = hit.lng; }
+        else if (g) { seq++; const j = (((seq * 2654435761) % 1000) / 1000 - 0.5) * 0.0008; lat = +(g.lat + j).toFixed(5); lng = +(g.lng + j).toFixed(5); }
+        else continue;                            // ни в реестре, ни в геокоде — пропуск
+        if (!inBounds(lat, lng)) continue;
+        records.push({ ...base, address: `улица ${s.name}, ${hn}`, lat, lng, geom: null, streetWide: false });
+      }
     }
   }
   return { records, source: SOURCE };
