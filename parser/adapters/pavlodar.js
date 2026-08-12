@@ -16,6 +16,7 @@ const curated = require('./pavlodar-curated');
 const pvkWater = require('./pvk-water');
 const ptsHeat = require('./pts-heat');
 const citizen = require('./citizen');
+const pavonHeat = require('./pavon-heat');
 
 const PAGE = 'https://pavlodarenergo.kz/ru/informacziya-o-planovyix-otklyucheniyax.html';
 const HOST = 'https://pavlodarenergo.kz';
@@ -171,6 +172,27 @@ async function fetchWithFallback() {
     const h = await ptsHeat.fetch();
     if (h.records.length) { records.push(...h.records); parts.push('ГВС (Павлодарские тепловые сети)'); }
   } catch (e) { console.warn('  ГВС недоступно:', e.message); }
+
+  // Точные графики ПОДКЛЮЧЕНИЯ ГВС (адресные списки ПТС через городской портал).
+  // ⚠️ ТОЧНЕЕ эвристики «все многоэтажки» из pts-heat.js: там дом/дата известны наверняка.
+  // Поэтому для совпавших адресов эвристические hot_water-записи УДАЛЯЕМ — иначе у дома
+  // было бы два наряда ГВС с разными датами и карточка показала бы менее точную.
+  try {
+    console.log('  графики подключения ГВС (pavon.kz)…');
+    const ph = await pavonHeat.fetch();
+    if (ph.records.length) {
+      const exact = new Set(ph.records.map((r) => r.address.trim().toLowerCase()));
+      const before = records.length;
+      for (let i = records.length - 1; i >= 0; i--) {
+        const r = records[i];
+        if (r.resource === 'hot_water' && exact.has(r.address.trim().toLowerCase())) records.splice(i, 1);
+      }
+      const removed = before - records.length;
+      records.push(...ph.records);
+      parts.push('графики подключения ГВС (адресные списки ПТС)');
+      if (removed) console.log(`    точные адреса вытеснили ${removed} эвристических записей ГВС`);
+    }
+  } catch (e) { console.warn('  графики подключения ГВС недоступны:', e.message); }
 
   // Сообщения жителей (подтверждённые модератором в таблице) — ОТДЕЛЬНЫЙ слой.
   // Не влияет на фолбэк: даже если официальные источники пусты, демо не подменяем при наличии citizen.
