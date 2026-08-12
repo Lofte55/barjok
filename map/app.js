@@ -532,16 +532,9 @@ function buildSuggest(qraw, box) {
   const q = qraw.trim().toLowerCase();
   if (!q) { box.classList.remove('show'); return; }
   const pq = parseQuery(qraw);
-  // Поиск по улице/адресу с учётом падежей и номера дома, независимо от фильтров.
-  const streetHits = STREETS.filter((s) => streetMatches(s.name, pq.street)).slice(0, 5);
-  const houseHits = DATA.houses.filter((h) =>
-    h.address.toLowerCase().includes(q) ||
-    (streetMatches(h.address, pq.street) && (!pq.house || h.address.includes(pq.house)))
-  ).slice(0, 7);
-  // Подсказки из общегородского справочника (дома без отключений тоже нужны)
-  const known = new Set(houseHits.map((h) => h.address.toLowerCase()));
-  const addrHits = addressSuggestions(pq).filter((a) =>
-    !known.has(`${a.street}, ${a.house}`.toLowerCase())).slice(0, 6);
+  // Автопереключение: дом ещё не указан → предлагаем УЛИЦЫ; как только введён номер
+  // дома → предлагаем КОНКРЕТНЫЕ АДРЕСА (единым списком, без деления на подгруппы).
+  const streetHits = pq.house ? [] : STREETS.filter((s) => streetMatches(s.name, pq.street)).slice(0, 8);
 
   let html = '';
   if (streetHits.length) {
@@ -550,35 +543,40 @@ function buildSuggest(qraw, box) {
         <span class="dot" style="background:#1f6feb"></span><span class="tt">${s.name}</span>
         <span class="tag">${s.n} ${t().houses}</span></div>`).join('');
   }
-  if (houseHits.length) {
-    html += `<div class="sg-head">${t().addresses}</div>` + houseHits.map((h) => {
+
+  if (pq.house) {
+    // Дома с известными отключениями (DATA.houses) + остальные дома улицы из общего
+    // справочника — ОДИН объединённый список, без текстовых пометок «N систем»/«ок»:
+    // статус читается по цвету точки, как и у остальных элементов поиска.
+    const houseHits = DATA.houses.filter((h) =>
+      h.address.toLowerCase().includes(q) ||
+      (streetMatches(h.address, pq.street) && h.address.includes(pq.house))
+    ).slice(0, 8);
+    const known = new Set(houseHits.map((h) => h.address.toLowerCase()));
+    const addrHits = addressSuggestions(pq, 10).filter((a) =>
+      !known.has(`${a.street}, ${a.house}`.toLowerCase()));
+
+    const rows = [];
+    houseHits.forEach((h) => {
       const o = cardOutages(h)[0] || h.outages[0];
-      return `<div class="sg" data-kind="house" data-id="${h.id}">
-        <span class="dot" style="background:${o ? RESOURCES[o.resource].color : '#8a94a3'}"></span>
-        <span class="tt">${h.address}</span></div>`;
-    }).join('');
-  }
-  // Адреса города без отключений — показываем как обычные подсказки.
-  // Клик → карточка «Отключений нет» (это и есть ответ сервиса).
-  if (addrHits.length) {
-    html += `<div class="sg-head">${t().addresses}</div>` + addrHits.map((a) => {
+      rows.push({ kind: 'house', id: h.id, label: h.address, dot: o ? RESOURCES[o.resource].color : '#8a94a3' });
+    });
+    addrHits.forEach((a) => {
       // ⚠️ Не подписывать «отключений нет» вслепую — сначала реально проверяем адрес.
       const near = outagesNear(a.lat, a.lng, `${a.street}, ${a.house}`);
-      const outs = [];
-      const seen = new Set();
-      near.forEach((h) => cardOutages(h).forEach((o) => {
-        const k = `${o.resource}|${o.type}|${o.start}|${o.end}`;
-        if (!seen.has(k)) { seen.add(k); outs.push(o); }
-      }));
-      const dot = outs.length ? RESOURCES[outs[0].resource].color : '#cfd6e0';
-      const tag = outs.length
-        ? `<span class="tag warn">${outs.length} ${systemsWord(outs.length)}</span>`
-        : `<span class="tag ok">${t().allOk}</span>`;
-      return `<div class="sg" data-kind="addr" data-street="${encodeURIComponent(a.street)}"
-            data-house="${encodeURIComponent(a.house)}" data-lat="${a.lat}" data-lng="${a.lng}">
-        <span class="dot" style="background:${dot}"></span>
-        <span class="tt">${a.street}, ${a.house}</span>${tag}</div>`;
-    }).join('');
+      const hasOut = near.some((h) => cardOutages(h).length);
+      rows.push({ kind: 'addr', street: a.street, house: a.house, lat: a.lat, lng: a.lng,
+        label: `${a.street}, ${a.house}`, dot: hasOut ? '#e8663d' : '#cfd6e0' });
+    });
+
+    if (rows.length) {
+      html += `<div class="sg-head">${t().addresses}</div>` + rows.slice(0, 10).map((r) => {
+        const attrs = r.kind === 'house'
+          ? `data-kind="house" data-id="${r.id}"`
+          : `data-kind="addr" data-street="${encodeURIComponent(r.street)}" data-house="${encodeURIComponent(r.house)}" data-lat="${r.lat}" data-lng="${r.lng}"`;
+        return `<div class="sg" ${attrs}><span class="dot" style="background:${r.dot}"></span><span class="tt">${r.label}</span></div>`;
+      }).join('');
+    }
   }
   // Ничего не нашли в данных об отключениях → предлагаем проверить адрес на карте
   // (геокодирование). Это и есть ответ пользователю: «по этому адресу отключений нет».
