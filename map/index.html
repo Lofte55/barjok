@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="/map/styles.css?v=1787200000" />
+  <link rel="stylesheet" href="/map/styles.css?v=1787300000" />
 
   <!-- Schema.org: карта-приложение отключений для Павлодара + хлебные крошки -->
   <script type="application/ld+json">
@@ -59,9 +59,8 @@
 
   <!-- Top bar: поиск по центру, язык в правом углу -->
   <div class="topbar">
-    <a class="mapbrand" href="/" title="На главную — Бар Жоқ">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5C16 2.5 5.5 13.4 5.5 21a10.5 10.5 0 0 0 21 0C26.5 13.4 16 2.5 16 2.5Z" fill="#1f6feb"/><path d="M17.7 11.2l-6 8.2h4.2l-1.3 5.6 6-8.6h-4.2l1.3-5.2z" fill="#fff"/></svg>
-      <b>Бар&nbsp;Жоқ</b>
+    <a class="mapbrand" href="/" title="На главную — Бар Жоқ" aria-label="Бар Жоқ">
+      <img class="logo-img" src="/barjok.svg" alt="Бар Жоқ" width="92" height="28">
     </a>
     <div class="search" id="searchWrap">
       <span class="ico"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg></span>
@@ -93,7 +92,7 @@
   <aside class="panel">
     <div class="head">
       <div class="head-row">
-        <a class="mark" href="/" title="На главную"><svg viewBox="0 0 32 32" width="100%" height="100%" style="display:block" aria-label="Бар Жоқ"><path d="M16 2.5C16 2.5 5.5 13.4 5.5 21a10.5 10.5 0 0 0 21 0C26.5 13.4 16 2.5 16 2.5Z" fill="#1f6feb"/><path d="M17.7 11.2l-6 8.2h4.2l-1.3 5.6 6-8.6h-4.2l1.3-5.2z" fill="#fff"/></svg></a>
+        <a class="mark" href="/" title="На главную"><img src="/favicon.svg" alt="Бар Жоқ" style="width:100%;height:100%;display:block;object-fit:contain"></a>
         <h1 data-title>Отключения · Павлодар</h1>
         <button class="info-btn" id="infoBtn" aria-label="Об источнике данных">i</button>
       </div>
@@ -151,7 +150,7 @@
   <section class="sheet" id="sheet">
     <div class="grip"><span class="bar"></span></div>
     <div class="shead">
-      <a class="mark" href="/"><svg viewBox="0 0 32 32" width="100%" height="100%" style="display:block" aria-label="Бар Жоқ"><path d="M16 2.5C16 2.5 5.5 13.4 5.5 21a10.5 10.5 0 0 0 21 0C26.5 13.4 16 2.5 16 2.5Z" fill="#1f6feb"/><path d="M17.7 11.2l-6 8.2h4.2l-1.3 5.6 6-8.6h-4.2l1.3-5.2z" fill="#fff"/></svg></a>
+      <a class="mark" href="/"><img src="/favicon.svg" alt="Бар Жоқ" style="width:100%;height:100%;display:block;object-fit:contain"></a>
       <h1 data-title>Отключения · Павлодар</h1>
       <span data-count class="count"></span>
       <button class="fbtn" data-filters-btn><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg><span> Фильтры</span></button>
@@ -242,8 +241,8 @@
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script defer src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
-  <script defer src="/map/data.js?v=1787200000"></script>
-  <script defer src="/map/app.js?v=1787200000"></script>
+  <script defer src="/map/data.js?v=1787300000"></script>
+  <script defer src="/map/app.js?v=1787300000"></script>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){

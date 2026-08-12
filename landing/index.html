@@ -52,6 +52,7 @@
 
   /* logo */
   .logo{display:inline-flex;align-items:center;gap:10px;flex:none}
+  .logo-img{height:30px;width:auto;display:block}
   .logo .gl{width:30px;height:30px;flex:none}
   .logo .wm{font-weight:800;font-size:19px;letter-spacing:-.02em;white-space:nowrap}
   .logo .wm b{color:var(--accent)}
@@ -439,9 +440,8 @@
 
 <header class="nav" id="nav">
   <div class="wrap nav-in">
-    <a class="logo" href="/">
-      <svg class="gl" style="color:var(--accent)"><use href="#glyph"/></svg>
-      <span class="wm">Бар <b>Жоқ</b></span>
+    <a class="logo" href="/" aria-label="Бар Жоқ — на главную">
+      <img class="logo-img" src="/barjok.svg" alt="Бар Жоқ" width="105" height="32">
     </a>
 
     <!-- выбор города -->
@@ -840,7 +840,7 @@
   <div class="wrap">
     <div class="foot-top">
       <div>
-        <a class="logo" href="/"><svg class="gl" style="color:var(--accent)"><use href="#glyph"/></svg><span class="wm">Бар <b>Жоқ</b></span></a>
+        <a class="logo" href="/" aria-label="Бар Жоқ"><img class="logo-img" src="/barjok.svg" alt="Бар Жоқ" width="105" height="32"></a>
         <p data-kk="Павлодардағы су, жарық және жылу ажыратулары сервисі. Ақпарат бар — біз оны 5 секундта табуға көмектесеміз.">Сервис отключений воды, света и тепла в Павлодаре. Информация уже существует — мы делаем так, чтобы её нашли за 5 секунд.</p>
       </div>
       <div class="foot-links">
