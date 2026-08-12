@@ -45,6 +45,8 @@ body {
 }
 .topbar > * { pointer-events: auto; }
 .topbar .tb-right { position: absolute; right: 0; top: 0; display: flex; gap: 10px; align-items: flex-start; }
+/* Бренд в шапке карты — на десктопе он есть в левой панели, поэтому здесь только для мобилки */
+.mapbrand { display: none; }
 .topbar .lang { position: static; }
 .mapcity { position: relative; }
 .mapcity-btn { display: inline-flex; align-items: center; gap: 6px; height: 46px; padding: 0 14px;
@@ -274,7 +276,8 @@ body {
   }
   .sheet.dragging { transition: none; }
   .sheet.half { height: 46vh; }
-  .sheet.expanded { height: 88vh; }
+  /* раскрытая шторка НЕ заходит под шапку/поиск — оставляем сверху место под них */
+  .sheet.expanded { height: calc(100dvh - 180px); max-height: calc(100vh - 180px); }
   .sheet.collapsed { height: 108px; }
   /* шапка (ручка + заголовок) — зона перетаскивания: тач-скролл гасим здесь,
      а списку ниже разрешаем pan-y, иначе он не прокручивался (был touch-action:none на всей шторке). */
@@ -454,17 +457,22 @@ body.ads-off [data-ad-slot] { display: none !important; }
 
 @media (max-width: 900px) {
   .panel { display: none; }
-  /* Мобильная шапка: верхняя строка — город слева / язык справа;
+  /* Мобильная шапка: верхняя строка — бренд слева, город и язык справа;
      под ними поиск на всю ширину, крупнее (главное действие). */
-  .topbar { flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 10px;
+  .topbar { flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 10px 8px;
     top: 10px; left: 12px; right: 12px; }
-  .topbar .tb-right { position: static; order: 0; width: 100%; margin: 0;
-    display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .topbar .mapbrand { order: 0; display: inline-flex; align-items: center; gap: 7px; height: 42px;
+    padding: 0 13px 0 10px; background: #fff; border: 1px solid var(--line); border-radius: 999px;
+    box-shadow: var(--shadow-sm); text-decoration: none; color: var(--ink); }
+  .topbar .mapbrand svg { width: 21px; height: 21px; flex: none; }
+  .topbar .mapbrand b { font-size: 15px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+  .topbar .tb-right { position: static; order: 1; margin-left: auto; width: auto;
+    display: flex; align-items: center; gap: 8px; }
   .topbar .mapcity { flex: 0 1 auto; min-width: 0; }
-  .topbar .mapcity-btn { height: 44px; max-width: 100%; }
-  .topbar .mapcity-btn #mapCityName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .topbar .lang { position: static; flex: none; height: 44px; }
-  .topbar .search { order: 1; width: 100%; flex: 1 1 100%; max-width: none; min-width: 0; }
+  .topbar .mapcity-btn { height: 42px; max-width: 100%; }
+  .topbar .mapcity-btn #mapCityName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 84px; }
+  .topbar .lang { position: static; flex: none; height: 42px; }
+  .topbar .search { order: 2; width: 100%; flex: 1 1 100%; max-width: none; min-width: 0; }
   .topbar .search input { height: 52px; font-size: 16px; padding: 0 48px;
     box-shadow: 0 4px 16px rgba(20,30,50,.10); }
   .topbar .search .ico { left: 17px; }

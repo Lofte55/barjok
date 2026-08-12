@@ -169,6 +169,12 @@ map.zoomControl.setPosition('bottomright');
 /* Клик по любому месту карты → определяем дом и показываем карточку */
 map.on('click', (e) => {
   if (e.originalEvent && e.originalEvent.target.closest && e.originalEvent.target.closest('.leaflet-marker-icon')) return;
+  // Мобилка: если шторка раскрыта (half/expanded) — первый тап по карте её СВОРАЧИВАЕТ
+  // в дефолт (нативный паттерн), карточку адреса при этом не открываем.
+  if (window.matchMedia('(max-width: 900px)').matches && sheet && !sheet.classList.contains('collapsed')) {
+    collapseSheet();
+    return;
+  }
   checkPoint(+e.latlng.lat.toFixed(6), +e.latlng.lng.toFixed(6));
 });
 const markerLayer = L.layerGroup().addTo(map);
@@ -1047,6 +1053,14 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
     } catch (e) { showErr('Нет связи. Проверьте интернет и повторите.'); }
     finally { submit.disabled = false; submit.textContent = 'Отправить'; }
   };
+
+  // Открытие модалки по ссылке с лендинга: /map/?report=1
+  try {
+    if (new URLSearchParams(location.search).get('report') === '1') {
+      setTimeout(() => open(''), 400);
+      history.replaceState(null, '', location.pathname);   // чистим параметр из URL
+    }
+  } catch (e) {}
 })();
 
 /* ---------- Go ---------- */

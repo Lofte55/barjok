@@ -137,7 +137,23 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
   .aud{grid-template-columns:1fr 1fr}
   .inv{grid-template-columns:1fr}
   .addon{grid-template-columns:1fr}
-  .tbl{display:block;overflow-x:auto;white-space:nowrap}
+}
+/* Мобилка: таблицы → карточки (без горизонтального скролла, всё видно) */
+@media(max-width:600px){
+  .tbl{display:block;border:0;background:transparent;border-radius:0;overflow:visible}
+  .tbl thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tbl tbody,.tbl tr,.tbl td{display:block;width:auto}
+  .tbl tr{background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 16px 12px;margin-bottom:14px}
+  .tbl td{border-top:0;padding:9px 0;display:flex;justify-content:space-between;align-items:baseline;gap:14px;white-space:normal}
+  .tbl td+td{border-top:1px solid var(--line-2)}
+  .tbl td.f{display:block;font-weight:800;font-size:16px;padding:12px 0 10px;border-bottom:2px solid var(--line-2)}
+  .tbl td.f .pill{font-weight:700}
+  .tbl td::before{content:attr(data-label);color:var(--ink-3);font-size:12.5px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.4px;flex:none}
+  .tbl td.f::before{content:none}
+  .tbl td.price{white-space:nowrap}
+  .tbl td[data-label="Требования"]{flex-direction:column;gap:4px;text-align:left}
+  .tbl td[data-label="Требования"]::before{margin-bottom:2px}
 }
 /* Мобильная шапка как на главной: строка 1 — город слева / «Связаться» справа;
    строка 2 — логотип / бургер (в бургере — «Открыть карту»). */
@@ -236,27 +252,27 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
     <tbody>
       <tr>
         <td class="f">Статика</td>
-        <td class="mono">JPG, PNG, WebP</td>
-        <td class="mono">≤ 150 КБ</td>
-        <td>Точный размер + @2x (напр. 300×250 и 600×500). RGB. Отступ от краёв 8 px под важные элементы. Кликабельная ссылка https + UTM-метки.</td>
+        <td class="mono" data-label="Форматы">JPG, PNG, WebP</td>
+        <td class="mono" data-label="Вес">≤ 150 КБ</td>
+        <td data-label="Требования">Точный размер + @2x (напр. 300×250 и 600×500). RGB. Отступ от краёв 8 px под важные элементы. Кликабельная ссылка https + UTM-метки.</td>
       </tr>
       <tr>
         <td class="f">Анимация <span class="pill">GIF</span></td>
-        <td class="mono">GIF, APNG</td>
-        <td class="mono">≤ 1 МБ · ≤ 15 сек · ≤ 30 fps</td>
-        <td>Зацикливание допускается. Без резких вспышек и стробоскопа (безопасность). Ключевое сообщение читается и на первом кадре.</td>
+        <td class="mono" data-label="Форматы">GIF, APNG</td>
+        <td class="mono" data-label="Вес">≤ 1 МБ · ≤ 15 сек · ≤ 30 fps</td>
+        <td data-label="Требования">Зацикливание допускается. Без резких вспышек и стробоскопа (безопасность). Ключевое сообщение читается и на первом кадре.</td>
       </tr>
       <tr>
         <td class="f">Видео <span class="pill">video</span></td>
-        <td class="mono">MP4 (H.264)</td>
-        <td class="mono">≤ 2 МБ · ≤ 10 сек</td>
-        <td>Автоплей <b>без звука</b>, muted-loop. Обязателен статичный фолбэк-кадр (JPG/PNG) для устройств без автоплея. Соотношение сторон под слот.</td>
+        <td class="mono" data-label="Форматы">MP4 (H.264)</td>
+        <td class="mono" data-label="Вес">≤ 2 МБ · ≤ 10 сек</td>
+        <td data-label="Требования">Автоплей <b>без звука</b>, muted-loop. Обязателен статичный фолбэк-кадр (JPG/PNG) для устройств без автоплея. Соотношение сторон под слот.</td>
       </tr>
       <tr>
         <td class="f">HTML5 <span class="pill">по согласованию</span></td>
-        <td class="mono">ZIP (HTML+CSS+JS)</td>
-        <td class="mono">≤ 200 КБ</td>
-        <td>Самодостаточный, без внешних запросов. Показ в изолированном sandbox-iframe. Индивидуальная проверка.</td>
+        <td class="mono" data-label="Форматы">ZIP (HTML+CSS+JS)</td>
+        <td class="mono" data-label="Вес">≤ 200 КБ</td>
+        <td data-label="Требования">Самодостаточный, без внешних запросов. Показ в изолированном sandbox-iframe. Индивидуальная проверка.</td>
       </tr>
     </tbody>
   </table>
@@ -270,10 +286,10 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding:40px 0 56px}
   <table class="tbl">
     <thead><tr><th>Место</th><th>Размер</th><th>День</th><th>Неделя</th><th>Месяц</th></tr></thead>
     <tbody>
-      <tr><td class="f">Нативный блок в карточке дома (спонсор)</td><td class="mono">—</td><td class="price">6 000 ₸</td><td class="price">30 000 ₸</td><td class="price best">85 000 ₸</td></tr>
-      <tr><td class="f">Боковой баннер карты (MPU)</td><td class="mono">300×250</td><td class="price">5 000 ₸</td><td class="price">25 000 ₸</td><td class="price best">70 000 ₸</td></tr>
-      <tr><td class="f">Мобильный баннер карты</td><td class="mono">320×100</td><td class="price">3 000 ₸</td><td class="price">15 000 ₸</td><td class="price best">45 000 ₸</td></tr>
-      <tr><td class="f">Лидерборд на лендинге</td><td class="mono">970×120</td><td class="price">2 500 ₸</td><td class="price">12 000 ₸</td><td class="price best">38 000 ₸</td></tr>
+      <tr><td class="f">Нативный блок в карточке дома (спонсор)</td><td class="mono" data-label="Размер">—</td><td class="price" data-label="День">6 000 ₸</td><td class="price" data-label="Неделя">30 000 ₸</td><td class="price best" data-label="Месяц">85 000 ₸</td></tr>
+      <tr><td class="f">Боковой баннер карты (MPU)</td><td class="mono" data-label="Размер">300×250</td><td class="price" data-label="День">5 000 ₸</td><td class="price" data-label="Неделя">25 000 ₸</td><td class="price best" data-label="Месяц">70 000 ₸</td></tr>
+      <tr><td class="f">Мобильный баннер карты</td><td class="mono" data-label="Размер">320×100</td><td class="price" data-label="День">3 000 ₸</td><td class="price" data-label="Неделя">15 000 ₸</td><td class="price best" data-label="Месяц">45 000 ₸</td></tr>
+      <tr><td class="f">Лидерборд на лендинге</td><td class="mono" data-label="Размер">970×120</td><td class="price" data-label="День">2 500 ₸</td><td class="price" data-label="Неделя">12 000 ₸</td><td class="price best" data-label="Месяц">38 000 ₸</td></tr>
     </tbody>
   </table>
 
