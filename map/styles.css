@@ -364,6 +364,9 @@ body {
 .hc-district { font-size: 12.5px; opacity: .85; margin-top: 3px; }
 .hc-sum { padding: 10px 16px 4px; }
 .hc-off { font-size: 12px; font-weight: 700; color: var(--emerg); text-transform: uppercase; letter-spacing: .4px; }
+/* Отключения только у соседей по улице — не алармируем красным, это не «ваш» дом */
+.hc-off.nearby { color: var(--ink-2); }
+.hc-note { display: block; margin-top: 3px; font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
 .hc-list { padding: 4px 12px 6px; max-height: 260px; overflow-y: auto; }
 .hc-row { display: flex; gap: 11px; padding: 11px 4px; border-top: 1px solid var(--line-2); }
 .hc-row:first-child { border-top: 0; }

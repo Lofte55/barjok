@@ -27,6 +27,9 @@ const I18N = {
     checkAddress: 'Проверить адрес', searching: 'Ищем адрес…', addrNotFound: 'Адрес не найден',
     allOk: 'Отключений нет', allOkSub: 'По этому адресу вода и свет в порядке', nearby: 'Рядом',
     whatsOff: 'Что отключено по адресу', until: 'до', na: 'нет отключений по фильтрам',
+    // ⚠️ Когда точного адреса НЕТ в данных, а рядом на улице есть отключения — писать
+    // «по адресу» нельзя (это чужие дома). Формулируем честно.
+    nearbyOnly: 'Рядом на этой улице', notListed: 'По этому адресу отключение не заявлено',
     source: 'Источник', demo: 'демо на открытых данных', adLabel: 'Реклама',
     adText: 'Место для рекламодателя', adCta: 'Разместить рекламу',
   },
@@ -46,6 +49,7 @@ const I18N = {
     checkAddress: 'Мекенжайды тексеру', searching: 'Мекенжай ізделуде…', addrNotFound: 'Мекенжай табылмады',
     allOk: 'Ажырату жоқ', allOkSub: 'Бұл мекенжайда су мен жарық қалыпты', nearby: 'Жақын жерде',
     whatsOff: 'Мекенжай бойынша не ажыратылған', until: 'дейін', na: 'сүзгі бойынша жоқ',
+    nearbyOnly: 'Осы көшеде жақын жерде', notListed: 'Бұл мекенжай бойынша ажырату жарияланбаған',
     source: 'Дереккөз', demo: 'ашық деректердегі демо', adLabel: 'Жарнама',
     adText: 'Жарнама беруші үшін орын', adCta: 'Жарнама орналастыру',
   },
@@ -658,6 +662,19 @@ async function reverseGeocode(lat, lng) {
   } catch (e) { return null; }
 }
 // Ближайшие известные отключения к точке (в пределах ~250 м)
+/* Номер дома из адреса: «улица Айманова, 47/1» → «47/1» */
+function houseNumOf(addr) {
+  const m = String(addr || '').match(/,\s*([^,]+)$/);
+  return m ? m[1].trim().toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е') : '';
+}
+/* Один и тот же дом? Улица сравнивается с учётом RU/KZ-вариантов, номер — точно.
+   Нужно, чтобы не выдавать наряд СОСЕДА за отключение «по вашему адресу». */
+function sameAddress(a, b) {
+  const na = houseNumOf(a), nb = houseNumOf(b);
+  if (!na || !nb || na !== nb) return false;
+  return streetMatches(a, streetName(b));
+}
+
 function outagesNear(lat, lng, address) {
   // ⚠️ Показываем ТОЛЬКО то, что реально касается адреса: точное совпадение адреса
   // или отключение на ТОЙ ЖЕ улице в разумном радиусе. Раньше был ещё чисто
@@ -708,6 +725,9 @@ function openAddressCard(pt, nearHouses) {
   }));
   const statusOrder = { current: 0, future: 1, past: 2 };
   const outs = [...byRes.values()].sort((a, b) => statusOrder[a.o.status] - statusOrder[b.o.status]);
+  // Есть ли отключение именно ПО ЭТОМУ адресу (а не у соседей на той же улице)?
+  // От этого зависит формулировка: «что отключено по адресу» vs «рядом на этой улице».
+  const hasExact = outs.some(({ h }) => sameAddress(h.address, pt.address));
   let inner;
   if (outs.length) {
     inner = outs.map(({ o, h }) => {
@@ -719,7 +739,7 @@ function openAddressCard(pt, nearHouses) {
             <span class="badge ${o.citizen ? 'citizen' : o.type}">${o.citizen ? 'Сообщение жителя' : (o.type === 'emergency' ? t().emergency : t().planned)}</span></div>
           <div class="hc-when"><span class="st ${rs.cls}"></span>${t().to} <b>${fmtDate(o.end)}</b></div>
           <div class="hc-period">${t().from}: ${fmtDate(o.start)}</div>
-          ${streetName(h.address) !== streetName(pt.address) ? `<div class="hc-period">${t().nearby}: ${esc(h.address)}</div>` : ''}
+          ${!sameAddress(h.address, pt.address) ? `<div class="hc-period">${t().nearby}: ${esc(h.address)}</div>` : ''}
           ${o.reason ? `<div class="hc-reason">${esc(o.reason)}</div>` : ''}
         </div></div>`;
     }).join('');
@@ -733,7 +753,10 @@ function openAddressCard(pt, nearHouses) {
       <div class="hc-addr">${esc(pt.address)}</div>
       ${pt.district ? `<div class="hc-district">${esc(pt.district)}</div>` : ''}
     </div>
-    ${outs.length ? `<div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>` : ''}
+    ${outs.length ? `<div class="hc-sum">${hasExact
+      ? `<span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span>`
+      : `<span class="hc-off nearby">${t().nearbyOnly}: ${outs.length} ${systemsWord(outs.length)}</span>
+         <span class="hc-note">${t().notListed}</span>`}</div>` : ''}
     <div class="hc-list">${inner}</div>
     <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(pt.address)}">Сообщить о проблеме</button>
   </div>`;
@@ -755,9 +778,35 @@ function submitSearch(box) {
   const q = SEARCHES[0].input.value.trim() || (SEARCHES[1] && SEARCHES[1].input.value.trim()) || '';
   if (!q) return;
   const pq = parseQuery(q);
+  closeSuggests();
+
+  // ⚠️ Если введён НОМЕР ДОМА — Enter должен открыть КАРТОЧКУ ЭТОГО ДОМА, а не «подсветить улицу».
+  // Раньше номер игнорировался (матч только по улице), и пользователь видел всю улицу —
+  // воспринималось как «поиск не находит дом».
+  if (pq.house) {
+    const exactHouse = DATA.houses.find((h) => sameAddress(h.address, `${pq.street}, ${pq.house}`));
+    if (exactHouse) {                                   // дом есть в данных об отключениях
+      setSearchValue(exactHouse.address);
+      state.query = ''; applyFilters();
+      ensureVisible(exactHouse);
+      map.setView([exactHouse.lat, exactHouse.lng], 17);
+      setTimeout(() => openHouseCard(exactHouse, [exactHouse.lat, exactHouse.lng]), 240);
+      return;
+    }
+    const a = addressSuggestions(pq, 1)[0];             // дом есть в общегородском справочнике
+    if (a) {
+      const address = `${a.street}, ${a.house}`;
+      setSearchValue(address);
+      state.query = ''; applyFilters();
+      map.setView([a.lat, a.lng], 17);
+      setTimeout(() => openAddressCard({ address, district: '', lat: a.lat, lng: a.lng },
+        outagesNear(a.lat, a.lng, address)), 240);
+      return;
+    }
+  }
+
   const match = DATA.houses.filter((h) =>
     h.address.toLowerCase().includes(q.toLowerCase()) || streetMatches(h.address, pq.street));
-  closeSuggests();
   if (!match.length) { checkAddress(q); return; }   // нет в данных → проверяем адрес геокодером
   if (!match.some((h) => matchingOutages(h).length)) ensureVisible(match[0]);
   state.query = q; applyFilters();
