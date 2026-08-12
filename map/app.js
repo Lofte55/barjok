@@ -1042,7 +1042,7 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
     if (kind === 'suggestion' && !message) return showErr('Напишите сообщение');
     submit.disabled = true; submit.textContent = 'Отправляем…';
     try {
-      const r = await fetch('/api/report', {
+      const r = await fetch('/api/report/', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ kind, category, address, message, website: hp.value }),
       });

@@ -82,7 +82,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({ chat_id: chat, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true }),
     });
     const j = await tg.json();
-    if (!j.ok) return res.status(502).json({ ok: false, error: 'telegram' });
+    if (!j.ok) return res.status(502).json({ ok: false, error: 'telegram', detail: j.description || null });
     return res.status(200).json({ ok: true });
   } catch (e) {
     return res.status(502).json({ ok: false, error: 'network' });
