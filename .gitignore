@@ -4,3 +4,4 @@ map/data.prev.json
 .DS_Store
 .vercel
 parser/buildings.json
+map/vendor/maplibre-gl/maplibre-gl.js.map

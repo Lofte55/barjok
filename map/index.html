@@ -11,13 +11,13 @@
   <link rel="apple-touch-icon" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
   <link rel="dns-prefetch" href="https://nominatim.openstreetmap.org">
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="/map/styles.css?v=1787400000" />
+  <!-- leaflet/maplibre — самохостинг (map/vendor/), без зависимости от unpkg.com под нагрузкой -->
+  <link rel="stylesheet" href="/map/vendor/leaflet/leaflet.css?v=1787500000" />
+  <link rel="stylesheet" href="/map/vendor/maplibre-gl/maplibre-gl.css?v=1787500000" />
+  <link rel="stylesheet" href="/map/styles.css?v=1787500000" />
 
   <!-- Schema.org: карта-приложение отключений для Павлодара + хлебные крошки -->
   <script type="application/ld+json">
@@ -246,11 +246,11 @@
     </div>
   </div>
 
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script defer src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
-  <script defer src="/map/data.js?v=1787400000"></script>
-  <script defer src="/map/app.js?v=1787400000"></script>
+  <script defer src="/map/vendor/leaflet/leaflet.js?v=1787500000"></script>
+  <script defer src="/map/vendor/maplibre-gl/maplibre-gl.js?v=1787500000"></script>
+  <script defer src="/map/vendor/maplibre-gl-leaflet/leaflet-maplibre-gl.js?v=1787500000"></script>
+  <script defer src="/map/data.js?v=1787500000"></script>
+  <script defer src="/map/app.js?v=1787500000"></script>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
