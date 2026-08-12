@@ -123,16 +123,15 @@ async function fetchPtsHeat() {
     if (new Date(end).getTime() < NOW || new Date(start).getTime() > KEEP_TO) continue;
     const status = new Date(start).getTime() > NOW ? 'future' : 'current';
 
-    /* ⚠️ ПОЧЕМУ НЕ РАЗМЕЧАЕМ ОБЛАСТЬ «в границах улиц».
-       Пробовали строить контур (выпуклую оболочку) по граничным улицам — получилось
+    /* ⚠️ ПОЧЕМУ НЕ СТРОИМ ПОЛИГОН «в границах улиц» ПО ГЕОМЕТРИИ.
+       Пробовали контур (выпуклую оболочку) по граничным улицам — получилось
        катастрофически неточно: центроид длинной улицы не является границей.
        Камзина тянется через весь город (центроид 52.257 — ЮГ, хотя объявление про СЕВЕР),
        Малайсары батыр уехала на 76.79 (запад). Контур раздулся до 33 км² и накрыл
        71% домов города — на карте был «ковёр» из пиктограмм там, где отключений нет.
-       Надёжно вывести полигон из прозаического перечня улиц нельзя.
-       Поэтому размечаем ТОЛЬКО явно названные улицы (что и написано в источнике).
-       Известное следствие: дома внутри области, но не на названной улице, ГВС не покажут.
-       Правильное решение — OCR адресных списков с картинок ПТС или данные от самой ПТС. */
+       Вместо геометрии — ниже, после этого цикла — размечаем по СЕМАНТИКЕ здания
+       (многоэтажки из OSM), это не даёт того искажения. Здесь остаётся точная разметка
+       по названным улицам. */
     for (const name of p.streets) {
       const g = coords.get(name); if (!g) continue;
       if (Math.abs(g.lat - 52.2871) > 0.22 || Math.abs(g.lng - 76.9674) > 0.35) continue;
@@ -166,6 +165,46 @@ async function fetchPtsHeat() {
           provider: 'ТОО «Павлодарские тепловые сети»',
           geom: null,
           streetWide: false,     // уже конкретный дом — index.js не разворачивает
+        });
+      }
+    }
+  }
+
+  // ⚠️ Общегородские объявления («в границах улиц/районе», ежегодные гидравлические
+  // испытания) — размечаем ВСЕ ИЗВЕСТНЫЕ многоэтажки города (OSM building:levels>=3
+  // или apartments/dormitory), а не площадь по геометрии (см. комментарий выше).
+  // Многоэтажки почти всегда на централизованном ГВС, частный сектор — нет, поэтому
+  // семантика здания честнее площади. Зоны (Северный/Южный сетевой район) OSM не знает —
+  // берём ОБЪЕДИНЁННЫЙ период всех isArea-сегментов на ресурс (шире, чем точная зона,
+  // но не «ковёр» на весь город и не пусто, как раньше). Покрытие частичное: OSM размечает
+  // этажность не у каждого здания — это ИЗВЕСТНЫЕ многоэтажки, не все физически.
+  const areaWindows = {}; // resource → { start(ms), end(ms), type }
+  for (const p of parsed) {
+    if (!p.isArea) continue;
+    const start = new Date(Date.UTC(p.year, p.mo, p.d1, 0, 0)).getTime();
+    const end = new Date(Date.UTC(p.year, p.mo, p.d2, 23, 59)).getTime();
+    if (end < NOW || start > KEEP_TO) continue;
+    const w = areaWindows[p.resource];
+    if (!w) areaWindows[p.resource] = { start, end, type: p.type };
+    else { w.start = Math.min(w.start, start); w.end = Math.max(w.end, end); if (p.type === 'emergency') w.type = 'emergency'; }
+  }
+  const areaResources = Object.keys(areaWindows);
+  if (areaResources.length) {
+    const multiHouses = await buildings.allMultiStory();
+    for (const resource of areaResources) {
+      const w = areaWindows[resource];
+      const status = w.start > NOW ? 'future' : 'current';
+      for (const h of multiHouses) {
+        if (Math.abs(h.lat - 52.2871) > 0.22 || Math.abs(h.lng - 76.9674) > 0.35) continue;
+        records.push({
+          address: `${h.street}, ${h.house}`,
+          district: 'Павлодар',
+          lat: h.lat, lng: h.lng,
+          resource, type: w.type, status,
+          start: new Date(w.start).toISOString(), end: new Date(w.end).toISOString(),
+          reason: 'Централизованные гидравлические испытания ГВС — по всему сетевому району (граница района OSM не размечает, окно шире точной зоны)',
+          provider: 'ТОО «Павлодарские тепловые сети»',
+          geom: null, streetWide: false,
         });
       }
     }

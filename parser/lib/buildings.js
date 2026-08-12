@@ -17,12 +17,20 @@ const ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ];
-const QUERY = `[out:json][timeout:120];
+const QUERY = `[out:json][timeout:180];
 (
   way["addr:housenumber"]["addr:street"](${BBOX});
   node["addr:housenumber"]["addr:street"](${BBOX});
 );
 out center tags;`;
+// Многоэтажка (обычно на центральном отоплении/ГВС): 3+ этажа ИЛИ явный тип
+// «многоквартирный дом»/«общежитие». Частный сектор (building=house/detached
+// без этажности) НЕ попадает — у него нет центральной ГВС.
+function isMultiStory(tags) {
+  const lvl = parseInt(tags['building:levels'], 10);
+  if (lvl >= 3) return true;
+  return tags.building === 'apartments' || tags.building === 'dormitory';
+}
 
 /* Нормализация названия улицы. Цель: «Кутузова» ↔ «Кутузов көшесі» ↔ «улица Кутузова»
    дают один ключ. ВНИМАНИЕ: \b в JS не работает с кириллицей — границы задаём явно. */
@@ -67,17 +75,18 @@ async function fetchAll() {
       const data = await res.json();
       const els = (data.elements || []).filter((e) => e.tags && e.tags['addr:street'] && e.tags['addr:housenumber']);
       if (!els.length) throw new Error('пустой ответ Overpass');
-      // компактная форма: [street, house, lat, lng]
+      // компактная форма: [street, house, lat, lng, multi(0|1)]
       return els.map((e) => {
         const c = e.center || e;
-        return [e.tags['addr:street'], e.tags['addr:housenumber'], +c.lat.toFixed(5), +c.lon.toFixed(5)];
+        return [e.tags['addr:street'], e.tags['addr:housenumber'], +c.lat.toFixed(5), +c.lon.toFixed(5), isMultiStory(e.tags) ? 1 : 0];
       }).filter((b) => typeof b[2] === 'number' && typeof b[3] === 'number');
     } catch (e) { lastErr = e; }
   }
   throw lastErr || new Error('Overpass недоступен');
 }
 
-let INDEX = null;   // normStreet → [{house, lat, lng, street}]
+let INDEX = null;   // normStreet → [{house, lat, lng, street, multi}]
+let ALL_ROWS = null; // плоский список [street, house, lat, lng, multi] — для allMultiStory()
 
 async function load() {
   if (INDEX) return INDEX;
@@ -91,11 +100,12 @@ async function load() {
     console.log(`  адресный реестр: ${rows.length} домов → parser/buildings.json`);
   }
   INDEX = new Map();
-  for (const [street, house, lat, lng] of rows) {
+  ALL_ROWS = rows;
+  for (const [street, house, lat, lng, multi] of rows) {
     const key = normStreet(street);
     if (!key) continue;
     if (!INDEX.has(key)) INDEX.set(key, []);
-    INDEX.get(key).push({ house, lat, lng, street });
+    INDEX.get(key).push({ house, lat, lng, street, multi: !!multi });
   }
   return INDEX;
 }
@@ -133,9 +143,21 @@ async function housesInPolygon(poly, limit = 3000) {
   return out;
 }
 
-async function refresh() {
-  try { fs.unlinkSync(CACHE); } catch (e) {}
-  INDEX = null; return load();
+/* Все известные многоэтажки города (building:levels>=3 или apartments/dormitory).
+   Частичное покрытие: OSM размечает этажность не у каждого здания — это ИЗВЕСТНЫЕ
+   многоэтажки, не «все многоэтажки физически». Используется для честной пометки
+   централизованных отключений (напр. ежегодные гидравлические испытания ГВС),
+   когда источник говорит «по всему городу/сетевому району», а не по конкретным улицам. */
+async function allMultiStory() {
+  await load();
+  return (ALL_ROWS || [])
+    .filter((r) => r[4])
+    .map(([street, house, lat, lng]) => ({ street, house, lat, lng }));
 }
 
-module.exports = { housesOnStreet, housesInPolygon, normStreet, load, refresh };
+async function refresh() {
+  try { fs.unlinkSync(CACHE); } catch (e) {}
+  INDEX = null; ALL_ROWS = null; return load();
+}
+
+module.exports = { housesOnStreet, housesInPolygon, allMultiStory, normStreet, load, refresh };
