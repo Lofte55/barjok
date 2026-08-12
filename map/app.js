@@ -1063,6 +1063,18 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
   } catch (e) {}
 })();
 
+/* ---------- Инфо-плашка (честный контекст) ---------- */
+(function mapNotice() {
+  const n = document.getElementById('mapNotice');
+  const txt = document.getElementById('mapNoticeText');
+  if (!n || !txt || !txt.textContent.trim()) return;   // пустой текст — плашки нет
+  const KEY = 'barjoq_notice_v1';                       // бампнуть при НОВОМ тексте — покажется снова
+  try { if (localStorage.getItem(KEY) === 'off') return; } catch (e) {}
+  n.hidden = false;
+  const x = document.getElementById('mnClose');
+  if (x) x.onclick = () => { n.hidden = true; try { localStorage.setItem(KEY, 'off'); } catch (e) {} };
+})();
+
 /* ---------- Go ---------- */
 load();
 })();

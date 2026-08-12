@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="/map/styles.css?v=1787300000" />
+  <link rel="stylesheet" href="/map/styles.css?v=1787400000" />
 
   <!-- Schema.org: карта-приложение отключений для Павлодара + хлебные крошки -->
   <script type="application/ld+json">
@@ -86,6 +86,14 @@
       <button data-lang-btn="kk">KZ</button>
     </div>
     </div>
+  </div>
+
+  <!-- Инфо-плашка: честный контекст (напр. общегородской ремонт ГВС). Закрывается, помнится в localStorage.
+       Текст правится здесь; чтобы убрать плашку совсем — удалить этот блок или очистить #mapNoticeText. -->
+  <div class="mapnotice" id="mapNotice" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <span id="mapNoticeText">Плановый ремонт горячей воды в городе (ориентир завершения — до 1 сентября). Если ГВС нет, а на карте её не видно — график по вашему району ПТС ещё не опубликовал.</span>
+    <button class="mn-x" id="mnClose" type="button" aria-label="Скрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
 
   <!-- Desktop left panel -->
@@ -241,8 +249,8 @@
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script defer src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
-  <script defer src="/map/data.js?v=1787300000"></script>
-  <script defer src="/map/app.js?v=1787300000"></script>
+  <script defer src="/map/data.js?v=1787400000"></script>
+  <script defer src="/map/app.js?v=1787400000"></script>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){

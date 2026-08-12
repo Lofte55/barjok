@@ -52,7 +52,7 @@
 
   /* logo */
   .logo{display:inline-flex;align-items:center;gap:10px;flex:none}
-  .logo-img{height:30px;width:auto;display:block}
+  .logo-img{height:26px;width:auto;display:block}
   .logo .gl{width:30px;height:30px;flex:none}
   .logo .wm{font-weight:800;font-size:19px;letter-spacing:-.02em;white-space:nowrap}
   .logo .wm b{color:var(--accent)}
@@ -645,7 +645,8 @@
 
   <!-- Блок «сообщить о проблеме» с мини-анимацией -->
   <style>
-    #report-cta{margin-top:8px}
+    #report-cta{margin-top:72px}
+    @media(max-width:760px){#report-cta{margin-top:48px}}
     .rc-band{position:relative;overflow:hidden;border-radius:26px;padding:44px 44px;
       background:linear-gradient(135deg,#2f6bed,#1f5fe0 55%,#4f93ff);color:#fff;
       display:grid;grid-template-columns:1.15fr .85fr;gap:36px;align-items:center;
