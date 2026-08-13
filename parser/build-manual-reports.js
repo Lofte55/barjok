@@ -28,6 +28,7 @@ const REPORTS = [
   { street: 'Нурсултана Назарбаева', house: '3/2', resource: 'hot_water', note: 'Нет горячей воды. Заявлено: отключили 03.08.2026' },
   { street: 'Нуржанова', house: '4/1', resource: 'cold_water', note: 'Нет холодной воды. Заявлено: отсутствует около недели' },
   { street: 'Торайгырова', house: '42', resource: 'hot_water', note: 'Нет горячей воды. Заявлено: дома нет в списках на подключение' },
+  { street: 'Нурсултана Назарбаева', house: '50', resource: 'hot_water', note: 'Нет горячей воды' },
 ];
 
 const houseNum = (h) => parseInt(String(h).match(/\d+/)?.[0] || 'NaN', 10);
