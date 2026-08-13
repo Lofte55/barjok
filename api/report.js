@@ -61,7 +61,9 @@ module.exports = async (req, res) => {
   ].filter(Boolean);
 
   // Дописываем строку в Google-таблицу (Apps Script webhook) — модерация + слой на карте.
-  // Не критично: если упало/не настроено, жалоба всё равно уйдёт в Telegram.
+  // Не критично для пользователя: если упало, жалоба всё равно уйдёт в Telegram —
+  // но ошибку ЛОГИРУЕМ (видно в Vercel → Deployments → Functions → Logs), иначе
+  // проблема невидима месяцами (именно так таблица не наполнялась).
   const sheetUrl = process.env.SHEET_WEBHOOK_URL;
   if (sheetUrl) {
     const row = {
@@ -71,8 +73,21 @@ module.exports = async (req, res) => {
       address, message, status: 'new', lat: '', lng: '',
     };
     try {
-      await fetch(sheetUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(row) });
-    } catch (e) { /* таблица недоступна — не блокируем отправку в Telegram */ }
+      const body = JSON.stringify(row);
+      const headers = { 'content-type': 'application/json' };
+      // ⚠️ Apps Script Web App отвечает на POST 302-редиректом на script.googleusercontent.com.
+      // fetch может конвертировать POST→GET на 301/302 и ТЕРЯЕТ тело запроса — doPost() у Apps
+      // Script тогда не получает данных и строка в таблицу не пишется, хотя запрос "успешен".
+      // Обрабатываем редирект вручную, повторяя POST на конечный URL.
+      let r = await fetch(sheetUrl, { method: 'POST', headers, body, redirect: 'manual' });
+      if (r.status >= 300 && r.status < 400) {
+        const loc = r.headers.get('location');
+        if (loc) r = await fetch(loc, { method: 'POST', headers, body, redirect: 'follow' });
+      }
+      const text = await r.text().catch(() => '');
+      if (!r.ok) console.error('sheet webhook non-2xx:', r.status, text.slice(0, 300));
+      else console.log('sheet webhook ok:', text.slice(0, 200));
+    } catch (e) { console.error('sheet webhook failed:', e.message); }
   }
 
   try {

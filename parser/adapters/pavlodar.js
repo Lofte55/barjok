@@ -16,6 +16,7 @@ const curated = require('./pavlodar-curated');
 const pvkWater = require('./pvk-water');
 const ptsHeat = require('./pts-heat');
 const citizen = require('./citizen');
+const manualReports = require('./manual-reports');
 const pavonHeat = require('./pavon-heat');
 
 const PAGE = 'https://pavlodarenergo.kz/ru/informacziya-o-planovyix-otklyucheniyax.html';
@@ -200,6 +201,12 @@ async function fetchWithFallback() {
     const cz = await citizen.fetch();
     if (cz.records.length) { records.push(...cz.records); parts.push('сообщения жителей'); }
   } catch (e) { console.warn('  сообщения жителей недоступны:', e.message); }
+
+  // Временный слой РУЧНЫХ жалоб (пока не чинили автозапись в таблицу — см. manual-reports.js).
+  try {
+    const mr = await manualReports.fetch();
+    if (mr.records.length) { records.push(...mr.records); parts.push('ручные жалобы'); }
+  } catch (e) { console.warn('  ручные жалобы недоступны:', e.message); }
 
   if (records.length) {
     return { records, center: CENTER, source: 'Реальные источники Павлодара: ' + parts.join(' + ') };
