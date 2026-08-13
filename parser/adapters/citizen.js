@@ -17,9 +17,15 @@ const FEED_URL = process.env.CITIZEN_FEED_URL || process.env.CITIZEN_CSV_URL || 
 const NOW = process.env.BARJOQ_NOW ? Date.parse(process.env.BARJOQ_NOW) : Date.now();
 const TTL = 3 * 86400000;
 const CENTER = [52.2871, 76.9674];
+// Поддержаны ОБА формата колонки category в таблице: старый код (hot_water) и
+// новый русский текст (api/report.js с какого-то момента пишет текст для читаемости
+// при модерации) — иначе уже одобренные строки со старым форматом перестали бы работать.
 const CAT_RES = {
   hot_water: ['hot_water'], cold_water: ['cold_water'], electricity: ['electricity'],
   heating: ['heating'], gas: ['gas'], water_light: ['cold_water', 'electricity'],
+  'нет горячей воды': ['hot_water'], 'нет холодной воды': ['cold_water'],
+  'нет электричества': ['electricity'], 'нет тепла': ['heating'], 'нет газа': ['gas'],
+  'нет воды и света': ['cold_water', 'electricity'],
 };
 
 // срезаем любые теги и угловые скобки, схлопываем пробелы, ограничиваем длину
@@ -70,7 +76,7 @@ async function fetchCitizen() {
   for (const o of rows) {
     if (String(o.status || '').trim().toLowerCase() !== 'approved') continue;
     if (String(o.kind || '').trim() === 'suggestion') continue;
-    const resources = CAT_RES[String(o.category || '').trim()]; if (!resources) continue;
+    const resources = CAT_RES[String(o.category || '').trim().toLowerCase()]; if (!resources) continue;
     const address = clean(o.address, 120); if (!address) continue;
     const ts = Date.parse(o.ts) || NOW;
     if (ts + TTL < NOW) continue;

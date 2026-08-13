@@ -69,7 +69,10 @@ module.exports = async (req, res) => {
     const row = {
       ts: new Date().toISOString(),
       kind: isSuggest ? 'suggestion' : 'complaint',
-      category: isSuggest ? '' : (b.category || ''),
+      // В таблицу пишем русский текст («Нет горячей воды»), а не код (hot_water) —
+      // владельцу так понятнее при модерации. citizen.js при чтении понимает оба
+      // варианта (и старый код, и текст), чтобы уже одобренные строки не сломались.
+      category: isSuggest ? '' : category,
       address, message, status: 'new', lat: '', lng: '',
     };
     try {
