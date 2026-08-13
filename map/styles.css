@@ -372,8 +372,11 @@ body {
 .hc-row:first-child { border-top: 0; }
 .hc-row .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 16px; flex: none; }
 .hc-main { flex: 1; min-width: 0; }
-.hc-r1 { display: flex; align-items: center; gap: 8px; }
-.hc-r1 b { font-size: 14px; }
+/* Имя ресурса — на всю ширину строки; бейдж (в т.ч. длинный «Сообщение жителя») —
+   отдельной строкой под ним, а не втиснут рядом (раньше переносился криво). */
+.hc-r1 { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.hc-r1 b { font-size: 14px; line-height: 1.25; }
+.hc-r1 .badge { width: fit-content; }
 .hc-when { font-size: 13px; color: var(--ink); margin-top: 5px; display: flex; align-items: center; gap: 7px; }
 .hc-when .st { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .hc-when .st.live { background: var(--emerg); box-shadow: 0 0 0 3px rgba(217,67,58,.18); }
