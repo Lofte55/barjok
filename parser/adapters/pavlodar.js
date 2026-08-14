@@ -18,6 +18,7 @@ const ptsHeat = require('./pts-heat');
 const citizen = require('./citizen');
 const manualReports = require('./manual-reports');
 const pavonHeat = require('./pavon-heat');
+const resolved = require('./resolved');
 
 const PAGE = 'https://pavlodarenergo.kz/ru/informacziya-o-planovyix-otklyucheniyax.html';
 const HOST = 'https://pavlodarenergo.kz';
@@ -207,6 +208,20 @@ async function fetchWithFallback() {
     const mr = await manualReports.fetch();
     if (mr.records.length) { records.push(...mr.records); parts.push('ручные жалобы'); }
   } catch (e) { console.warn('  ручные жалобы недоступны:', e.message); }
+
+  // «Восстановлено» через таблицу — применяем В САМОМ КОНЦЕ, после ВСЕХ источников
+  // (официальных и жителей), чтобы перекрывать вообще любую запись по адресу.
+  try {
+    const resolvedSet = await resolved.fetchResolvedSet();
+    if (resolvedSet.size) {
+      const before = records.length;
+      for (let i = records.length - 1; i >= 0; i--) {
+        if (resolved.isResolved(resolvedSet, records[i].address, records[i].resource)) records.splice(i, 1);
+      }
+      const removed = before - records.length;
+      if (removed) console.log(`  восстановлено (убрано с карты): ${removed} записей`);
+    }
+  } catch (e) { console.warn('  не удалось применить восстановленные адреса:', e.message); }
 
   if (records.length) {
     return { records, center: CENTER, source: 'Реальные источники Павлодара: ' + parts.join(' + ') };
