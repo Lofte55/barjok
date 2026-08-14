@@ -22,7 +22,11 @@ const SOURCE = 'ТОО «Павлодарские тепловые сети» ·
 const UA = { 'User-Agent': 'Mozilla/5.0 (BarJoqParser/1.0)' };
 const NOW = process.env.BARJOQ_NOW ? Date.parse(process.env.BARJOQ_NOW) : Date.now();
 const KEEP_TO = NOW + 60 * 86400000;
-const MAX_ARTICLES = 12;
+// ⚠️ pavon.kz — общегородской новостной портал (не сайт ПТС), поток новостей высокий:
+// статья про подключение ГВС от 12.08 (id 93356) за неполные 2 суток вытеснилась за
+// пределы топ-12 более чем 15 несвязанными новостями → адаптер отдавал 0 записей,
+// хотя актуальный график подключения существовал. Взято с запасом на ~неделю потока.
+const MAX_ARTICLES = 60;
 const MONTHS = ['январ', 'феврал', 'март', 'апрел', 'ма', 'июн', 'июл', 'август', 'сентябр', 'октябр', 'ноябр', 'декабр'];
 const CENTER = [52.2871, 76.9674];
 
@@ -83,17 +87,31 @@ function parseAddresses(body) {
   return out;
 }
 
+// ⚠️ ГРАБЛИ (нашли 14.08.2026, НЕ повторять само собой разумеющееся «увеличить MAX_ARTICLES»):
+// pavon.kz — общегородской портал, /news отдаёт лишь ~38 последних ссылок БЕЗ реальной
+// пагинации (?page= игнорируется, отдаёт тот же список) и без рабочего /search (игнорирует
+// query). Статья с адресным графиком подключения ГВС (актуальным на 3+ недели вперёд)
+// вытесняется из этих 38 ссылок несвязанными новостями за ~2 суток — увеличение
+// MAX_ARTICLES тут не помогает, т.к. упирается в потолок самой ленты. Тег /post/tags/жкх
+// тоже не содержал эту статью (непоследовательная теговка на сайте). Единственный
+// надёжный способ — ID у постов последовательные: если по ссылкам из ленты ничего
+// не нашли, добираем прямым перебором ID вниз от последнего известного (ID_SCAN_WINDOW).
+const ID_SCAN_WINDOW = 150; // ~3 недели при текущем темпе публикаций (~7-8 постов/сутки)
+
 async function fetchPavonHeat() {
   let feed;
   try { feed = await getText(FEED); } catch (e) { console.warn('  pavon.kz недоступен:', e.message); return { records: [] }; }
-  const links = [...new Set([...feed.matchAll(/\/post\/view\/(\d+)/g)].map((m) => m[0]))].slice(0, MAX_ARTICLES);
+  const feedLinks = [...new Set([...feed.matchAll(/\/post\/view\/(\d+)/g)].map((m) => m[0]))];
+  const links = feedLinks.slice(0, MAX_ARTICLES);
 
   const parsed = [];
-  for (const slug of links) {
+  const tried = new Set();
+  async function scanArticle(slug) {
+    if (tried.has(slug)) return; tried.add(slug);
     let text;
-    try { text = strip(await getText(BASE + slug)); } catch (e) { continue; }
-    if (!/горяч[а-яё]*\s+вод|ГВС/i.test(text)) continue;   // ⚠️ не \w — кириллица
-    if (!/подключ/i.test(text)) continue;
+    try { text = strip(await getText(BASE + slug)); } catch (e) { return; }
+    if (!/горяч[а-яё]*\s+вод|ГВС/i.test(text)) return;   // ⚠️ не \w — кириллица
+    if (!/подключ/i.test(text)) return;
     const year = +((text.match(/\b(\d{4})\s*,?\s*(?:Понедельник|Вторник|Среда|Четверг|Пятница|Суббота|Воскресенье)/i) || [])[1]
       || (text.match(/\b20(\d{2})\b/) ? text.match(/\b(20\d{2})\b/)[1] : new Date(NOW).getUTCFullYear()));
     for (const sec of findSections(text, year)) {
@@ -101,8 +119,19 @@ async function fetchPavonHeat() {
       if (addrs.length) parsed.push({ ...sec, addrs });
     }
   }
-  if (!parsed.length) return { records: [] };
+  for (const slug of links) await scanArticle(slug);
 
+  // Резервный проход: ничего по ленте не нашли — перебираем ID напрямую вниз от топа.
+  if (!parsed.length && feedLinks.length) {
+    const topId = Math.max(...feedLinks.map((s) => +s.match(/\d+/)[0]));
+    console.log(`  pavon.kz: по ленте ничего не нашли, добираю перебором ID ${topId}…${topId - ID_SCAN_WINDOW}`);
+    for (let id = topId; id >= topId - ID_SCAN_WINDOW; id--) await scanArticle(`/post/view/${id}`);
+  }
+  if (!parsed.length) return { records: [] };
+  return finishPavonHeat(parsed);
+}
+
+async function finishPavonHeat(parsed) {
   // реестр домов улицы → точные координаты
   const regCache = new Map();
   async function registry(name) {
