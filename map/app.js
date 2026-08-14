@@ -474,6 +474,22 @@ function parseQuery(raw) {
   const m = s.match(/^(.*?)[\s,]+(\d+[а-я]?(?:\/\d+)?)\s*$/i);
   return m ? { street: m[1].trim(), house: m[2] } : { street: s, house: null };
 }
+/* Язык названия улицы: OSM/наши источники хранят одну и ту же улицу ДВУМЯ отдельными
+   строками — «улица Естая» (RU) и «Естай көшесі» (KK) — как разные ключи в addresses.json
+   и разные адреса домов. Раньше подсказки показывали ОБА варианта вперемешку одновременно —
+   путало пользователя. Признак: суффикс-тип (көшесі/даңғылы/…) или казахские буквы. */
+function streetLangOf(name) {
+  if (/(көшесі|даңғылы|алаңы|тұйығы|шағын|ауданы)\b/i.test(name)) return 'kk';
+  if (/[әіңғұүқөһ]/i.test(name)) return 'kk';
+  return 'ru';
+}
+/* Фильтрует список под текущий LANG, но не даёт результату опустеть: если для этой
+   улицы существует ТОЛЬКО другой языковой вариант (нет RU-названия и наоборот) —
+   лучше показать что есть, чем скрыть адрес целиком. */
+function preferLang(items, nameOf) {
+  const matched = items.filter((x) => streetLangOf(nameOf(x)) === LANG);
+  return matched.length ? matched : items;
+}
 /* Нормализация названия улицы для сравнения: «улица Ак.Сатпаева» → «ак сатпаева» */
 function normStreet(s) {
   return (s || '').toLowerCase()
@@ -508,10 +524,15 @@ function loadAddresses() {
   }
   return addrLoading;
 }
-/* Подсказки из справочника: «Павлова 38» → улица Павлова, 38 / 38/1 / 38а */
+/* Подсказки из справочника: «Павлова 38» → улица Павлова, 38 / 38/1 / 38а.
+   ⚠️ Собираем кандидатов БЕЗ раннего обрыва по limit — та же улица хранится в реестре
+   ДВУМЯ ключами (RU «улица Естая» и KK «Естай көшесі»), нужно набрать оба варианта
+   ПЕРЕД тем как отфильтровать по текущему языку (preferLang), иначе ранний break мог
+   бы отсечь нужный язык раньше, чем список до него дойдёт. */
 function addressSuggestions(pq, limit = 8) {
   if (!ADDR) return [];
   const out = [];
+  const CEILING = limit * 6;   // с запасом на оба языковых варианта
   for (const street of Object.keys(ADDR)) {
     if (!streetMatches(street, pq.street)) continue;
     const houses = ADDR[street];
@@ -527,9 +548,9 @@ function addressSuggestions(pq, limit = 8) {
     } else {
       houses.slice(0, 6).forEach(([house, lat, lng]) => out.push({ street, house, lat, lng }));
     }
-    if (out.length >= limit) break;
+    if (out.length >= CEILING) break;
   }
-  return out.slice(0, limit);
+  return preferLang(out, (a) => a.street).slice(0, limit);
 }
 
 function buildSuggest(qraw, box) {
@@ -538,7 +559,7 @@ function buildSuggest(qraw, box) {
   const pq = parseQuery(qraw);
   // Автопереключение: дом ещё не указан → предлагаем УЛИЦЫ; как только введён номер
   // дома → предлагаем КОНКРЕТНЫЕ АДРЕСА (единым списком, без деления на подгруппы).
-  const streetHits = pq.house ? [] : STREETS.filter((s) => streetMatches(s.name, pq.street)).slice(0, 8);
+  const streetHits = pq.house ? [] : preferLang(STREETS.filter((s) => streetMatches(s.name, pq.street)), (s) => s.name).slice(0, 8);
 
   let html = '';
   if (streetHits.length) {
@@ -552,10 +573,10 @@ function buildSuggest(qraw, box) {
     // Дома с известными отключениями (DATA.houses) + остальные дома улицы из общего
     // справочника — ОДИН объединённый список, без текстовых пометок «N систем»/«ок»:
     // статус читается по цвету точки, как и у остальных элементов поиска.
-    const houseHits = DATA.houses.filter((h) =>
+    const houseHits = preferLang(DATA.houses.filter((h) =>
       h.address.toLowerCase().includes(q) ||
       (streetMatches(h.address, pq.street) && h.address.includes(pq.house))
-    ).slice(0, 8);
+    ), (h) => h.address).slice(0, 8);
     const known = new Set(houseHits.map((h) => h.address.toLowerCase()));
     const addrHits = addressSuggestions(pq, 10).filter((a) =>
       !known.has(`${a.street}, ${a.house}`.toLowerCase()));
