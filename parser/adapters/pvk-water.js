@@ -158,8 +158,18 @@ async function fetchPvkWater() {
         const hit = reg.get(normHouse(hn));
         let lat, lng;
         if (hit) { lat = hit.lat; lng = hit.lng; }
-        else if (g) { seq++; const j = (((seq * 2654435761) % 1000) / 1000 - 0.5) * 0.0008; lat = +(g.lat + j).toFixed(5); lng = +(g.lng + j).toFixed(5); }
-        else continue;                            // ни в реестре, ни в геокоде — пропуск
+        else {
+          // Дома нет в OSM-реестре улицы (Overpass) — ПЕРЕД тем как ставить точку
+          // «наугад» у центра улицы, пробуем геокодировать именно этот адрес
+          // напрямую через Nominatim (другой источник данных, иногда знает дом,
+          // которого нет в реестре зданий). Раньше сразу шли в jitter-фолбэк —
+          // получались маркеры в центре перекрёстка вместо реального дома (баг,
+          // найден на примере «Сатпаева, 156», 2026-08-18).
+          const gh = await geocode(`${s.name}, ${hn}`);
+          if (gh && inBounds(gh.lat, gh.lng)) { lat = gh.lat; lng = gh.lng; }
+          else if (g) { seq++; const j = (((seq * 2654435761) % 1000) / 1000 - 0.5) * 0.0008; lat = +(g.lat + j).toFixed(5); lng = +(g.lng + j).toFixed(5); }
+          else continue;                          // ни в реестре, ни в геокоде — пропуск
+        }
         if (!inBounds(lat, lng)) continue;
         records.push({ ...base, address: `улица ${s.name}, ${hn}`, lat, lng, geom: null, streetWide: false });
       }
