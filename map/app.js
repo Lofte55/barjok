@@ -415,11 +415,51 @@ function houseCardHtml(h) {
     </div>
     <div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>
     <div class="hc-list">${rows}</div>
+    <div id="adSlotHouse"></div>
     <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(h.address)}">Сообщить о проблеме</button>
   </div>`;
   // Кнопка «Подписаться» временно скрыта — подписки будут позже.
 }
-function wireCard(popup, h) { /* подписка отключена */ }
+function wireCard(popup, h) { loadAdIntoSlot('adSlotHouse', h, cardOutages(h)); }
+
+/* ---------- ADS: outage_detail_context (§19, §21, §97 документа) ----------
+   Реклама вторична и никогда не блокирует основной UX (§75): любая ошибка/задержка
+   сети тихо оставляет слот пустым, ничего в карточке не ломается. Точный адрес
+   пользователя НЕ уходит на сервер — только city/utility/outage status (§18, §91). */
+function outageStatusFor(o) {
+  if (o.type === 'emergency') return 'emergency';
+  if (o.status === 'future') return 'planned';
+  return 'active';
+}
+async function loadAdIntoSlot(slotId, house, outs) {
+  const slot = document.getElementById(slotId);
+  if (!slot || !outs || !outs.length) return;
+  const primary = outs[0];
+  const device = window.matchMedia('(max-width: 640px)').matches ? 'mobile' : 'desktop';
+  const params = new URLSearchParams({
+    placement: 'outage_detail_context', city: 'pavlodar',
+    utility: primary.resource, outage: outageStatusFor(primary), device, page: 'outage_detail',
+  });
+  try {
+    const r = await fetch('/api/ads-select/?' + params.toString());
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok || !j.ad) return;
+    const a = j.ad;
+    const tag = a.destinationUrl ? 'a' : 'div';
+    const hrefAttr = a.destinationUrl ? ` href="${esc(a.destinationUrl)}" target="_blank" rel="noopener sponsored"` : '';
+    slot.innerHTML = `<${tag} class="ad-card"${hrefAttr}>
+      <div class="ad-eyebrow"><span class="ad-secondary">${esc(a.secondaryLabel)}</span><span class="ad-label">${esc(a.label)}</span></div>
+      <div class="ad-body">
+        ${a.imageUrl ? `<img class="ad-logo" src="${esc(a.imageUrl)}" alt="" loading="lazy">` : ''}
+        <div class="ad-text">
+          <div class="ad-headline">${esc(a.headline)}</div>
+          ${a.description ? `<div class="ad-desc">${esc(a.description)}</div>` : ''}
+          ${a.ctaEnabled && a.destinationUrl ? `<span class="ad-cta">${esc(a.ctaText)}</span>` : ''}
+        </div>
+      </div>
+    </${tag}>`;
+  } catch (e) { /* реклама не критична — тихо игнорируем */ }
+}
 
 /* ---------- List ---------- */
 function renderList() {
