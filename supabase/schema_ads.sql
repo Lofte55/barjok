@@ -42,20 +42,20 @@ create table if not exists ads_categories (
 -- Стартовый набор категорий и placements — из документа (§11, §19). Дальше редактируется
 -- через /admin/ads/settings (не в этой фазе — UI пока нет, правки через SQL/консоль).
 insert into ads_categories (slug, name, recommended_utilities) values
-  ('water_delivery', 'Water Delivery', array['cold_water','hot_water']),
-  ('water_heaters', 'Water Heaters', array['hot_water']),
-  ('plumbing', 'Plumbing', array['cold_water','hot_water']),
-  ('electricians', 'Electricians', array['electricity']),
-  ('power_banks', 'Power Banks', array['electricity']),
-  ('generators', 'Generators', array['electricity']),
-  ('heating', 'Heating', array['heating']),
-  ('air_conditioning', 'Air Conditioning', '{}'),
-  ('internet', 'Internet', '{}'),
-  ('retail', 'Retail', '{}'),
-  ('food_delivery', 'Food Delivery', '{}'),
-  ('real_estate', 'Real Estate', '{}'),
-  ('banking', 'Banking', '{}'),
-  ('other', 'Other', '{}')
+  ('water_delivery', 'Доставка воды', array['cold_water','hot_water']),
+  ('water_heaters', 'Водонагреватели', array['hot_water']),
+  ('plumbing', 'Сантехника', array['cold_water','hot_water']),
+  ('electricians', 'Электрики', array['electricity']),
+  ('power_banks', 'Powerbank', array['electricity']),
+  ('generators', 'Генераторы', array['electricity']),
+  ('heating', 'Отопление', array['heating']),
+  ('air_conditioning', 'Кондиционеры', '{}'),
+  ('internet', 'Интернет', '{}'),
+  ('retail', 'Розница', '{}'),
+  ('food_delivery', 'Доставка еды', '{}'),
+  ('real_estate', 'Недвижимость', '{}'),
+  ('banking', 'Банки', '{}'),
+  ('other', 'Другое', '{}')
 on conflict (slug) do nothing;
 
 create table if not exists ads_placements (
@@ -78,8 +78,8 @@ insert into ads_placements (id, name, page, device) values
   ('outage_detail_context', 'В карточке конкретного отключения', 'outage_detail', 'all'),
   ('map_context', 'В интерфейсе карты', 'map', 'all'),
   ('city_feed', 'На городской странице', 'city_page', 'all'),
-  ('sidebar_desktop', 'Desktop sidebar', 'home', 'desktop'),
-  ('mobile_bottom', 'Mobile placement', 'home', 'mobile')
+  ('sidebar_desktop', 'Боковая панель (десктоп)', 'home', 'desktop'),
+  ('mobile_bottom', 'Мобильный низ экрана', 'home', 'mobile')
 on conflict (id) do nothing;
 
 create table if not exists ads_campaigns (

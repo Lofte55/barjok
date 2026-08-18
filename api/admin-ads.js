@@ -3,8 +3,8 @@ const { renderAdminPage } = require('./_lib/admin-layout');
 
 const BODY = `
   <div id="tabs" style="margin-bottom:16px">
-    <button class="ghost" data-tab="campaigns">Campaigns</button>
-    <button class="ghost" data-tab="advertisers">Advertisers</button>
+    <button class="ghost" data-tab="campaigns">Кампании</button>
+    <button class="ghost" data-tab="advertisers">Рекламодатели</button>
   </div>
   <div id="view"></div>
 `;
@@ -12,9 +12,9 @@ const BODY = `
 const SCRIPT = `
 const UTILITIES = [['electricity','Электричество'],['cold_water','Холодная вода'],['hot_water','Горячая вода'],['heating','Отопление'],['gas','Газ'],['other','Другое']];
 const OUTAGE_STATUSES = [['planned','Плановое'],['active','Активное'],['emergency','Аварийное'],['restored','Восстановлено'],['unknown','Неизвестно']];
-const PAGE_CONTEXTS = [['home','Home'],['search_result','Search Result'],['address_result','Address Result'],['outage_detail','Outage Detail'],['map','Map'],['city_page','City Page']];
-const CAMPAIGN_TYPES = [['local','Local'],['context','Context'],['category_exclusive','Category Exclusive'],['sponsor','Sponsor'],['house_ad','House Ad']];
-const STATUS_LABEL = { draft:'Draft', scheduled:'Scheduled', active:'Active', paused:'Paused', completed:'Completed', archived:'Archived', error:'Error' };
+const PAGE_CONTEXTS = [['home','Главная'],['search_result','Результат поиска'],['address_result','Результат по адресу'],['outage_detail','Карточка отключения'],['map','Карта'],['city_page','Страница города']];
+const CAMPAIGN_TYPES = [['local','Локальная'],['context','Контекстная'],['category_exclusive','Эксклюзив категории'],['sponsor','Спонсорство'],['house_ad','Реклама BARJOK']];
+const STATUS_LABEL = { draft:'Черновик', scheduled:'Запланирована', active:'Активна', paused:'На паузе', completed:'Завершена', archived:'В архиве', error:'Ошибка' };
 const STATUS_CLASS = { draft:'b-manual', scheduled:'b-manual', active:'b-restored', paused:'b-manual', completed:'b-restored', archived:'b-manual', error:'b-active' };
 
 let CATEGORIES = [], PLACEMENTS = [], ADVERTISERS = [];
@@ -59,7 +59,7 @@ addEventListener('hashchange', () => route());
 // ---------------- CAMPAIGNS LIST ----------------
 async function renderCampaigns() {
   const view = document.getElementById('view');
-  view.innerHTML = '<div class="card"><button id="newCampaignBtn">+ New Campaign</button></div><div class="card"><table><thead><tr><th>Campaign</th><th>Advertiser</th><th>Type</th><th>Status</th><th>Period</th><th>Actions</th></tr></thead><tbody id="campRows"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody></table></div>';
+  view.innerHTML = '<div class="card"><button id="newCampaignBtn">+ Новая кампания</button></div><div class="card"><table><thead><tr><th>Кампания</th><th>Рекламодатель</th><th>Тип</th><th>Статус</th><th>Период</th><th>Действия</th></tr></thead><tbody id="campRows"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody></table></div>';
   document.getElementById('newCampaignBtn').onclick = () => { location.hash = '#campaign-edit/new'; };
   try {
     await loadRefs();
@@ -71,11 +71,11 @@ async function renderCampaigns() {
     if (!campaigns.length) { rows.innerHTML = '<tr><td colspan="6" class="empty">Пока нет ни одной кампании</td></tr>'; return; }
     rows.innerHTML = campaigns.map((c) => {
       const actions = [];
-      actions.push('<button class="ghost" data-edit="' + c.id + '">Edit</button>');
-      if (c.status === 'active' || c.status === 'scheduled') actions.push('<button class="ghost" data-act="pause_campaign" data-id="' + c.id + '">Pause</button>');
-      if (c.status === 'paused') actions.push('<button class="ghost" data-act="resume_campaign" data-id="' + c.id + '">Resume</button>');
-      actions.push('<button class="ghost" data-act="duplicate_campaign" data-id="' + c.id + '">Duplicate</button>');
-      if (c.status !== 'archived') actions.push('<button class="ghost" data-act="archive_campaign" data-id="' + c.id + '">Archive</button>');
+      actions.push('<button class="ghost" data-edit="' + c.id + '">Изменить</button>');
+      if (c.status === 'active' || c.status === 'scheduled') actions.push('<button class="ghost" data-act="pause_campaign" data-id="' + c.id + '">Пауза</button>');
+      if (c.status === 'paused') actions.push('<button class="ghost" data-act="resume_campaign" data-id="' + c.id + '">Возобновить</button>');
+      actions.push('<button class="ghost" data-act="duplicate_campaign" data-id="' + c.id + '">Дублировать</button>');
+      if (c.status !== 'archived') actions.push('<button class="ghost" data-act="archive_campaign" data-id="' + c.id + '">В архив</button>');
       return '<tr>' +
         '<td>' + esc(c.name) + '<div class="muted">' + esc(c.campaign_key) + '</div></td>' +
         '<td>' + advName(c.advertiser_id) + '</td>' +
@@ -105,20 +105,20 @@ async function renderAdvertisers() {
     '<div class="card"><h3 style="margin-top:0">Новый рекламодатель</h3>' +
     '<form id="advForm" class="new" style="flex-direction:column;align-items:stretch;gap:10px">' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<input name="company_name" placeholder="Company name *" required style="flex:1;min-width:200px">' +
-        '<input name="brand_name" placeholder="Brand name" style="flex:1;min-width:160px">' +
-        '<input name="category" placeholder="Category slug (напр. water_delivery)" style="flex:1;min-width:200px">' +
-        '<input name="website" placeholder="Website" style="flex:1;min-width:180px">' +
+        '<input name="company_name" placeholder="Название компании *" required style="flex:1;min-width:200px">' +
+        '<input name="brand_name" placeholder="Название бренда" style="flex:1;min-width:160px">' +
+        '<input name="category" placeholder="Категория (напр. water_delivery)" style="flex:1;min-width:200px">' +
+        '<input name="website" placeholder="Сайт" style="flex:1;min-width:180px">' +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<input name="contact_person" placeholder="Contact person" style="flex:1;min-width:160px">' +
-        '<input name="contact_phone" placeholder="Phone" style="flex:1;min-width:140px">' +
+        '<input name="contact_person" placeholder="Контактное лицо" style="flex:1;min-width:160px">' +
+        '<input name="contact_phone" placeholder="Телефон" style="flex:1;min-width:140px">' +
         '<input name="contact_email" placeholder="Email" style="flex:1;min-width:160px">' +
-        '<select name="status"><option value="prospect">Prospect</option><option value="active" selected>Active</option><option value="paused">Paused</option></select>' +
+        '<select name="status"><option value="prospect">Потенциальный</option><option value="active" selected>Активный</option><option value="paused">На паузе</option></select>' +
       '</div>' +
       '<button type="submit" style="align-self:flex-start">Создать</button>' +
     '</form></div>' +
-    '<div class="card"><table><thead><tr><th>Company</th><th>Category</th><th>Status</th><th>Contact</th><th>Campaigns</th></tr></thead><tbody id="advRows"><tr><td colspan="5" class="empty">Загрузка…</td></tr></tbody></table></div>';
+    '<div class="card"><table><thead><tr><th>Компания</th><th>Категория</th><th>Статус</th><th>Контакт</th><th>Кампаний</th></tr></thead><tbody id="advRows"><tr><td colspan="5" class="empty">Загрузка…</td></tr></tbody></table></div>';
 
   document.getElementById('advForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -176,53 +176,53 @@ async function renderCampaignEdit(id) {
   view.innerHTML =
     '<div class="card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center">' +
-        '<h2 style="margin:0">' + (id ? 'Edit: ' + esc(campaign.name) : 'New Campaign') + '</h2>' +
+        '<h2 style="margin:0">' + (id ? 'Редактирование: ' + esc(campaign.name) : 'Новая кампания') + '</h2>' +
         (id ? '<span class="badge ' + (STATUS_CLASS[campaign.status]||'') + '">' + (STATUS_LABEL[campaign.status]||campaign.status) + '</span>' : '') +
       '</div>' +
     '</div>' +
 
-    '<div class="card"><h3 style="margin-top:0">Basic settings</h3>' +
+    '<div class="card"><h3 style="margin-top:0">Основные настройки</h3>' +
     '<form id="basicForm" style="display:flex;flex-direction:column;gap:10px">' +
       '<input type="hidden" name="id" value="' + (id||'') + '">' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<input name="name" placeholder="Campaign Name *" value="' + escAttr(campaign.name) + '" required style="flex:2;min-width:240px">' +
-        '<select name="advertiser_id" required style="flex:1;min-width:180px"><option value="">Advertiser…</option>' + advOptions + '</select>' +
+        '<input name="name" placeholder="Название кампании *" value="' + escAttr(campaign.name) + '" required style="flex:2;min-width:240px">' +
+        '<select name="advertiser_id" required style="flex:1;min-width:180px"><option value="">Рекламодатель…</option>' + advOptions + '</select>' +
         '<select name="category" style="flex:1;min-width:160px">' + catOptions + '</select>' +
         '<select name="campaign_type" style="flex:1;min-width:140px">' + typeOptions + '</select>' +
       '</div>' +
 
-      '<h4 style="margin:6px 0 0">Targeting</h4>' +
-      '<div><label><input type="checkbox" name="all_cities" ' + (campaign.all_cities?'checked':'') + '> All current cities</label> ' +
+      '<h4 style="margin:6px 0 0">Таргетинг</h4>' +
+      '<div><label><input type="checkbox" name="all_cities" ' + (campaign.all_cities?'checked':'') + '> Все текущие города</label> ' +
         '<span class="muted">(иначе — только Pavlodar, других городов пока нет)</span></div>' +
-      '<div><b class="muted" style="font-size:12px">Utility Types:</b><br>' + checkboxGroup('utility_types', UTILITIES, campaign.utility_types||[]) + '</div>' +
-      '<div><b class="muted" style="font-size:12px">Outage Status:</b><br>' + checkboxGroup('outage_statuses', OUTAGE_STATUSES, campaign.outage_statuses||[]) + '</div>' +
-      '<div><b class="muted" style="font-size:12px">Page Context:</b><br>' + checkboxGroup('page_contexts', PAGE_CONTEXTS, campaign.page_contexts||[]) + '</div>' +
-      '<div><b class="muted" style="font-size:12px">Placements:</b><br>' + checkboxGroup('placement_ids', PLACEMENTS.map(p=>[p.id,p.name]), placementIds) + '</div>' +
-      '<div><b class="muted" style="font-size:12px">Device:</b> <select name="device_targeting"><option value="all"' + (campaign.device_targeting==='all'?' selected':'') + '>All</option><option value="mobile"' + (campaign.device_targeting==='mobile'?' selected':'') + '>Mobile</option><option value="desktop"' + (campaign.device_targeting==='desktop'?' selected':'') + '>Desktop</option></select></div>' +
+      '<div><b class="muted" style="font-size:12px">Типы услуг:</b><br>' + checkboxGroup('utility_types', UTILITIES, campaign.utility_types||[]) + '</div>' +
+      '<div><b class="muted" style="font-size:12px">Статус отключения:</b><br>' + checkboxGroup('outage_statuses', OUTAGE_STATUSES, campaign.outage_statuses||[]) + '</div>' +
+      '<div><b class="muted" style="font-size:12px">Где на сайте:</b><br>' + checkboxGroup('page_contexts', PAGE_CONTEXTS, campaign.page_contexts||[]) + '</div>' +
+      '<div><b class="muted" style="font-size:12px">Места размещения:</b><br>' + checkboxGroup('placement_ids', PLACEMENTS.map(p=>[p.id,p.name]), placementIds) + '</div>' +
+      '<div><b class="muted" style="font-size:12px">Устройство:</b> <select name="device_targeting"><option value="all"' + (campaign.device_targeting==='all'?' selected':'') + '>Все</option><option value="mobile"' + (campaign.device_targeting==='mobile'?' selected':'') + '>Mobile</option><option value="desktop"' + (campaign.device_targeting==='desktop'?' selected':'') + '>Desktop</option></select></div>' +
 
-      '<h4 style="margin:6px 0 0">Schedule</h4>' +
+      '<h4 style="margin:6px 0 0">Расписание</h4>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<label class="muted" style="font-size:12px">Start<br><input type="datetime-local" name="start_at" value="' + toInputDatetime(campaign.start_at) + '"></label>' +
-        '<label class="muted" style="font-size:12px">End<br><input type="datetime-local" name="end_at" value="' + toInputDatetime(campaign.end_at) + '"></label>' +
+        '<label class="muted" style="font-size:12px">Начало<br><input type="datetime-local" name="start_at" value="' + toInputDatetime(campaign.start_at) + '"></label>' +
+        '<label class="muted" style="font-size:12px">Окончание<br><input type="datetime-local" name="end_at" value="' + toInputDatetime(campaign.end_at) + '"></label>' +
       '</div>' +
 
-      '<h4 style="margin:6px 0 0">Budget & Limits</h4>' +
+      '<h4 style="margin:6px 0 0">Бюджет и лимиты</h4>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<select name="pricing_model"><option value="fixed"' + (campaign.pricing_model==='fixed'?' selected':'') + '>Fixed</option><option value="cpm"' + (campaign.pricing_model==='cpm'?' selected':'') + '>CPM</option><option value="cpc"' + (campaign.pricing_model==='cpc'?' selected':'') + '>CPC</option><option value="house"' + (campaign.pricing_model==='house'?' selected':'') + '>House</option></select>' +
-        '<input name="contract_value" type="number" placeholder="Contract value" value="' + escAttr(campaign.contract_value) + '" style="width:160px">' +
-        '<input name="max_impressions" type="number" placeholder="Max impressions" value="' + escAttr(campaign.max_impressions) + '" style="width:150px">' +
-        '<input name="max_clicks" type="number" placeholder="Max clicks" value="' + escAttr(campaign.max_clicks) + '" style="width:130px">' +
+        '<select name="pricing_model"><option value="fixed"' + (campaign.pricing_model==='fixed'?' selected':'') + '>Фиксированная</option><option value="cpm"' + (campaign.pricing_model==='cpm'?' selected':'') + '>CPM</option><option value="cpc"' + (campaign.pricing_model==='cpc'?' selected':'') + '>CPC</option><option value="house"' + (campaign.pricing_model==='house'?' selected':'') + '>Своя реклама</option></select>' +
+        '<input name="contract_value" type="number" placeholder="Сумма контракта" value="' + escAttr(campaign.contract_value) + '" style="width:160px">' +
+        '<input name="max_impressions" type="number" placeholder="Макс. показов" value="' + escAttr(campaign.max_impressions) + '" style="width:150px">' +
+        '<input name="max_clicks" type="number" placeholder="Макс. кликов" value="' + escAttr(campaign.max_clicks) + '" style="width:130px">' +
         '<input name="frequency_cap_count" type="number" placeholder="Freq cap: показов" value="' + escAttr(campaign.frequency_cap_count) + '" style="width:160px">' +
         '<input name="frequency_cap_window_hours" type="number" placeholder="за N часов" value="' + escAttr(campaign.frequency_cap_window_hours) + '" style="width:130px">' +
-        '<input name="priority" type="number" placeholder="Priority (1-100)" value="' + escAttr(campaign.priority) + '" style="width:150px">' +
-        '<label><input type="checkbox" name="category_exclusive" ' + (campaign.category_exclusive?'checked':'') + '> Category Exclusive</label>' +
+        '<input name="priority" type="number" placeholder="Приоритет (1-100)" value="' + escAttr(campaign.priority) + '" style="width:150px">' +
+        '<label><input type="checkbox" name="category_exclusive" ' + (campaign.category_exclusive?'checked':'') + '> Эксклюзив категории</label>' +
       '</div>' +
-      '<textarea name="notes" placeholder="Internal notes (рекламодателю не видны)" rows="2">' + esc(campaign.notes||'') + '</textarea>' +
-      '<button type="submit" style="align-self:flex-start">' + (id ? 'Сохранить' : 'Создать (Draft)') + '</button>' +
+      '<textarea name="notes" placeholder="Внутренние заметки (рекламодателю не видны)" rows="2">' + esc(campaign.notes||'') + '</textarea>' +
+      '<button type="submit" style="align-self:flex-start">' + (id ? 'Сохранить' : 'Создать (черновик)') + '</button>' +
     '</form></div>' +
 
     (id ? creativesSectionHtml(creatives) : '<div class="card"><i class="muted">Сначала сохраните кампанию — потом можно будет добавить creatives.</i></div>') +
-    (id ? '<div class="card"><h3 style="margin-top:0">UTM Preview</h3><div id="utmPreview" class="muted">Выберите/сохраните creative выше, чтобы увидеть ссылку.</div></div>' : '') +
+    (id ? '<div class="card"><h3 style="margin-top:0">Предпросмотр UTM</h3><div id="utmPreview" class="muted">Выберите/сохраните creative выше, чтобы увидеть ссылку.</div></div>' : '') +
     (id ? validationAndPublishHtml(campaign) : '');
 
   document.getElementById('basicForm').addEventListener('submit', async (e) => {
@@ -269,27 +269,27 @@ function creativesSectionHtml(creatives) {
       '<td>' + esc(cr.headline) + '</td>' +
       '<td>' + esc(cr.cta_text) + '</td>' +
       '<td>' + esc(cr.status) + '</td>' +
-      '<td class="actions"><button class="ghost" data-select-cr="' + cr.id + '">UTM</button> <button class="ghost" data-del-cr="' + cr.id + '">Delete</button></td>' +
+      '<td class="actions"><button class="ghost" data-select-cr="' + cr.id + '">UTM</button> <button class="ghost" data-del-cr="' + cr.id + '">Удалить</button></td>' +
     '</tr>').join('');
-  return '<div class="card"><h3 style="margin-top:0">Creatives</h3>' +
-    '<table><thead><tr><th>Name</th><th>Headline</th><th>CTA</th><th>Status</th><th>Actions</th></tr></thead><tbody id="crRows">' +
+  return '<div class="card"><h3 style="margin-top:0">Креативы</h3>' +
+    '<table><thead><tr><th>Название</th><th>Заголовок</th><th>CTA</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="crRows">' +
     (rows || '<tr><td colspan="5" class="empty">Нет creatives</td></tr>') + '</tbody></table>' +
     '<h4>Добавить creative</h4>' +
     '<form id="crForm" style="display:flex;flex-direction:column;gap:8px;max-width:640px">' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<input name="internal_name" placeholder="Internal name *" required style="flex:1;min-width:180px">' +
+        '<input name="internal_name" placeholder="Внутреннее название *" required style="flex:1;min-width:180px">' +
         '<input name="slug" placeholder="slug (напр. headline_a)" style="flex:1;min-width:160px">' +
       '</div>' +
-      '<input name="headline" placeholder="Headline * (до 60 симв.)" maxlength="60" required>' +
-      '<input name="description" placeholder="Description (до 120 симв.)" maxlength="120">' +
+      '<input name="headline" placeholder="Заголовок * (до 60 симв.)" maxlength="60" required>' +
+      '<input name="description" placeholder="Описание (до 120 симв.)" maxlength="120">' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<input name="brand_name" placeholder="Brand name" style="flex:1;min-width:140px">' +
-        '<input name="image_url" placeholder="Image URL" style="flex:2;min-width:220px">' +
+        '<input name="brand_name" placeholder="Название бренда" style="flex:1;min-width:140px">' +
+        '<input name="image_url" placeholder="URL картинки" style="flex:2;min-width:220px">' +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-        '<label><input type="checkbox" name="cta_enabled" checked> CTA</label>' +
-        '<input name="cta_text" placeholder="CTA text" value="Узнать подробнее" style="flex:1;min-width:140px">' +
-        '<select name="cta_action_type"><option value="website">Website</option><option value="phone">Phone</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></select>' +
+        '<label><input type="checkbox" name="cta_enabled" checked> Кнопка CTA</label>' +
+        '<input name="cta_text" placeholder="Текст кнопки" value="Узнать подробнее" style="flex:1;min-width:140px">' +
+        '<select name="cta_action_type"><option value="website">Сайт</option><option value="phone">Телефон</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></select>' +
         '<input name="cta_destination" placeholder="https://... или телефон" style="flex:2;min-width:220px">' +
       '</div>' +
       '<button type="submit" style="align-self:flex-start">Добавить creative</button>' +
@@ -299,8 +299,8 @@ function creativesSectionHtml(creatives) {
 function validationAndPublishHtml(campaign) {
   return '<div class="card">' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-      '<button id="validateBtn" class="ghost">Validate Campaign</button>' +
-      '<button id="publishBtn">Publish Campaign</button>' +
+      '<button id="validateBtn" class="ghost">Проверить кампанию</button>' +
+      '<button id="publishBtn">Опубликовать кампанию</button>' +
     '</div>' +
     '<div id="validationResult" style="margin-top:10px"></div>' +
   '</div>';
@@ -342,8 +342,8 @@ function wireCreativesAndPublish(id, campaign) {
   const showResult = (r) => {
     const box = document.getElementById('validationResult');
     let html = '';
-    if (r.errors && r.errors.length) html += '<div style="color:#ff8a80"><b>Errors:</b><ul>' + r.errors.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
-    if (r.warnings && r.warnings.length) html += '<div style="color:#ffcf6b"><b>Warnings:</b><ul>' + r.warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul></div>';
+    if (r.errors && r.errors.length) html += '<div style="color:#ff8a80"><b>Ошибки:</b><ul>' + r.errors.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
+    if (r.warnings && r.warnings.length) html += '<div style="color:#ffcf6b"><b>Предупреждения:</b><ul>' + r.warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul></div>';
     if (!html) html = '<div style="color:#7be08a">Всё в порядке.</div>';
     box.innerHTML = html;
   };
