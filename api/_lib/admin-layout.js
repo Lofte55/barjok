@@ -29,6 +29,7 @@ const STYLE = `
   input[name=address] { flex: 1; min-width: 220px; }
   button { background: #2f6bed; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
   button.ghost { background: transparent; border: 1px solid #2c3140; color: #e7e9ee; }
+  button.ghost.on { background: #1d2b4d; border-color: #2f6bed; color: #9ec1ff; }
   button:disabled { opacity: .5; cursor: default; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #232733; vertical-align: top; }
