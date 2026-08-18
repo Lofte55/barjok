@@ -221,7 +221,7 @@ async function renderCampaignEdit(id) {
       '<button type="submit" style="align-self:flex-start">' + (id ? 'Сохранить' : 'Создать (черновик)') + '</button>' +
     '</form></div>' +
 
-    (id ? creativesSectionHtml(creatives) : '<div class="card"><i class="muted">Сначала сохраните кампанию — потом можно будет добавить creatives.</i></div>') +
+    (id ? creativesSectionHtml(creatives) : '<div class="card"><i class="muted">Сначала сохраните кампанию — потом можно будет добавить креативы.</i></div>') +
     (id ? '<div class="card"><h3 style="margin-top:0">Предпросмотр UTM</h3><div id="utmPreview" class="muted">Выберите/сохраните creative выше, чтобы увидеть ссылку.</div></div>' : '') +
     (id ? validationAndPublishHtml(campaign) : '');
 
@@ -371,7 +371,7 @@ module.exports = async (req, res) => {
   if (!requireAdmin(req, res)) return;
   const html = renderAdminPage({
     active: 'ads', title: 'ADS',
-    sub: 'Advertisers, Campaigns, Creatives, UTM. Rendering/tracking/analytics — следующие фазы.',
+    sub: 'Рекламодатели, кампании, креативы, UTM. Рендер/трекинг/аналитика — следующие фазы.',
     body: BODY, script: SCRIPT,
   });
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
