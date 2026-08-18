@@ -59,4 +59,8 @@ async function update(table, query, patch) {
   });
 }
 
-module.exports = { select, insert, update };
+async function remove(table, query) {
+  return supaFetch(`${table}?${query}`, { method: 'DELETE' });
+}
+
+module.exports = { select, insert, update, remove };

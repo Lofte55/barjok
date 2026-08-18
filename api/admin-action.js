@@ -4,7 +4,7 @@
  * запускает переоценку (нечем), а просто убирает флаг ручного режима.
  */
 const { requireAdmin } = require('./_lib/auth');
-const { select, insert, update } = require('./_lib/supabase');
+const { select, insert, update, remove } = require('./_lib/supabase');
 const { evaluate } = require('./_lib/decision-engine');
 
 const UTILITIES = new Set(['hot_water', 'cold_water', 'electricity', 'heating', 'gas']);
@@ -152,6 +152,14 @@ module.exports = async (req, res) => {
       // не дожидаясь следующего report'а.
       const incident = before ? await evaluate(before.address, before.utility_type) : null;
       return res.status(200).json({ ok: true, incident });
+    }
+
+    if (action === 'delete') {
+      const id = Number(b.id);
+      if (!id) return res.status(400).json({ ok: false, error: 'bad_input' });
+      // incident_log удалится каскадом (on delete cascade в schema.sql)
+      await remove('incidents', `id=eq.${id}`);
+      return res.status(200).json({ ok: true });
     }
 
     if (action === 'import_sheet') {
