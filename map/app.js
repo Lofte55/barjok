@@ -458,7 +458,39 @@ async function loadAdIntoSlot(slotId, house, outs) {
         </div>
       </div>
     </${tag}>`;
+    wireAdTracking(slot.firstElementChild, a);
   } catch (e) { /* реклама не критична — тихо игнорируем */ }
+}
+
+/* §46-47: ad_rendered сразу, ad_impression когда ≥50% блока во viewport ~1с,
+   ad_click по клику. Трекинг не блокирует основной UX (§75) — fetch fire-and-forget,
+   ошибки сети тихо игнорируются, клик по ссылке не ждёт ответа сервера. */
+function trackAdEvent(eventType, a) {
+  try {
+    const body = JSON.stringify({
+      event_type: eventType, campaignId: a.campaignId, creativeId: a.creativeId,
+      placementId: a.placementId, clickId: eventType === 'ad_click' ? a.clickId : undefined,
+      city: a.ctx.city, utility: a.ctx.utility, outage: a.ctx.outage, device: a.ctx.device,
+    });
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/ads-track/', new Blob([body], { type: 'application/json' }));
+    else fetch('/api/ads-track/', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => {});
+  } catch (e) {}
+}
+function wireAdTracking(el, a) {
+  if (!el) return;
+  trackAdEvent('ad_rendered', a);
+  let impressionSent = false;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !impressionSent) {
+        setTimeout(() => {
+          if (!impressionSent && el.isConnected) { impressionSent = true; trackAdEvent('ad_impression', a); io.disconnect(); }
+        }, 1000);
+      }
+    });
+  }, { threshold: [0.5] });
+  io.observe(el);
+  if (el.tagName === 'A') el.addEventListener('click', () => trackAdEvent('ad_click', a));
 }
 
 /* ---------- List ---------- */

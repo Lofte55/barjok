@@ -1,34 +1,14 @@
 /*
  * Публичный (без admin-auth) эндпоинт: отдаёт рекламу для одного ad slot на BARJOK.
- * Фаза 3 плана (рендер) — импрессии/клики НЕ пишутся в ads_events здесь, это
- * следующая фаза (tracking). Сейчас только выбор + готовая ссылка с UTM.
+ * Возвращает готовую ссылку с UTM + bjclid, и IDs кампании/креатива — фронт передаёт
+ * их обратно в /api/ads-track при impression/click (фаза tracking).
  *
  * ВАЖНО (§18, §29, §91): принимает только city/utility/outageStatus/placement/device —
- * НИКОГДА точный адрес пользователя. bjclid генерируется здесь (нужен для будущего
- * tracking), но пока никуда не пишется — просто передаётся в ссылке.
+ * НИКОГДА точный адрес пользователя.
  */
 const crypto = require('crypto');
 const { selectAd, buildUtm, appendUtmToUrl } = require('./_lib/ads-engine');
-
-const ALLOWED = ['https://barjok.kz', 'https://www.barjok.kz', 'https://barjok.vercel.app'];
-function originOk(req) {
-  const o = req.headers.origin || '';
-  if (o) {
-    if (ALLOWED.includes(o)) return true;
-    try { return /\.vercel\.app$/.test(new URL(o).hostname); } catch (e) { return false; }
-  }
-  const ref = req.headers.referer || '';
-  return ALLOWED.some((a) => ref.startsWith(a)) || /^https:\/\/[^/]+\.vercel\.app\//.test(ref);
-}
-
-function getOrSetVisitorId(req, res) {
-  const cookies = String(req.headers.cookie || '');
-  const m = /(?:^|;\s*)bj_ad_visitor=([a-f0-9-]{36})/.exec(cookies);
-  if (m) return m[1];
-  const id = crypto.randomUUID();
-  res.setHeader('Set-Cookie', `bj_ad_visitor=${id}; Path=/; Max-Age=63072000; SameSite=Lax; Secure; HttpOnly`);
-  return id;
-}
+const { originOk, getOrSetVisitorId, getOrSetSessionId } = require('./_lib/ads-tracking');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'method' });
@@ -40,23 +20,22 @@ module.exports = async (req, res) => {
   if (!placementId) return res.status(400).json({ ok: false, error: 'no_placement' });
 
   const visitorId = getOrSetVisitorId(req, res);
-  const ctx = {
-    placementId,
-    cityId: String(q.city || 'pavlodar'),
-    utilityType: q.utility || undefined,
-    outageStatus: q.outage || undefined,
-    deviceType: q.device === 'mobile' || q.device === 'desktop' ? q.device : undefined,
-    pageContext: q.page || undefined,
-    visitorId,
-  };
+  getOrSetSessionId(req, res);
+  const cityId = String(q.city || 'pavlodar');
+  const utilityType = q.utility || undefined;
+  const outageStatus = q.outage || undefined;
+  const deviceType = q.device === 'mobile' || q.device === 'desktop' ? q.device : undefined;
 
   try {
-    const result = await selectAd(ctx);
+    const result = await selectAd({
+      placementId, cityId, utilityType, outageStatus, deviceType,
+      pageContext: q.page || undefined, visitorId,
+    });
     if (!result) return res.status(200).json({ ok: true, ad: null });
 
     const { campaign, creative } = result;
     const clickId = 'bjc_' + crypto.randomBytes(9).toString('base64url');
-    const utm = buildUtm({ campaign, creative, cityId: ctx.cityId, utilityType: ctx.utilityType, placementId, term: '{city}_{utility}' });
+    const utm = buildUtm({ campaign, creative, cityId, utilityType, placementId, term: '{city}_{utility}' });
     let destinationUrl = null;
     if (creative.cta_enabled && creative.cta_action_type === 'website' && creative.cta_destination) {
       destinationUrl = appendUtmToUrl(creative.cta_destination, utm, clickId);
@@ -71,8 +50,12 @@ module.exports = async (req, res) => {
     res.status(200).json({
       ok: true,
       ad: {
+        campaignId: campaign.id,
+        creativeId: creative.id,
         campaignKey: campaign.campaign_key,
-        clickId,
+        placementId, clickId,
+        // контекст возвращаем обратно — фронт отправит его же в /api/ads-track без пересчёта
+        ctx: { city: cityId, utility: utilityType || null, outage: outageStatus || null, device: deviceType || null },
         label: 'Реклама',
         secondaryLabel: creative.sponsor_label || 'Партнёр BARJOK',
         headline: creative.headline,
