@@ -1031,6 +1031,8 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
   const kindSeg = modal.querySelector('[data-rm-kind]');
   const catWrap = modal.querySelector('[data-rm-catwrap]');
   const catSel = document.getElementById('rmCategory');
+  const stateWrap = modal.querySelector('[data-rm-statewrap]');
+  const stateSeg = modal.querySelector('[data-rm-state]');
   const addrInput = document.getElementById('rmAddress');
   const addrReq = modal.querySelector('[data-rm-req]');
   const addrHint = modal.querySelector('[data-rm-addrhint]');
@@ -1040,19 +1042,26 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
   const errBox = document.getElementById('rmErr');
   const submit = document.getElementById('rmSubmit');
   let kind = 'complaint';
+  let reportState = 'outage';
 
   function setKind(k) {
     kind = k;
     kindSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.kind === k));
     catWrap.style.display = k === 'complaint' ? '' : 'none';
+    stateWrap.style.display = k === 'complaint' ? '' : 'none';
     addrReq.style.display = k === 'complaint' ? '' : 'none';   // адрес обязателен только для жалобы
     addrHint.textContent = k === 'complaint' ? 'Начните вводить — подскажем улицу и дом' : 'Адрес по желанию';
   }
+  function setState(s) {
+    reportState = s;
+    stateSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.state === s));
+  }
+  stateSeg.querySelectorAll('button').forEach((b) => (b.onclick = () => setState(b.dataset.state)));
   function showErr(m) { errBox.textContent = m; errBox.classList.add('show'); }
   function open(prefill) {
     errBox.textContent = ''; errBox.classList.remove('show');
     submit.disabled = false; submit.textContent = 'Отправить';
-    setKind('complaint');
+    setKind('complaint'); setState('outage');
     catSel.value = ''; msgEl.value = ''; hp.value = '';
     addrInput.value = prefill || '';
     suggestBox.classList.remove('show');
@@ -1112,7 +1121,7 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
     try {
       const r = await fetch('/api/report/', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ kind, category, address, message, website: hp.value }),
+        body: JSON.stringify({ kind, category, address, message, state: reportState, website: hp.value }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.ok) { close(); showToast('Спасибо! Сообщение отправлено.', 3500); }

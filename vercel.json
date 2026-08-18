@@ -8,7 +8,13 @@
     { "source": "/map/pavlodar", "destination": "/map/index.html" },
     { "source": "/map/pavlodar/", "destination": "/map/index.html" },
     { "source": "/admin", "destination": "/api/admin" },
-    { "source": "/admin/", "destination": "/api/admin" }
+    { "source": "/admin/", "destination": "/api/admin" },
+    { "source": "/admin/settings", "destination": "/api/admin-settings" },
+    { "source": "/admin/settings/", "destination": "/api/admin-settings" },
+    { "source": "/admin/ads", "destination": "/api/admin-ads" },
+    { "source": "/admin/ads/", "destination": "/api/admin-ads" },
+    { "source": "/admin/analytics", "destination": "/api/admin-analytics" },
+    { "source": "/admin/analytics/", "destination": "/api/admin-analytics" }
   ],
   "headers": [
     {

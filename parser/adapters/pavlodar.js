@@ -19,6 +19,7 @@ const citizen = require('./citizen');
 const manualReports = require('./manual-reports');
 const pavonHeat = require('./pavon-heat');
 const resolved = require('./resolved');
+const incidents = require('./incidents');
 
 const PAGE = 'https://pavlodarenergo.kz/ru/informacziya-o-planovyix-otklyucheniyax.html';
 const HOST = 'https://pavlodarenergo.kz';
@@ -209,6 +210,14 @@ async function fetchWithFallback() {
     if (mr.records.length) { records.push(...mr.records); parts.push('ручные жалобы'); }
   } catch (e) { console.warn('  ручные жалобы недоступны:', e.message); }
 
+  // Incidents из админки/Decision Engine (Supabase) — ручные и community-подтверждённые
+  // отключения, ОТДЕЛЬНЫЙ слой, как citizen.js.
+  try {
+    const inc = await incidents.fetch();
+    if (inc.records.length) { records.push(...inc.records); parts.push('BARJOK incidents'); }
+    var incidentsRestoredSet = inc.restoredSet; // eslint-disable-line no-var
+  } catch (e) { console.warn('  incidents недоступны:', e.message); }
+
   // «Восстановлено» через таблицу — применяем В САМОМ КОНЦЕ, после ВСЕХ источников
   // (официальных и жителей), чтобы перекрывать вообще любую запись по адресу.
   try {
@@ -222,6 +231,17 @@ async function fetchWithFallback() {
       if (removed) console.log(`  восстановлено (убрано с карты): ${removed} записей`);
     }
   } catch (e) { console.warn('  не удалось применить восстановленные адреса:', e.message); }
+
+  // То же самое, но источник restored-сигнала — incidents.status=RESTORED (Decision
+  // Engine/админка), а не Sheet. Тоже в самом конце, тоже подавляет любой источник.
+  if (incidentsRestoredSet && incidentsRestoredSet.size) {
+    const before = records.length;
+    for (let i = records.length - 1; i >= 0; i--) {
+      if (incidents.isRestored(incidentsRestoredSet, records[i].address, records[i].resource)) records.splice(i, 1);
+    }
+    const removed = before - records.length;
+    if (removed) console.log(`  restored (BARJOK incidents): убрано с карты ${removed} записей`);
+  }
 
   if (records.length) {
     return { records, center: CENTER, source: 'Реальные источники Павлодара: ' + parts.join(' + ') };
