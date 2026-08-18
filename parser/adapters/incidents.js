@@ -47,11 +47,23 @@ async function fetchIncidents() {
     return { records: [], restoredSet: new Set() };
   }
 
+  // На один address+utility_type может существовать НЕСКОЛЬКО incident'ов —
+  // старый RESTORED и новый ACTIVE (§20 документа: после восстановления новое
+  // отключение создаёт НОВЫЙ incident, старый не переиспользуется). Берём только
+  // САМЫЙ СВЕЖИЙ по updated_at на каждую пару — иначе устаревший RESTORED
+  // глушил бы актуальный ACTIVE.
+  const latestByKey = new Map();
+  for (const inc of rows || []) {
+    const key = `${inc.address}|${inc.utility_type}`;
+    const cur = latestByKey.get(key);
+    if (!cur || new Date(inc.updated_at) > new Date(cur.updated_at)) latestByKey.set(key, inc);
+  }
+
   const records = [];
   const restoredSet = new Set();
   const NOW = process.env.BARJOQ_NOW ? Date.parse(process.env.BARJOQ_NOW) : Date.now();
 
-  for (const inc of rows || []) {
+  for (const inc of latestByKey.values()) {
     if (inc.status === 'RESTORED') {
       const key = addrKey(inc.address);
       if (key) restoredSet.add(`${key}|${inc.utility_type}`);
