@@ -14,7 +14,9 @@
     { "source": "/admin/ads", "destination": "/api/admin-ads" },
     { "source": "/admin/ads/", "destination": "/api/admin-ads" },
     { "source": "/admin/analytics", "destination": "/api/admin-analytics" },
-    { "source": "/admin/analytics/", "destination": "/api/admin-analytics" }
+    { "source": "/admin/analytics/", "destination": "/api/admin-analytics" },
+    { "source": "/report/:token", "destination": "/api/ads-report?token=:token" },
+    { "source": "/report/:token/", "destination": "/api/ads-report?token=:token" }
   ],
   "headers": [
     {

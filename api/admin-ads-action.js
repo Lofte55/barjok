@@ -1,4 +1,5 @@
 const { requireAdmin } = require('./_lib/auth');
+const crypto = require('crypto');
 const { select, insert, update, remove } = require('./_lib/supabase');
 
 async function audit(entity_type, entity_id, action, before, after) {
@@ -184,6 +185,27 @@ module.exports = async (req, res) => {
       if (!id) return res.status(400).json({ ok: false, error: 'bad_input' });
       await remove('ads_creatives', `id=eq.${id}`);
       return res.status(200).json({ ok: true });
+    }
+
+    // ---------- Reports (§57-58) ----------
+    if (action === 'create_report') {
+      const campaignId = Number(b.campaign_id);
+      if (!campaignId) return res.status(400).json({ ok: false, error: 'bad_input' });
+      const validDays = Number(b.valid_days) || 30;
+      const [row] = await insert('ads_reports', {
+        token: crypto.randomBytes(18).toString('base64url'),
+        campaign_id: campaignId,
+        valid_until: new Date(Date.now() + validDays * 86400000).toISOString(),
+        password: b.password || null,
+        include_financial: !!b.include_financial,
+      });
+      return res.status(200).json({ ok: true, report: row });
+    }
+    if (action === 'disable_report') {
+      const id = Number(b.id);
+      if (!id) return res.status(400).json({ ok: false, error: 'bad_input' });
+      const [row] = await update('ads_reports', `id=eq.${id}`, { disabled: true });
+      return res.status(200).json({ ok: true, report: row });
     }
 
     return res.status(400).json({ ok: false, error: 'unknown_action' });

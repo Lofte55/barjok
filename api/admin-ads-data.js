@@ -1,5 +1,6 @@
 const { requireAdmin } = require('./_lib/auth');
 const { select } = require('./_lib/supabase');
+const { campaignStats, dashboardStats } = require('./_lib/ads-analytics');
 
 module.exports = async (req, res) => {
   if (!requireAdmin(req, res)) return;
@@ -29,6 +30,19 @@ module.exports = async (req, res) => {
     if (resource === 'placements') {
       const rows = await select('ads_placements', 'status=eq.active&order=id.asc');
       return res.status(200).json({ ok: true, placements: rows });
+    }
+    if (resource === 'dashboard') {
+      const stats = await dashboardStats();
+      return res.status(200).json({ ok: true, ...stats });
+    }
+    if (resource === 'campaign-analytics' && id) {
+      const stats = await campaignStats(Number(id));
+      if (!stats) return res.status(404).json({ ok: false, error: 'not_found' });
+      return res.status(200).json({ ok: true, ...stats });
+    }
+    if (resource === 'reports' && id) {
+      const rows = await select('ads_reports', `campaign_id=eq.${Number(id)}&order=created_at.desc`);
+      return res.status(200).json({ ok: true, reports: rows });
     }
     return res.status(400).json({ ok: false, error: 'unknown_resource' });
   } catch (e) {

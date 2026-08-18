@@ -5,6 +5,7 @@ const BODY = `
   <div id="tabs" style="margin-bottom:16px">
     <button class="ghost" data-tab="campaigns">Кампании</button>
     <button class="ghost" data-tab="advertisers">Рекламодатели</button>
+    <button class="ghost" data-tab="dashboard">Dashboard</button>
   </div>
   <div id="view"></div>
 `;
@@ -51,10 +52,31 @@ function route(forced) {
   const [tab, arg] = hash.slice(1).split('/');
   setTab(tab === 'campaign-edit' ? 'campaigns' : tab);
   if (tab === 'advertisers') return renderAdvertisers();
+  if (tab === 'dashboard') return renderDashboard();
   if (tab === 'campaign-edit') return renderCampaignEdit(arg === 'new' ? null : Number(arg));
   return renderCampaigns();
 }
 addEventListener('hashchange', () => route());
+
+// ---------------- DASHBOARD ----------------
+async function renderDashboard() {
+  const view = document.getElementById('view');
+  view.innerHTML = '<div class="card">Загрузка…</div>';
+  try {
+    const d = await api('/api/admin-ads-data?resource=dashboard');
+    const kpi = (v, l) => '<div class="card" style="text-align:center;padding:18px 8px"><div style="font-size:26px;font-weight:800">' + esc(v) + '</div><div class="muted" style="margin-top:4px">' + l + '</div></div>';
+    const alerts = [];
+    d.alerts.endingSoon.forEach((c) => alerts.push('⚠ Кампания «' + esc(c.name) + '» заканчивается скоро — <a href="#campaign-edit/' + c.id + '" style="color:#9ec1ff">открыть</a>'));
+    d.alerts.noActiveCreative.forEach((c) => alerts.push('⚠ У кампании «' + esc(c.name) + '» нет активного creative — <a href="#campaign-edit/' + c.id + '" style="color:#9ec1ff">открыть</a>'));
+    view.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px">' +
+        kpi(d.activeCampaigns, 'Активных кампаний') + kpi(d.scheduledCampaigns, 'Запланировано') +
+        kpi(d.totals.impressions || 0, 'Показов (всего)') + kpi(d.totals.clicks || 0, 'Кликов (всего)') +
+        kpi(d.totals.ctr != null ? d.totals.ctr + '%' : '—', 'CTR') +
+      '</div>' +
+      (alerts.length ? '<div class="card"><h3 style="margin-top:0">Требует внимания</h3>' + alerts.map((a) => '<div style="padding:6px 0;border-bottom:1px solid #232733;font-size:13px">' + a + '</div>').join('') + '</div>' : '<div class="card muted">Всё спокойно — предупреждений нет.</div>');
+  } catch (e) { view.innerHTML = '<div class="card">Ошибка: ' + esc(e.message) + '</div>'; }
+}
 
 // ---------------- CAMPAIGNS LIST ----------------
 async function renderCampaigns() {
@@ -223,7 +245,9 @@ async function renderCampaignEdit(id) {
 
     (id ? creativesSectionHtml(creatives) : '<div class="card"><i class="muted">Сначала сохраните кампанию — потом можно будет добавить креативы.</i></div>') +
     (id ? '<div class="card"><h3 style="margin-top:0">Предпросмотр UTM</h3><div id="utmPreview" class="muted">Выберите/сохраните creative выше, чтобы увидеть ссылку.</div></div>' : '') +
-    (id ? validationAndPublishHtml(campaign) : '');
+    (id ? validationAndPublishHtml(campaign) : '') +
+    (id ? '<div class="card"><h3 style="margin-top:0">Аналитика</h3><div id="analyticsBox" class="muted">Загрузка…</div></div>' : '') +
+    (id ? reportsSectionHtml() : '');
 
   document.getElementById('basicForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -260,6 +284,7 @@ async function renderCampaignEdit(id) {
   });
 
   if (id) wireCreativesAndPublish(id, campaign);
+  if (id) { loadAnalytics(id); wireReports(id); }
 }
 
 function creativesSectionHtml(creatives) {
@@ -362,6 +387,71 @@ function wireCreativesAndPublish(id, campaign) {
       else alert('Ошибка: ' + err.message);
     }
   };
+}
+
+// ---------------- ANALYTICS (§51-56) ----------------
+async function loadAnalytics(id) {
+  const box = document.getElementById('analyticsBox');
+  if (!box) return;
+  try {
+    const d = await api('/api/admin-ads-data?resource=campaign-analytics&id=' + id);
+    const o = d.overview;
+    const kpi = (v, l) => '<div style="display:inline-block;min-width:110px;margin:0 14px 10px 0"><div style="font-size:20px;font-weight:800">' + esc(v) + '</div><div class="muted" style="font-size:12px">' + l + '</div></div>';
+    let html = kpi(o.impressions, 'Показы') + kpi(o.reach, 'Уникальный охват') + kpi(o.clicks, 'Клики') +
+      kpi(o.uniqueClicks, 'Уник. клики') + kpi(o.ctr != null ? o.ctr + '%' : '—', 'CTR') +
+      kpi(o.frequency != null ? o.frequency : '—', 'Frequency') +
+      kpi(o.cpm != null ? o.cpm : '—', 'CPM') + kpi(o.cpc != null ? o.cpc : '—', 'CPC');
+    if (d.delivery) {
+      const st = { on_track: 'В графике', under: '⚠ Отстаёт', over: 'Опережает', completed: 'Завершена' }[d.delivery.status] || d.delivery.status;
+      html += '<div class="muted" style="margin-top:8px;font-size:13px">Delivery: период пройден ' + (d.delivery.periodCompleted ?? '—') + '%, ожидалось ~' + (d.delivery.expected ?? '—') + ' показов, факт ' + d.delivery.actual + ' (' + (d.delivery.deliveryPct ?? '—') + '%) — ' + st + '</div>';
+    }
+    if (d.creativeBreakdown && d.creativeBreakdown.length) {
+      html += '<table style="margin-top:12px"><thead><tr><th>Creative</th><th>Показы</th><th>Клики</th><th>CTR</th></tr></thead><tbody>' +
+        d.creativeBreakdown.map((c) => '<tr><td>' + esc(c.name) + '</td><td>' + c.impressions + '</td><td>' + c.clicks + '</td><td>' + (c.ctr != null ? c.ctr + '%' : '—') + '</td></tr>').join('') +
+        '</tbody></table>';
+    }
+    box.innerHTML = html;
+  } catch (e) { box.innerHTML = 'Ошибка: ' + esc(e.message); }
+}
+
+// ---------------- REPORTS (§57-58) ----------------
+function reportsSectionHtml() {
+  return '<div class="card"><h3 style="margin-top:0">Отчёт для рекламодателя</h3>' +
+    '<form id="reportForm" class="new"><input name="valid_days" type="number" value="30" placeholder="Дней действия" style="width:140px">' +
+    '<label><input type="checkbox" name="include_financial"> Включить бюджет</label>' +
+    '<button type="submit">Создать ссылку на отчёт</button></form>' +
+    '<div id="reportsList" style="margin-top:10px"></div></div>';
+}
+async function wireReports(id) {
+  const list = document.getElementById('reportsList');
+  const form = document.getElementById('reportForm');
+  async function reload() {
+    const { reports } = await api('/api/admin-ads-data?resource=reports&id=' + id);
+    if (!reports.length) { list.innerHTML = '<span class="muted">Ссылок ещё нет</span>'; return; }
+    list.innerHTML = reports.map((r) => {
+      const url = location.origin + '/report/' + r.token + '/';
+      const status = r.disabled ? 'отключена' : (r.valid_until && new Date(r.valid_until) < new Date() ? 'истекла' : 'активна');
+      return '<div style="padding:8px 0;border-bottom:1px solid #232733;font-size:13px">' +
+        '<a href="' + url + '" target="_blank" style="color:#9ec1ff;word-break:break-all">' + url + '</a>' +
+        ' <span class="muted">(' + status + (r.valid_until ? ', до ' + fmtDate(r.valid_until) : '') + ')</span> ' +
+        (!r.disabled ? '<button class="ghost" data-disable="' + r.id + '" style="margin-left:8px">Отключить</button>' : '') +
+        '</div>';
+    }).join('');
+    list.querySelectorAll('button[data-disable]').forEach((b) => b.onclick = async () => {
+      await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'disable_report', id: Number(b.dataset.disable) }) });
+      reload();
+    });
+  }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    try {
+      await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'create_report', campaign_id: id, valid_days: f.get('valid_days'), include_financial: f.has('include_financial') }) });
+      e.target.reset();
+      await reload();
+    } catch (err) { alert('Ошибка: ' + err.message); }
+  });
+  await reload();
 }
 
 route();
