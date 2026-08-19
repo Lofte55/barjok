@@ -220,9 +220,9 @@
   .cbtn:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
   .cbtn .ci{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center}
   .cbtn .ci svg{width:24px;height:24px;color:#fff}
-  .cbtn .ct{flex:1}
-  .cbtn .ct .l{font-size:12.5px;color:rgba(255,255,255,.6);font-weight:600}
-  .cbtn .ct .v{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em}
+  .cbtn .ct{flex:1;min-width:0}
+  .cbtn .ct .l{display:block;font-size:12.5px;color:rgba(255,255,255,.6);font-weight:600}
+  .cbtn .ct .v{display:block;margin-top:2px;font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em}
   .cbtn .arw{color:rgba(255,255,255,.4)}
   @media(max-width:760px){.contact{padding:36px 22px}.contact .in{grid-template-columns:1fr;gap:26px}}
 
