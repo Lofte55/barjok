@@ -261,5 +261,122 @@
   <script defer src="/map/app.js?v=1788300000"></script>
 <!-- Яндекс.Метрика + информационный баннер о cookie — в /cookie-consent.js (единое место на все страницы) -->
 <script defer src="/cookie-consent.js?v=2"></script>
+
+<!-- Виджет доступности — плавающая кнопка снизу справа, едет со скроллом (тот же
+     паттерн, что на SEO-страницах, api/_lib/seo-layout.js:a11yWidgetHtml, но с
+     токенами карты: --panel вместо --canvas, --brand вместо --accent) -->
+<div id="a11y-widget">
+  <button id="a11yFab" type="button" aria-label="Настройки доступности" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 8v6M12 8c-2.8 0-5.2.6-7 1.4M12 8c2.8 0 5.2.6 7 1.4M9 14l-2.2 6M15 14l2.2 6"/></svg>
+  </button>
+  <div id="a11yPanel" role="dialog" aria-label="Настройки доступности" hidden>
+    <div class="a11y-head">
+      <b>Доступность</b>
+      <p>Настройте отображение сайта под себя. Выбор сохраняется на этом устройстве.</p>
+    </div>
+    <div class="a11y-group">
+      <div class="a11y-label">Контраст</div>
+      <div class="a11y-seg" data-group="contrast" role="group">
+        <button data-val="default" class="on">Обычный</button>
+        <button data-val="high">Высокий</button>
+        <button data-val="bw">Ч/Б</button>
+      </div>
+    </div>
+    <div class="a11y-group">
+      <div class="a11y-label">Вспомогательные функции</div>
+      <button class="a11y-toggle" data-toggle="readable-font"><span>Читаемый шрифт</span><span class="a11y-state">Выкл</span></button>
+      <button class="a11y-toggle" data-toggle="highlight-links"><span>Выделить ссылки</span><span class="a11y-state">Выкл</span></button>
+      <button class="a11y-toggle" data-toggle="big-cursor"><span>Крупный курсор</span><span class="a11y-state">Выкл</span></button>
+      <button class="a11y-toggle" data-toggle="reduce-motion"><span>Меньше анимации</span><span class="a11y-state">Выкл</span></button>
+    </div>
+    <button id="a11yReset" type="button">Сбросить всё</button>
+  </div>
+</div>
+<style>
+  #a11y-widget{position:fixed;right:20px;bottom:20px;z-index:9999;font-family:var(--sans);text-align:left}
+  #a11yFab{width:52px;height:52px;border-radius:50%;background:var(--brand);color:#fff;border:0;cursor:pointer;
+    display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(31,111,235,.55);transition:transform .18s}
+  #a11yFab:hover{transform:scale(1.06)}
+  #a11yFab svg{width:26px;height:26px}
+  #a11yPanel{position:absolute;right:0;bottom:64px;width:300px;max-width:calc(100vw - 40px);background:var(--panel);
+    border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:20px}
+  #a11yPanel[hidden]{display:none}
+  .a11y-head b{font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .a11y-head p{font-size:12.5px;color:var(--ink-3);margin-top:4px;line-height:1.4}
+  .a11y-group{margin-top:16px}
+  .a11y-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);margin-bottom:8px}
+  .a11y-seg{display:flex;gap:6px;background:var(--bg);border-radius:10px;padding:4px}
+  .a11y-seg button{flex:1;background:none;border:0;border-radius:7px;padding:8px 4px;font-family:inherit;font-weight:700;
+    color:var(--ink-2);cursor:pointer}
+  .a11y-seg button.on{background:var(--panel);color:var(--brand-ink);box-shadow:var(--shadow-sm)}
+  .a11y-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);
+    border:0;border-radius:10px;padding:11px 14px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);
+    cursor:pointer;margin-top:8px}
+  .a11y-toggle .a11y-state{font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase}
+  .a11y-toggle.on{background:rgba(31,111,235,.12)}
+  .a11y-toggle.on .a11y-state{color:var(--brand-ink)}
+  #a11yReset{width:100%;margin-top:16px;background:none;border:1px solid var(--line);border-radius:10px;padding:11px;
+    font-family:inherit;font-weight:700;font-size:13px;color:var(--ink-2);cursor:pointer}
+  #a11yReset:hover{border-color:var(--ink-3)}
+  @media(max-width:480px){#a11y-widget{right:14px;bottom:14px}}
+  html.a11y-contrast-high{--ink:#000;--ink-2:#111;--ink-3:#333;--bg:#fff;--panel:#fff;--line:#000;--line-2:#000;
+    --brand:#0033cc;--brand-ink:#002499}
+  html.a11y-contrast-bw{filter:grayscale(1)}
+  html.a11y-readable-font body, html.a11y-readable-font input, html.a11y-readable-font button{font-family:Verdana,Arial,sans-serif!important}
+  html.a11y-highlight-links a{text-decoration:underline!important;text-decoration-thickness:2px!important;text-underline-offset:2px}
+  html.a11y-big-cursor, html.a11y-big-cursor *{cursor:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22 viewBox=%220 0 24 24%22><path d=%22M4 2l14 8-6 1.5L14 20l-3-1.5L8 12H4z%22 fill=%22black%22 stroke=%22white%22 stroke-width=%221%22/></svg>') 4 4, auto!important}
+  html.a11y-reduce-motion *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+</style>
+<script>
+(function(){
+  var root=document.documentElement;
+  var fab=document.getElementById('a11yFab'), panel=document.getElementById('a11yPanel');
+  var STORE_KEY='barjok_a11y';
+  function load(){ try{return JSON.parse(localStorage.getItem(STORE_KEY))||{};}catch(e){return {};} }
+  function save(s){ try{localStorage.setItem(STORE_KEY, JSON.stringify(s));}catch(e){} }
+  // Масштаб текста (zoom) намеренно не включён на карте — Leaflet/MapLibre
+  // считают координаты клика/тайлов в реальных пикселях, CSS zoom на теле
+  // страницы сбивает это соответствие и ломает точность попадания по карте.
+  var state=Object.assign({contrast:'default', toggles:{}}, load());
+
+  function apply(){
+    root.classList.toggle('a11y-contrast-high', state.contrast==='high');
+    root.classList.toggle('a11y-contrast-bw', state.contrast==='bw');
+    ['readable-font','highlight-links','big-cursor','reduce-motion'].forEach(function(k){
+      root.classList.toggle('a11y-'+k, !!state.toggles[k]);
+    });
+    document.querySelectorAll('.a11y-seg[data-group="contrast"] button').forEach(function(b){b.classList.toggle('on', b.dataset.val===state.contrast);});
+    document.querySelectorAll('.a11y-toggle').forEach(function(b){
+      var on=!!state.toggles[b.dataset.toggle];
+      b.classList.toggle('on', on);
+      b.querySelector('.a11y-state').textContent = on?'Вкл':'Выкл';
+    });
+  }
+  apply();
+
+  fab.addEventListener('click', function(){
+    var open=panel.hidden;
+    panel.hidden=!open;
+    fab.setAttribute('aria-expanded', open?'true':'false');
+  });
+  document.addEventListener('click', function(e){
+    if(!panel.hidden && !panel.contains(e.target) && e.target!==fab && !fab.contains(e.target)) panel.hidden=true;
+  });
+  document.querySelectorAll('.a11y-seg[data-group="contrast"] button').forEach(function(b){
+    b.addEventListener('click', function(){ state.contrast=b.dataset.val; save(state); apply(); });
+  });
+  document.querySelectorAll('.a11y-toggle').forEach(function(b){
+    b.addEventListener('click', function(){
+      var k=b.dataset.toggle;
+      state.toggles[k]=!state.toggles[k];
+      save(state); apply();
+    });
+  });
+  document.getElementById('a11yReset').addEventListener('click', function(){
+    state={contrast:'default', toggles:{}};
+    save(state); apply();
+  });
+})();
+</script>
 </body>
 </html>
