@@ -45,14 +45,14 @@ const FAQ_SERVICE = {
    известными плановыми работами (snap.futureAffectedAddresses), иначе
    блок выглядит "не подключённым", хотя данные живые. */
 function buildMiniStats(snap) {
-  const hasActive = !!snap.affectedAddresses;
-  const primary = hasActive ? snap.affectedAddresses : (snap.futureAffectedAddresses || 0);
-  const primaryLabel = hasActive ? 'адресов затронуто сейчас' : 'адресов ждут плановых работ';
+  // "Затронуто N адресов" — та же методика, что на самой карте (union текущих
+  // и будущих отключений, а не только активных прямо сейчас — см. city-stats.js).
   return minimalStatsHtml([
-    [primary, primaryLabel, primary ? '+' : ''],
-    [snap.electricityAffected, 'без света сейчас', '', 'var(--elec)'],
-    [snap.hotWaterAffected, 'без горячей воды сейчас', '', 'var(--hot)'],
-    [snap.coldWaterAffected, 'без холодной воды сейчас', '', 'var(--cold)'],
+    [snap.totalAffectedAddresses, 'адресов затронуто', '+'],
+    [snap.electricityAffected, 'электричество', '', 'var(--elec)'],
+    [snap.hotWaterAffected, 'горячая вода', '', 'var(--hot)'],
+    [snap.coldWaterAffected, 'холодная вода', '', 'var(--cold)'],
+    [snap.heatingAffected, 'отопление', '', 'var(--hot)'],
   ], { allZero: !snap.activeOutages });
 }
 

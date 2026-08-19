@@ -54,15 +54,30 @@ async function computeSnapshot() {
     houses.filter((h) => (h.outages || []).some((o) => o.status === 'future')).map((h) => h.id)
   ).size;
 
+  // ГЛАВНАЯ цифра "Затронуто N адресов" — та же методика, что и на самой карте
+  // (map/app.js renderList: houses.length при дефолтном фильтре "все ресурсы,
+  // любой статус кроме past") — union текущих И будущих, а не только активных.
+  // Раньше эта цифра считалась только по активным (affectedAddresses) — при 0
+  // активных отключений (обычная ситуация) блок показывал "0" вместо реальных
+  // тысяч адресов с уже известными плановыми работами, как на карте.
+  const totalAffectedAddresses = new Set(
+    houses.filter((h) => (h.outages || []).some((o) => o.status !== 'past')).map((h) => h.id)
+  ).size;
+  const byResourceAny = (res) => new Set(
+    houses.filter((h) => (h.outages || []).some((o) => o.resource === res && o.status !== 'past')).map((h) => h.id)
+  ).size;
+
   cache = {
     ok: true,
     generatedAt: new Date().toISOString(),
     activeOutages: current.length,
     affectedAddresses,
-    coldWaterAffected: byResource('cold_water'),
-    hotWaterAffected: byResource('hot_water'),
-    electricityAffected: byResource('electricity'),
-    heatingAffected: byResource('heating'),
+    totalAffectedAddresses,
+    coldWaterAffected: byResourceAny('cold_water'),
+    hotWaterAffected: byResourceAny('hot_water'),
+    electricityAffected: byResourceAny('electricity'),
+    heatingAffected: byResourceAny('heating'),
+    gasAffected: byResourceAny('gas'),
     plannedCount,
     emergencyCount,
     futureCount: future.length,
