@@ -236,9 +236,16 @@ ${footerHtml()}
 <script>
 (function(){
   var rvs=[].slice.call(document.querySelectorAll('.rv'));
+  var groupIdx=new Map();
+  rvs.forEach(function(el){
+    var p=el.parentElement;
+    var i=groupIdx.get(p)||0;
+    groupIdx.set(p,i+1);
+    el.style.transitionDelay=(Math.min(i,8)*70)+'ms';
+  });
   if('IntersectionObserver' in window){
     var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12,rootMargin:'0px 0px -6% 0px'});
-    rvs.forEach(function(el,i){el.style.transitionDelay=(Math.min(i,6)*60)+'ms';io.observe(el);});
+    rvs.forEach(function(el){io.observe(el);});
   } else rvs.forEach(function(el){el.classList.add('in');});
   setTimeout(function(){rvs.forEach(function(el){el.classList.add('in');});},1400);
 })();
