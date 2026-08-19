@@ -211,11 +211,11 @@ ${jsonLdBlocks}
      border+shadow+фоновой плашки под иконку (Border-first/anti-card-overuse) */
   .feat-grid{grid-template-columns:1fr 1fr;gap:36px 48px}
   .feat{position:relative;display:flex;align-items:center;gap:22px;padding:26px 0 0;
-    border:0;border-top:1px solid var(--line);background:none;border-radius:0;transition:border-color .25s}
-  .feat:hover{border-top-color:var(--accent)}
+    border:0;border-top:1px solid var(--line);background:none;border-radius:0}
+  /* без hover-эффекта по просьбе — карточка статична, реагирует только идле-анимация иконки */
+  .feat:hover{border-top-color:var(--line);transform:none;box-shadow:none}
   .feat .fi-img{width:72px;height:72px;flex:none;object-fit:contain;
-    filter:drop-shadow(0 6px 14px rgba(47,107,237,.28));transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
-  .feat:hover .fi-img{transform:scale(1.08)}
+    filter:drop-shadow(0 6px 14px rgba(47,107,237,.28))}
   .feat-text{min-width:0}
   .feat-text h3{font-size:17px}
   .feat-text p{margin-top:6px}
@@ -229,11 +229,13 @@ ${jsonLdBlocks}
   @media(max-width:760px){.feat-grid{grid-template-columns:1fr}.feat{flex-direction:column;align-items:flex-start;gap:14px}}
   @media(prefers-reduced-motion:reduce){.feat .fi-img{animation:none!important}.feat{transition:none}}
   .sec{margin-top:76px}
+  #report-cta{margin-top:76px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:20px 0}
   .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s,box-shadow .16s}
   /* карточка улицы — целиком ссылка на карту, не только название улицы */
-  a.street-card{display:block;text-decoration:none;color:inherit;cursor:pointer}
+  a.street-card{display:block;text-decoration:none;color:inherit;cursor:pointer;outline:none}
   a.street-card:hover{border-color:var(--accent);box-shadow:0 10px 24px -14px rgba(21,32,58,.22)}
+  a.street-card:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
   a.street-card h3{display:inline-flex;align-items:center;gap:5px;color:var(--ink)}
   a.street-card h3 svg{color:var(--ink-3);flex:none;transition:transform .16s,color .16s}
   a.street-card:hover h3 svg{transform:translate(2px,-2px);color:var(--accent-ink)}
@@ -262,8 +264,9 @@ ${jsonLdBlocks}
   /* "+N ещё" — замыкающая плитка сетки вместо тихого обрезания списка, ведёт
      на общий вид карты (без фильтра по конкретной улице) */
   .outage-more{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-    text-decoration:none;color:var(--ink);background:var(--bg);border-style:dashed;gap:2px;padding:20px 16px}
+    text-decoration:none;color:var(--ink);background:var(--bg);border-style:dashed;gap:2px;padding:20px 16px;outline:none}
   .outage-more:hover{background:var(--line-2);border-color:var(--ink-3)}
+  .outage-more:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
   .outage-more-n{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--accent-ink)}
   .outage-more-label{font-size:12.5px;color:var(--ink-3);font-weight:600;max-width:26ch;line-height:1.4}
   .outage-more-cta{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--accent-ink);margin-top:10px}
