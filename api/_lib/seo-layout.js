@@ -230,7 +230,13 @@ ${jsonLdBlocks}
   @media(prefers-reduced-motion:reduce){.feat .fi-img{animation:none!important}.feat{transition:none}}
   .sec{margin-top:76px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:20px 0}
-  .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s}
+  .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s,box-shadow .16s}
+  /* карточка улицы — целиком ссылка на карту, не только название улицы */
+  a.street-card{display:block;text-decoration:none;color:inherit;cursor:pointer}
+  a.street-card:hover{border-color:var(--accent);box-shadow:0 10px 24px -14px rgba(21,32,58,.22)}
+  a.street-card h3{display:inline-flex;align-items:center;gap:5px;color:var(--ink)}
+  a.street-card h3 svg{color:var(--ink-3);flex:none;transition:transform .16s,color .16s}
+  a.street-card:hover h3 svg{transform:translate(2px,-2px);color:var(--accent-ink)}
   /* компактный вариант — "Текущие отключения" может быть десятки карточек подряд,
      полные подписи ("Ожидаемое восстановление", месяц словом) растягивали их по
      высоте; тут короткие подписи + числовые даты + обрезанный текст причины */

@@ -117,13 +117,13 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
     const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
     const mapHref = `/map/${citySlug}?q=${encodeURIComponent(g.street)}`;
     const extraAttrs = idx >= MAX_VISIBLE ? ' hidden data-extra="1"' : '';
-    return `<article class="outage-card rv" data-res="${esc(g.resource)}"${extraAttrs}>
+    return `<a class="outage-card street-card rv" data-res="${esc(g.resource)}"${extraAttrs} href="${mapHref}">
       <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span>
-      <h3 style="margin:8px 0 2px"><a href="${mapHref}" class="street-link">${esc(g.street)}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></a></h3>
+      <h3 style="margin:8px 0 2px">${esc(g.street)}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></h3>
       <span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
       <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:8px">Дома: ${esc(preview)}${more}</div>
       <dl style="margin-top:8px"><dt>Начало</dt><dd>${dateLabel} ${esc(fmtDate(g.minStart))}</dd></dl>
-    </article>`;
+    </a>`;
   }).join('');
   const moreTile = overflowCount > 0 ? `<a class="outage-card outage-more rv" data-res="__more__" href="/map/${citySlug}">
     <span class="outage-more-n">+${overflowCount}</span>
