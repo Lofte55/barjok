@@ -30,7 +30,6 @@ function navHtml(currentCitySlug) {
     <div class="nav-links">
       <a href="/pavlodar/">Павлодар</a>
       <a href="/map/">Карта</a>
-      <a href="/about/">О проекте</a>
       <a href="/#faq">Вопросы</a>
     </div>
     <div class="nav-right">
@@ -48,7 +47,6 @@ function navHtml(currentCitySlug) {
     <div class="mobile-menu" id="mobileMenu">
       <a href="/pavlodar/">Павлодар</a>
       <a href="/map/">Карта</a>
-      <a href="/about/">О проекте</a>
       <a class="btn primary" href="/map/pavlodar">Открыть карту</a>
     </div>
   </div>
@@ -100,7 +98,6 @@ function footerHtml() {
         </div>
         <div class="fcol">
           <h4>Проект</h4>
-          <a href="/about/">О проекте</a>
           <a href="/map/pavlodar">Открыть карту</a>
         </div>
       </div>

@@ -19,7 +19,7 @@ const { SERVICES } = require('../api/_lib/seo-cities');
 const { allCities } = require('../api/_lib/seo-cities');
 
 function canonicalUrls() {
-  const urls = [`https://${HOST}/`, `https://${HOST}/map/`, `https://${HOST}/about/`];
+  const urls = [`https://${HOST}/`, `https://${HOST}/map/`];
   for (const city of allCities().filter((c) => c.status === 'active')) {
     urls.push(`https://${HOST}/${city.slug}/`);
     urls.push(`https://${HOST}/map/${city.slug}/`);

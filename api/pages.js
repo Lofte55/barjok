@@ -370,6 +370,9 @@ async function renderAbout(req, res) {
 
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
+    // Страница скрыта из навигации/sitemap по просьбе владельца — остаётся
+    // доступной по прямой ссылке /about/, но не должна попадать в индекс.
+    noindex: true,
     breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: 'О проекте' }],
     bodyHtml,
     jsonLd: [
@@ -389,7 +392,6 @@ async function renderSitemap(req, res) {
   const urls = [
     { loc: `${ORIGIN}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${ORIGIN}/map/`, changefreq: 'daily', priority: '0.5' },
-    { loc: `${ORIGIN}/about/`, changefreq: 'monthly', priority: '0.4' },
   ];
   for (const city of activeCities()) {
     urls.push({ loc: `${ORIGIN}/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
