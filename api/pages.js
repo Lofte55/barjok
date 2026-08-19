@@ -61,9 +61,10 @@ async function renderHome(req, res) {
   const websiteJsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: BRAND, url: `${ORIGIN}/` };
   const miniStats = snap.ok ? minimalStatsHtml([
     [snap.affectedAddresses, 'адресов затронуто', '+'],
-    [snap.electricityAffected, 'домов без света'],
-    [snap.hotWaterAffected, 'без горячей воды'],
-  ]) : '';
+    [snap.electricityAffected, 'без света', '', 'var(--elec)'],
+    [snap.hotWaterAffected, 'без горячей воды', '', 'var(--hot)'],
+    [snap.coldWaterAffected, 'без холодной воды', '', 'var(--cold)'],
+  ], { allZero: !snap.activeOutages }) : '';
   const bodyHtml = `
     <p class="lead rv" style="text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
     ${miniStats}
@@ -192,9 +193,10 @@ async function renderCity(req, res) {
 
   const miniStats = snap.ok ? minimalStatsHtml([
     [snap.affectedAddresses, 'адресов затронуто', '+'],
-    [snap.electricityAffected, 'домов без света'],
-    [snap.hotWaterAffected, 'без горячей воды'],
-  ]) : '';
+    [snap.electricityAffected, 'без света', '', 'var(--elec)'],
+    [snap.hotWaterAffected, 'без горячей воды', '', 'var(--hot)'],
+    [snap.coldWaterAffected, 'без холодной воды', '', 'var(--cold)'],
+  ], { allZero: !snap.activeOutages }) : '';
   const sampleAddress = (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
   const bodyHtml = `
     <div style="text-align:center;padding-top:6px">

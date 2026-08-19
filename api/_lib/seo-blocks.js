@@ -25,10 +25,18 @@ function statRowHtml({ affectedAddresses, electricityAffected, hotWaterAffected,
 }
 
 /* Компактные unboxed-цифры под hero — в духе awesomic.com (не боксы, просто число+подпись в ряд).
-   pairs: [ [числоBase, подпись, suffix?] ] — анимируются count-up от 0 при появлении в viewport. */
-function minimalStatsHtml(pairs) {
+   pairs: [ [числоBase, подпись, suffix?, colorVar?] ] — анимируются count-up от 0 при появлении
+   в viewport. Цветная точка-индикатор у каждой цифры — визуально читается как "живые данные",
+   даже когда все значения честно нулевые (нет активных отключений), а не как "сломано". */
+function minimalStatsHtml(pairs, { allZero } = {}) {
   return `<div class="mini-stats rv">
-    ${pairs.map(([n, l, suffix]) => `<div class="mstat"><b data-to="${Number(n) || 0}"${suffix ? ` data-suffix="${esc(suffix)}"` : ''}>0${suffix ? esc(suffix) : ''}</b><span>${esc(l)}</span></div>`).join('')}
+    ${allZero ? '<div class="mini-stats-ok"><span class="ok-dot"></span>Сейчас всё в порядке — активных отключений не найдено</div>' : ''}
+    <div class="mini-stats-row">
+    ${pairs.map(([n, l, suffix, color]) => `<div class="mstat">
+      <b data-to="${Number(n) || 0}"${suffix ? ` data-suffix="${esc(suffix)}"` : ''}>0${suffix ? esc(suffix) : ''}</b>
+      <span>${color ? `<span class="mstat-dot" style="background:${color}"></span>` : ''}${esc(l)}</span>
+    </div>`).join('')}
+    </div>
   </div>`;
 }
 

@@ -167,9 +167,15 @@ ${jsonLdBlocks}
   .status-block b{color:var(--ink)}
   .search-box.capture{margin-left:0}
   /* unboxed-цифры под hero, как "20 000+ completed projects" на awesomic.com */
-  .mini-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:34px 48px;margin:34px 0 6px;text-align:left}
+  .mini-stats{margin:34px 0 6px;text-align:center}
+  .mini-stats-ok{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ok);
+    background:color-mix(in srgb, var(--ok) 10%, white);border-radius:999px;padding:7px 14px 7px 12px;margin-bottom:22px}
+  .mini-stats-ok .ok-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none;animation:beat 2s infinite}
+  .mini-stats-row{display:flex;flex-wrap:wrap;justify-content:center;gap:34px 52px}
+  .mini-stats .mstat{text-align:center}
   .mini-stats .mstat b{display:block;font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-  .mini-stats .mstat span{font-size:13px;color:var(--ink-3);font-weight:600}
+  .mini-stats .mstat span{font-size:13px;color:var(--ink-3);font-weight:600;display:inline-flex;align-items:center;gap:6px;margin-top:4px}
+  .mstat-dot{width:7px;height:7px;border-radius:50%;flex:none}
   /* case-card: border-first (hairline-рамка держит форму, не тень) — паттерн Dub.co,
      hover = граница темнеет + лёгкий подъём, а не разрастающаяся тень */
   .city-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:22px 0}
