@@ -8,7 +8,7 @@ const { getCity, allCities, activeCities, SERVICES, getService } = require('./_l
 const { getHomeSeo, getCitySeo, getServiceSeo, BRAND, ORIGIN } = require('./_lib/seo');
 const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc } = require('./_lib/seo-layout');
 const { computeSnapshot } = require('./_lib/city-stats');
-const { outageCardsHtml, groupedOutagesHtml, countMatching, statusBlockHtml, RES_LABEL_NOM } = require('./_lib/seo-cards');
+const { groupedOutagesHtml, countMatching } = require('./_lib/seo-cards');
 const { statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
 
 const SERVICE_CARDS = [
@@ -222,15 +222,25 @@ async function renderService(req, res) {
   else if (service.waterGroup) filterFn = (o) => o.resource === 'cold_water' || o.resource === 'hot_water';
   else filterFn = () => true;
 
-  const houses = snap.houses || [];
-  const matchedCount = snap.ok ? countMatching(houses, filterFn) : 0;
-  const cardsHtml = snap.ok && !service.addressSearch ? outageCardsHtml(houses, filterFn) : '';
+  const allHouses = snap.houses || [];
+  const matchedCount = snap.ok ? countMatching(allHouses, filterFn) : 0;
+  // Дома, отфильтрованные под конкретную услугу (только подходящие outages) —
+  // тот же группированный паттерн улиц/табов, что и на странице города, но
+  // уже скоуплен под ресурс/тип этой конкретной услуги.
+  const scopedHouses = allHouses
+    .map((h) => ({ ...h, outages: (h.outages || []).filter((o) => filterFn(o, h)) }))
+    .filter((h) => h.outages.length);
 
-  const statusHtml = statusBlockHtml({
-    locative: loc, activeOutages: matchedCount, affectedAddresses: matchedCount,
-    electricityAffected: snap.electricityAffected || 0, hotWaterAffected: snap.hotWaterAffected || 0,
-    coldWaterAffected: snap.coldWaterAffected || 0, generatedAt: snap.generatedAt, ok: snap.ok,
-  });
+  const cardsHtml = snap.ok && !service.addressSearch ? groupedOutagesHtml(scopedHouses, 'current', citySlug, {
+    eyebrow: 'Прямо сейчас', title: `Текущие отключения — ${service.label}`,
+    intro: 'Активные отключения — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.',
+    idPrefix: 'svcCurrent',
+  }) : '';
+  const futureHtml = snap.ok && !service.addressSearch ? groupedOutagesHtml(scopedHouses, 'future', citySlug, {
+    eyebrow: 'Заранее', title: `Предстоящие отключения — ${service.label}`,
+    intro: 'Плановые работы, известные заранее — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.',
+    idPrefix: 'svcFuture',
+  }) : '';
 
   const relatedLinks = [
     ['Все отключения ' + nom, `/${citySlug}/`], ['Отключение света', `/${citySlug}/svet/`],
@@ -238,23 +248,38 @@ async function renderService(req, res) {
     ['Карта ' + nom, `/map/${citySlug}`],
   ].filter(([, url]) => !url.endsWith(`/${serviceSlug}/`));
 
-  const searchBoxHtml = `<form class="capture search-box rv" action="/map/${citySlug}" method="get" style="max-width:560px;margin:22px 0">
-    <label class="field">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
-      <input type="text" name="address" placeholder="Улица и номер дома" aria-label="Адрес" autocomplete="off">
-    </label>
-    <button class="btn primary" type="submit">Проверить</button>
-  </form>`;
+  const updatedAt = snap.generatedAt ? new Date(snap.generatedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+  const leadText = matchedCount
+    ? `Сейчас в ${esc(loc)} <b>${matchedCount}</b> активных случаев по категории «${esc(service.label)}». Введи свой адрес, чтобы узнать подробности.`
+    : `Активных случаев по категории «${esc(service.label)}» в ${esc(loc)} сейчас не найдено. Введи адрес — проверим, нет ли отключения именно по нему.`;
+
+  const searchBoxHtml = `<p class="lead rv">${leadText}</p>
+  <div class="cap-wrap rv" style="margin:26px auto 0">
+    <form class="capture" action="/map/${citySlug}" method="get" onsubmit="var v=this.querySelector('input').value.trim();if(v){location.href='/map/${citySlug}?q='+encodeURIComponent(v);return false;}">
+      <label class="field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+        <input id="capInput" type="text" name="address" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес" autocomplete="off" autocorrect="off" spellcheck="false" data-map-href="/map/${citySlug}">
+      </label>
+      <button class="btn primary" type="submit">Проверить</button>
+    </form>
+    <div class="lsug" id="lsug" role="listbox"></div>
+  </div>
+  ${updatedAt ? `<p class="cap-note rv">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
+
+  const miniStats = snap.ok ? buildMiniStats(snap) : '';
+  const sampleAddress = (scopedHouses[0] && scopedHouses[0].address) || (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
 
   const bodyHtml = `
-    ${statusHtml}
-    ${searchBoxHtml}
-    ${cardsHtml ? '<div class="sec rv"><div class="eyebrow">Прямо сейчас</div><h2>Текущие отключения — ' + esc(service.label) + '</h2></div>' + cardsHtml : ''}
-    <div class="sec rv"><div class="eyebrow">Карта</div><h2>Карта отключений</h2></div>
-    <p><a href="/map/${citySlug}">Открыть карту отключений ${esc(loc)} →</a></p>
-    ${stepsHtml({})}
+    <div style="text-align:center;padding-top:6px">
+      ${searchBoxHtml}
+    </div>
+    ${miniStats}
+    ${mapPreviewHtml({ href: `/map/${citySlug}` })}
+    ${cardsHtml}
+    ${futureHtml}
+    ${stepsHtml({ addressSample: sampleAddress })}
     ${trustGridHtml()}
-    ${faqAccordionHtml(FAQ_SERVICE[serviceSlug] || FAQ_HOME)}
+    ${faqAccordionHtml(FAQ_SERVICE[serviceSlug] || FAQ_HOME, 'faq', { contactHref: `/map/${citySlug}?report=1` })}
     <div class="sec rv"><div class="eyebrow">Ещё</div><h2>Связанные страницы</h2></div>
     <div class="related-links">${relatedLinks.map(([name, url]) => `<a href="${url}">${esc(name)}</a>`).join('')}</div>
     ${ctaFinalHtml({ title: `Проверьте «${esc(service.label)}» по своему адресу`, href: `/map/${citySlug}` })}
@@ -262,7 +287,7 @@ async function renderService(req, res) {
 
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
-    heroSlogan: `${esc(service.label)} в ${esc(loc)} — статус по вашему дому.`,
+    pillAnnText: 'Обновляется каждые несколько часов',
     currentCitySlug: citySlug,
     breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: nom, url: `${ORIGIN}/${citySlug}/` }, { name: service.label }],
     bodyHtml,
