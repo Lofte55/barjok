@@ -226,11 +226,7 @@ async function renderCity(req, res) {
   ];
 
   const updatedAt = snap.generatedAt ? new Date(snap.generatedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
-  const leadText = !snap.ok
-    ? 'Получаем свежие данные — обновите страницу через минуту.'
-    : (snap.activeOutages
-        ? `Сейчас в ${esc(loc)} <b>${snap.activeOutages}</b> активных отключений — они затрагивают <b>${(snap.affectedAddresses || 0).toLocaleString('ru-RU')}</b> адресов. Введи свой, чтобы узнать подробности.`
-        : `Активных отключений воды и света в ${esc(loc)} сейчас не найдено. Введи адрес — проверим, нет ли отключения именно по нему.`);
+  const leadText = `Вода, свет, отопление — весь статус по вашему дому в ${esc(loc)} за секунды. Введи свой, чтобы узнать подробности.`;
 
   const searchBoxHtml = `<p class="lead rv">${leadText}</p>
   <div class="cap-wrap rv" style="margin:26px auto 0">
@@ -269,7 +265,6 @@ async function renderCity(req, res) {
 
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
-    heroSlogan: `Вода, свет, отопление — весь статус по вашему дому в ${esc(loc)} за секунды.`,
     pillAnnText: 'Обновляется каждые несколько часов',
     currentCitySlug: citySlug,
     breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: nom }],
