@@ -60,9 +60,9 @@ async function renderHome(req, res) {
   }).join('')}</div>`;
   const websiteJsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: BRAND, url: `${ORIGIN}/` };
   const miniStats = snap.ok ? minimalStatsHtml([
-    [snap.affectedAddresses.toLocaleString('ru-RU') + '+', 'адресов затронуто'],
-    [snap.electricityAffected.toLocaleString('ru-RU'), 'домов без света'],
-    [snap.hotWaterAffected.toLocaleString('ru-RU'), 'без горячей воды'],
+    [snap.affectedAddresses, 'адресов затронуто', '+'],
+    [snap.electricityAffected, 'домов без света'],
+    [snap.hotWaterAffected, 'без горячей воды'],
   ]) : '';
   const bodyHtml = `
     <p class="lead rv" style="text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
@@ -119,27 +119,42 @@ async function renderCity(req, res) {
   const serviceCardsHtml = serviceTilesHtml(citySlug, SERVICE_CARDS);
   const cardsHtml = snap.ok ? outageCardsHtml(snap.houses || [], () => true, 16) : '';
 
+  const splitAddress = (address) => {
+    const idx = address.lastIndexOf(',');
+    return idx === -1 ? { street: address, house: '' } : { street: address.slice(0, idx).trim(), house: address.slice(idx + 1).trim() };
+  };
+
   let futureHtml = '';
   if (snap.ok) {
-    const futureRows = [];
+    // Группируем по улице+ресурсу — иначе один и тот же дом-ряд (10 карточек
+    // "Ермакова, 1/1", "1/2"…) выглядит как повтор одной и той же карточки.
+    const groups = new Map();
     for (const h of snap.houses || []) {
       for (const o of h.outages || []) {
         if (o.status !== 'future') continue;
-        futureRows.push({ h, o });
-        if (futureRows.length >= 10) break;
+        const { street, house } = splitAddress(h.address);
+        const key = street + '|' + o.resource;
+        if (!groups.has(key)) groups.set(key, { street, resource: o.resource, houses: [], minStart: o.start });
+        const g = groups.get(key);
+        if (house) g.houses.push(house);
+        if (new Date(o.start) < new Date(g.minStart)) g.minStart = o.start;
       }
-      if (futureRows.length >= 10) break;
     }
-    if (futureRows.length) {
-      futureHtml = '<div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2></div><div class="cards rv wrap">' + futureRows.map(({ h, o }) => {
-        const color = RES_COLOR[o.resource] || 'var(--accent)';
-        const icon = RES_ICON[o.resource] || RES_ICON.electricity;
+    const groupList = [...groups.values()].sort((a, b) => b.houses.length - a.houses.length).slice(0, 9);
+    if (groupList.length) {
+      futureHtml = '<div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице, чтобы не листать десятки одинаковых карточек.</p></div><div class="cards rv wrap">' + groupList.map((g) => {
+        const color = RES_COLOR[g.resource] || 'var(--accent)';
+        const icon = RES_ICON[g.resource] || RES_ICON.electricity;
+        const houseCount = g.houses.length || 1;
+        const preview = g.houses.slice(0, 6).join(', ');
+        const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
         return `<article class="outage-card" style="border-top-color:${color}">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-            <span class="ic" style="background:${color};width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" fill="#fff" style="width:15px;height:15px">${icon}</svg></span>
-            <h3 style="margin:0">${esc(h.address)}</h3>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span class="ic" style="background:${color};width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" fill="#fff" style="width:16px;height:16px">${icon}</svg></span>
+            <div style="min-width:0"><h3 style="margin:0;line-height:1.25">${esc(g.street)}</h3><span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')} · ${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span></div>
           </div>
-          <dl><dt>${esc(RES_LABEL_NOM[o.resource] || 'Ресурс')}</dt><dd>с ${esc(new Date(o.start).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl>
+          <div style="font-size:13px;color:var(--ink-2);line-height:1.5">Дома: ${esc(preview)}${more}</div>
+          <dl style="margin-top:8px"><dt>Начало</dt><dd>с ${esc(new Date(g.minStart).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl>
         </article>`;
       }).join('') + '</div>';
     }
@@ -164,19 +179,22 @@ async function renderCity(req, res) {
         : `Активных отключений воды и света в ${esc(loc)} сейчас не найдено. Введи адрес — проверим, нет ли отключения именно по нему.`);
 
   const searchBoxHtml = `<p class="lead rv">${leadText}</p>
-  <form class="capture rv" action="/map/${citySlug}" method="get" style="margin:26px auto 0">
-    <label class="field">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
-      <input type="text" name="address" placeholder="Улица и номер дома" aria-label="Адрес" autocomplete="off">
-    </label>
-    <button class="btn primary" type="submit">Проверить</button>
-  </form>
+  <div class="cap-wrap rv" style="margin:26px auto 0">
+    <form class="capture" action="/map/${citySlug}" method="get" onsubmit="var v=this.querySelector('input').value.trim();if(v){location.href='/map/${citySlug}?q='+encodeURIComponent(v);return false;}">
+      <label class="field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+        <input id="capInput" type="text" name="address" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес" autocomplete="off" autocorrect="off" spellcheck="false" data-map-href="/map/${citySlug}">
+      </label>
+      <button class="btn primary" type="submit">Проверить</button>
+    </form>
+    <div class="lsug" id="lsug" role="listbox"></div>
+  </div>
   ${updatedAt ? `<p class="cap-note rv">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
 
   const miniStats = snap.ok ? minimalStatsHtml([
-    [snap.affectedAddresses.toLocaleString('ru-RU') + '+', 'адресов затронуто'],
-    [snap.electricityAffected.toLocaleString('ru-RU'), 'домов без света'],
-    [snap.hotWaterAffected.toLocaleString('ru-RU'), 'без горячей воды'],
+    [snap.affectedAddresses, 'адресов затронуто', '+'],
+    [snap.electricityAffected, 'домов без света'],
+    [snap.hotWaterAffected, 'без горячей воды'],
   ]) : '';
   const sampleAddress = (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
   const bodyHtml = `

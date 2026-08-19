@@ -185,20 +185,24 @@ ${jsonLdBlocks}
   .related-links{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
   .related-links a{color:var(--ink-2);font-size:13.5px;font-weight:700;text-decoration:none;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:9px 16px;transition:border-color .18s,color .18s}
   .related-links a:hover{border-color:var(--accent);color:var(--accent-ink)}
-  /* цветные плитки услуг — у каждого ресурса свой акцент, а не однотонный список */
-  .svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:24px 0}
-  .svc-tile{display:flex;align-items:center;gap:14px;background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);
-    padding:16px 16px;text-decoration:none;color:var(--ink);position:relative;overflow:hidden;
-    transition:transform .18s cubic-bezier(.16,1,.3,1),box-shadow .18s,border-color .18s}
-  .svc-tile::before{content:"";position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--svc-c);transform:scaleY(0);transform-origin:bottom;transition:transform .25s cubic-bezier(.16,1,.3,1)}
-  .svc-tile:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:transparent}
-  .svc-tile:hover::before{transform:scaleY(1)}
-  .svc-tile .svc-ic{width:40px;height:40px;border-radius:11px;flex:none;display:grid;place-items:center;background:color-mix(in srgb, var(--svc-c) 14%, white);color:var(--svc-c);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+  /* цветные плитки услуг — у каждого ресурса свой акцент + описание, не однотонный список ссылок */
+  .svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:26px 0}
+  .svc-tile{display:flex;flex-direction:column;align-items:flex-start;gap:0;background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 22px 20px;text-decoration:none;color:var(--ink);position:relative;overflow:hidden;
+    transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s,border-color .2s}
+  .svc-tile::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--svc-c);transform:scaleX(0);transform-origin:left;transition:transform .3s cubic-bezier(.16,1,.3,1)}
+  .svc-tile::after{content:"";position:absolute;top:-30%;right:-20%;width:140px;height:140px;border-radius:50%;background:var(--svc-c);opacity:0;filter:blur(30px);transition:opacity .3s}
+  .svc-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:transparent}
+  .svc-tile:hover::before{transform:scaleX(1)}
+  .svc-tile:hover::after{opacity:.08}
+  .svc-tile .svc-ic{width:46px;height:46px;border-radius:13px;flex:none;display:grid;place-items:center;background:color-mix(in srgb, var(--svc-c) 15%, white);color:var(--svc-c);margin-bottom:14px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
   .svc-tile:hover .svc-ic{transform:scale(1.1) rotate(-4deg)}
-  .svc-tile .svc-ic svg{width:20px;height:20px}
-  .svc-tile b{flex:1;font-size:15px;font-weight:800;letter-spacing:-.01em}
-  .svc-tile .svc-arw{color:var(--ink-3);flex:none;transition:transform .18s,color .18s}
+  .svc-tile .svc-ic svg{width:22px;height:22px}
+  .svc-tile b{position:relative;font-size:16px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:6px;width:100%}
+  .svc-tile .svc-desc{position:relative;font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:6px;font-weight:500}
+  .svc-tile .svc-arw{color:var(--ink-3);flex:none;transition:transform .18s,color .18s;margin-left:auto}
   .svc-tile:hover .svc-arw{transform:translateX(3px);color:var(--svc-c)}
+  .more-chip{display:inline-block;font-size:11px;font-weight:700;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:1px 7px;margin-left:2px}
   .sec{margin-top:56px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin:20px 0}
   .outage-card{border-top:3px solid var(--accent);border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--canvas);padding:20px;box-shadow:var(--shadow-sm)}
@@ -237,6 +241,65 @@ ${footerHtml()}
     rvs.forEach(function(el,i){el.style.transitionDelay=(Math.min(i,6)*60)+'ms';io.observe(el);});
   } else rvs.forEach(function(el){el.classList.add('in');});
   setTimeout(function(){rvs.forEach(function(el){el.classList.add('in');});},1400);
+})();
+(function(){
+  // ---------- count-up для чисел [data-to] (mini-stats/stat-row) ----------
+  function countUp(el){var to=+el.dataset.to||0,s=performance.now(),d=1200;(function step(t){var p=Math.min((t-s)/d,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e).toLocaleString('ru-RU')+(el.dataset.suffix||'');if(p<1)requestAnimationFrame(step);})(s);}
+  var nums=[].slice.call(document.querySelectorAll('[data-to]'));
+  if(nums.length){
+    if('IntersectionObserver' in window){
+      var io3=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){countUp(e.target);io3.unobserve(e.target);}});},{threshold:.4});
+      nums.forEach(function(el){io3.observe(el);});
+    } else nums.forEach(countUp);
+  }
+})();
+(function(){
+  // ---------- живые подсказки адреса (тот же паттерн, что на карте) ----------
+  var capInput=document.getElementById('capInput'), lsug=document.getElementById('lsug');
+  if(!capInput||!lsug) return;
+  var mapHref=capInput.dataset.mapHref||'/map/pavlodar';
+  var ADDR=null;
+  function loadAddr(){ if(ADDR) return Promise.resolve(ADDR);
+    return fetch('/map/addresses.json').then(function(r){return r.json();}).then(function(d){ADDR=d;return d;}).catch(function(){return ADDR={};}); }
+  function norm(s){ return (s||'').toLowerCase().replace(/^(улица|ул\\.?|проспект|пр\\.?|переулок|пер\\.?|мкр\\.?|площадь|пл\\.?)\\s*/,'').replace(/ё/g,'е').replace(/[.,]/g,' ').replace(/\\s+/g,' ').trim(); }
+  function parseQ(raw){
+    var s=(raw||'').trim().replace(/^(ул|улица|пр|проспект|пер|переулок|мкр|пл)\\.?\\s+/i,'');
+    var m=s.match(/^(.*?)[\\s,]+(\\d+[а-я]?(?:\\/\\d+)?)\\s*$/i);
+    return { street: norm(m?m[1]:s), house: m?m[2].toLowerCase():'' };
+  }
+  function esc2(s){return String(s).replace(/[<&>"]/g,function(c){return {'<':'&lt;','&':'&amp;','>':'&gt;','"':'&quot;'}[c];});}
+  function renderSug(raw){
+    var q=(raw||'').trim(); if(q.length<2){ lsug.classList.remove('show'); return; }
+    var pq=parseQ(q);
+    loadAddr().then(function(d){
+      var streets=Object.keys(d).filter(function(s){return norm(s).indexOf(pq.street)>=0;})
+        .sort(function(a,b){return d[b].length-d[a].length;});
+      var html='';
+      if(pq.house){
+        var rows=[];
+        for(var i=0;i<streets.length && rows.length<7;i++){
+          var st=streets[i], hs=d[st];
+          var exact=[], part=[];
+          for(var j=0;j<hs.length;j++){ var hn=String(hs[j][0]).toLowerCase();
+            if(hn===pq.house) exact.push(hs[j][0]); else if(hn.indexOf(pq.house)===0) part.push(hs[j][0]); }
+          part.sort(function(a,b){ var na=parseInt(a,10),nb=parseInt(b,10); return (na-nb)|| (String(a)<String(b)?-1:1); });
+          exact.concat(part).slice(0,7-rows.length).forEach(function(h){ rows.push({street:st,house:h}); });
+        }
+        html=rows.map(function(r){ var qq=r.street+', '+r.house;
+          return '<a href="'+mapHref+'?q='+encodeURIComponent(qq)+'"><span class="p"></span><span class="nm">'+esc2(r.street)+', '+esc2(r.house)+'</span></a>'; }).join('');
+      }
+      if(!html){
+        var hits=streets.slice(0,6);
+        if(!hits.length){ lsug.classList.remove('show'); return; }
+        html=hits.map(function(s){ var qq=s+(pq.house?(', '+pq.house):'');
+          return '<a href="'+mapHref+'?q='+encodeURIComponent(qq)+'"><span class="p"></span><span class="nm">'+esc2(s)+'</span><span class="hs">'+d[s].length+' адр.</span></a>'; }).join('');
+      }
+      lsug.innerHTML=html; lsug.classList.add('show');
+    });
+  }
+  capInput.addEventListener('input',function(){ renderSug(this.value); });
+  capInput.addEventListener('focus',function(){ if(this.value.trim().length>=2) renderSug(this.value); });
+  document.addEventListener('click',function(e){ if(!e.target.closest('.cap-wrap')) lsug.classList.remove('show'); });
 })();
 </script>
 </body>

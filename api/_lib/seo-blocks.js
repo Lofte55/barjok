@@ -24,10 +24,11 @@ function statRowHtml({ affectedAddresses, electricityAffected, hotWaterAffected,
   </section>`;
 }
 
-/* Компактные unboxed-цифры под hero — в духе awesomic.com (не боксы, просто число+подпись в ряд). */
+/* Компактные unboxed-цифры под hero — в духе awesomic.com (не боксы, просто число+подпись в ряд).
+   pairs: [ [числоBase, подпись, suffix?] ] — анимируются count-up от 0 при появлении в viewport. */
 function minimalStatsHtml(pairs) {
   return `<div class="mini-stats rv">
-    ${pairs.map(([n, l]) => `<div class="mstat"><b>${esc(String(n))}</b><span>${esc(l)}</span></div>`).join('')}
+    ${pairs.map(([n, l, suffix]) => `<div class="mstat"><b data-to="${Number(n) || 0}"${suffix ? ` data-suffix="${esc(suffix)}"` : ''}>0${suffix ? esc(suffix) : ''}</b><span>${esc(l)}</span></div>`).join('')}
   </div>`;
 }
 
@@ -183,12 +184,12 @@ function stepsHtml({ addressSample = 'Естая, 38' } = {}) {
 /* Цветные интерактивные плитки услуг вместо шаблонных белых карточек —
    у каждого ресурса свой фирменный акцент (совпадает с .fchip/.ic на карте). */
 const SERVICE_TILE_META = {
-  voda: { color: 'var(--cold)', icon: '<path d="M12 3c3.2 4.2 6 7.6 6 11a6 6 0 1 1-12 0c0-3.4 2.8-6.8 6-11z"/>' },
-  svet: { color: 'var(--elec)', icon: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>' },
-  otoplenie: { color: 'var(--hot)', icon: '<path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/>' },
-  'planovye-otklyucheniya': { color: 'var(--accent)', icon: '<rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/>' },
-  'avariynye-otklyucheniya': { color: 'var(--emerg)', icon: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>' },
-  'po-adresu': { color: 'var(--ink)', icon: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/>' },
+  voda: { color: 'var(--cold)', icon: '<path d="M12 3c3.2 4.2 6 7.6 6 11a6 6 0 1 1-12 0c0-3.4 2.8-6.8 6-11z"/>', desc: 'Холодная и горячая вода по каждому дому — с датой и причиной.' },
+  svet: { color: 'var(--elec)', icon: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>', desc: 'Плановые и аварийные отключения электричества по адресу.' },
+  otoplenie: { color: 'var(--hot)', icon: '<path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/>', desc: 'Статус теплоснабжения и график ремонтных работ.' },
+  'planovye-otklyucheniya': { color: 'var(--accent)', icon: '<rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/>', desc: 'Работы, о которых известно заранее — можно подготовиться.' },
+  'avariynye-otklyucheniya': { color: 'var(--emerg)', icon: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', desc: 'Внезапные отключения из-за аварий на сетях.' },
+  'po-adresu': { color: 'var(--ink)', icon: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/>', desc: 'Введите улицу и дом — покажем всё, что отключено именно у вас.' },
 };
 
 function serviceTilesHtml(citySlug, items) {
@@ -196,8 +197,8 @@ function serviceTilesHtml(citySlug, items) {
     const meta = SERVICE_TILE_META[slug] || SERVICE_TILE_META['po-adresu'];
     return `<a class="svc-tile" href="/${citySlug}/${slug}/" style="--svc-c:${meta.color}">
       <span class="svc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${meta.icon}</svg></span>
-      <b>${esc(label)}</b>
-      <svg class="svc-arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <b>${esc(label)}<svg class="svc-arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></b>
+      <span class="svc-desc">${esc(meta.desc)}</span>
     </a>`;
   }).join('')}</div>`;
 }
