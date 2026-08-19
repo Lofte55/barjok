@@ -116,11 +116,6 @@ async function renderCity(req, res) {
   const loc = city.names.ru.locative;
   const nom = city.names.ru.nominative;
 
-  const statusHtml = statusBlockHtml({
-    locative: loc, activeOutages: snap.activeOutages || 0, affectedAddresses: snap.affectedAddresses || 0,
-    electricityAffected: snap.electricityAffected || 0, hotWaterAffected: snap.hotWaterAffected || 0,
-    coldWaterAffected: snap.coldWaterAffected || 0, generatedAt: snap.generatedAt, ok: snap.ok,
-  });
   const serviceCardsHtml = serviceTilesHtml(citySlug, SERVICE_CARDS);
   const cardsHtml = snap.ok ? outageCardsHtml(snap.houses || [], () => true, 16) : '';
 
@@ -161,13 +156,22 @@ async function renderCity(req, res) {
     [`Откуда берутся данные об отключениях?`, `Официальные источники (Павлодарэнерго, Павлодар-Водоканал, Павлодарские тепловые сети) плюс подтверждённые сообщения жителей BARJOK.`],
   ];
 
-  const searchBoxHtml = `<form class="capture search-box rv" action="/map/${citySlug}" method="get" style="max-width:560px;margin:22px 0">
+  const updatedAt = snap.generatedAt ? new Date(snap.generatedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+  const leadText = !snap.ok
+    ? 'Получаем свежие данные — обновите страницу через минуту.'
+    : (snap.activeOutages
+        ? `Сейчас в ${esc(loc)} <b>${snap.activeOutages}</b> активных отключений — они затрагивают <b>${(snap.affectedAddresses || 0).toLocaleString('ru-RU')}</b> адресов. Введи свой, чтобы узнать подробности.`
+        : `Активных отключений воды и света в ${esc(loc)} сейчас не найдено. Введи адрес — проверим, нет ли отключения именно по нему.`);
+
+  const searchBoxHtml = `<p class="lead rv">${leadText}</p>
+  <form class="capture rv" action="/map/${citySlug}" method="get" style="margin:26px auto 0">
     <label class="field">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
       <input type="text" name="address" placeholder="Улица и номер дома" aria-label="Адрес" autocomplete="off">
     </label>
     <button class="btn primary" type="submit">Проверить</button>
-  </form>`;
+  </form>
+  ${updatedAt ? `<p class="cap-note rv">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
 
   const miniStats = snap.ok ? minimalStatsHtml([
     [snap.affectedAddresses.toLocaleString('ru-RU') + '+', 'адресов затронуто'],
@@ -176,8 +180,9 @@ async function renderCity(req, res) {
   ]) : '';
   const sampleAddress = (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
   const bodyHtml = `
-    ${statusHtml}
-    ${searchBoxHtml}
+    <div style="text-align:center;padding-top:6px">
+      ${searchBoxHtml}
+    </div>
     ${miniStats}
     ${mapPreviewHtml({ href: `/map/${citySlug}` })}
     <div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Услуги</div><h2>Что можно проверить в ${esc(loc)}</h2></div>
