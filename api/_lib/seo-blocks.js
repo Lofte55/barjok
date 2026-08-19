@@ -86,8 +86,10 @@ function trustGridHtml(features = TRUST_FEATURES) {
   <div class="feat-grid">
     ${features.map(([icon, title, desc]) => `<div class="feat rv">
       <img class="fi-img" src="${FEAT_IMAGES[icon] || FEAT_IMAGES.pin}" alt="" width="96" height="96" loading="lazy">
-      <h3>${esc(title)}</h3>
-      <p>${esc(desc)}</p>
+      <div class="feat-text">
+        <h3>${esc(title)}</h3>
+        <p>${esc(desc)}</p>
+      </div>
     </div>`).join('')}
   </div>`;
 }

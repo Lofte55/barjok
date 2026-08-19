@@ -209,14 +209,16 @@ ${jsonLdBlocks}
   /* trust-блок "Почему нам можно верить" — БЕЗ карточек-коробок: иллюстрация
      с прозрачным фоном + тонкая верхняя линия-разделитель вместо
      border+shadow+фоновой плашки под иконку (Border-first/anti-card-overuse) */
-  .feat-grid{grid-template-columns:1fr 1fr;gap:40px 48px}
-  .feat{position:relative;display:flex;align-items:flex-start;gap:20px;padding-top:22px;
-    border-top:1px solid var(--line);background:none;border-radius:0;transition:border-color .25s}
+  .feat-grid{grid-template-columns:1fr 1fr;gap:36px 48px}
+  .feat{position:relative;display:flex;align-items:center;gap:22px;padding:26px 0 0;
+    border:0;border-top:1px solid var(--line);background:none;border-radius:0;transition:border-color .25s}
   .feat:hover{border-top-color:var(--accent)}
-  .feat .fi-img{width:64px;height:64px;flex:none;object-fit:contain;
+  .feat .fi-img{width:72px;height:72px;flex:none;object-fit:contain;
     filter:drop-shadow(0 6px 14px rgba(47,107,237,.28));transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
   .feat:hover .fi-img{transform:scale(1.08)}
-  .feat h3{padding-top:2px}
+  .feat-text{min-width:0}
+  .feat-text h3{font-size:17px}
+  .feat-text p{margin-top:6px}
   .feat:nth-child(1) .fi-img{animation:fiBounce 2.6s ease-in-out infinite}
   .feat:nth-child(2) .fi-img{animation:fiPulse 2.6s ease-in-out infinite}
   .feat:nth-child(3) .fi-img{animation:fiPulse 2.6s ease-in-out infinite .35s}
