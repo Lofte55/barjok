@@ -8,15 +8,7 @@ const { getCity, allCities, activeCities, SERVICES, getService } = require('./_l
 const { getHomeSeo, getCitySeo, getServiceSeo, BRAND, ORIGIN } = require('./_lib/seo');
 const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc } = require('./_lib/seo-layout');
 const { computeSnapshot } = require('./_lib/city-stats');
-const { outageCardsHtml, countMatching, statusBlockHtml, RES_LABEL_NOM } = require('./_lib/seo-cards');
-const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
-const RES_ICON = {
-  cold_water: '<path d="M12 3c3.2 4.2 6 7.6 6 11a6 6 0 1 1-12 0c0-3.4 2.8-6.8 6-11z"/>',
-  hot_water: '<path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/>',
-  electricity: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
-  heating: '<path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/>',
-  gas: '<circle cx="12" cy="12" r="8"/>',
-};
+const { outageCardsHtml, groupedOutagesHtml, countMatching, statusBlockHtml, RES_LABEL_NOM } = require('./_lib/seo-cards');
 const { statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
 
 const SERVICE_CARDS = [
@@ -130,86 +122,17 @@ async function renderCity(req, res) {
   const nom = city.names.ru.nominative;
 
   const serviceCardsHtml = serviceTilesHtml(citySlug, SERVICE_CARDS);
-  const cardsHtml = snap.ok ? outageCardsHtml(snap.houses || [], () => true, 16) : '';
 
-  const splitAddress = (address) => {
-    const idx = address.lastIndexOf(',');
-    return idx === -1 ? { street: address, house: '' } : { street: address.slice(0, idx).trim(), house: address.slice(idx + 1).trim() };
-  };
-
-  const RES_TABS = [
-    ['all', 'Все'], ['electricity', 'Электричество'], ['cold_water', 'Холодная вода'],
-    ['hot_water', 'Горячая вода'], ['heating', 'Отопление'],
-  ];
-
-  let futureHtml = '';
-  if (snap.ok) {
-    // Группируем по улице+ресурсу — иначе один и тот же дом-ряд (10 карточек
-    // "Ермакова, 1/1", "1/2"…) выглядит как повтор одной и той же карточки.
-    const groups = new Map();
-    for (const h of snap.houses || []) {
-      for (const o of h.outages || []) {
-        if (o.status !== 'future') continue;
-        const { street, house } = splitAddress(h.address);
-        const key = street + '|' + o.resource;
-        if (!groups.has(key)) groups.set(key, { street, resource: o.resource, houses: [], minStart: o.start });
-        const g = groups.get(key);
-        if (house) g.houses.push(house);
-        if (new Date(o.start) < new Date(g.minStart)) g.minStart = o.start;
-      }
-    }
-    // Топ-N НА КАЖДЫЙ ресурс, а не топ-N по всем сразу — иначе табы "Вода"/"Отопление"
-    // остаются пустыми, если электричество просто численно больше в базе.
-    const byResource = new Map();
-    for (const g of groups.values()) {
-      const list = byResource.get(g.resource) || [];
-      list.push(g);
-      byResource.set(g.resource, list);
-    }
-    let groupList = [];
-    for (const list of byResource.values()) {
-      list.sort((a, b) => b.houses.length - a.houses.length);
-      groupList = groupList.concat(list.slice(0, 6));
-    }
-    groupList.sort((a, b) => b.houses.length - a.houses.length);
-
-    const presentResources = new Set(groupList.map((g) => g.resource));
-    const tabsToShow = RES_TABS.filter(([key]) => key === 'all' || presentResources.has(key));
-
-    if (groupList.length) {
-      const tabsHtml = tabsToShow.length > 2 ? `<div class="res-tabs rv" role="tablist">
-        ${tabsToShow.map(([key, label], i) => `<button class="res-tab${i === 0 ? ' on' : ''}" data-filter="${key}" type="button">${esc(label)}</button>`).join('')}
-      </div>` : '';
-      // В общем виде ("Все") показываем не больше 12 плиток: 11 реальных улиц +
-      // плитка "+N ещё", ведущая на карту БЕЗ фильтра по конкретному адресу (вся
-      // область целиком) — так пользователь видит масштаб, а не тонет в карточках.
-      // При переключении на конкретный ресурс (таб) ограничение снимается — там и
-      // так не больше 6 (см. top-N-на-ресурс выше).
-      const MAX_VISIBLE = 11;
-      const overflowCount = Math.max(0, groupList.length - MAX_VISIBLE);
-      const cardsHtml2 = groupList.map((g, idx) => {
-        const color = RES_COLOR[g.resource] || 'var(--accent)';
-        const houseCount = g.houses.length || 1;
-        const preview = g.houses.slice(0, 6).join(', ');
-        const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
-        const mapHref = `/map/${citySlug}?q=${encodeURIComponent(g.street)}`;
-        const extraAttrs = idx >= MAX_VISIBLE ? ' hidden data-extra="1"' : '';
-        return `<article class="outage-card rv" data-res="${esc(g.resource)}"${extraAttrs}>
-          <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span>
-          <h3 style="margin:8px 0 2px"><a href="${mapHref}" class="street-link">${esc(g.street)}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></a></h3>
-          <span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
-          <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:8px">Дома: ${esc(preview)}${more}</div>
-          <dl style="margin-top:8px"><dt>Начало</dt><dd>с ${esc(new Date(g.minStart).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl>
-        </article>`;
-      }).join('');
-      const moreTile = overflowCount > 0 ? `<a class="outage-card outage-more rv" data-res="__more__" href="/map/${citySlug}">
-        <span class="outage-more-n">+${overflowCount}</span>
-        <span class="outage-more-label">ещё ${overflowCount === 1 ? 'улица' : 'улиц'} с плановыми работами</span>
-        <span class="outage-more-cta">Смотреть всё на карте<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </a>` : '';
-      futureHtml = `<div class="sec rv"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.</p></div>${tabsHtml}<div class="cards" id="futureCards">${cardsHtml2}${moreTile}</div>`;
-    }
-  }
+  const cardsHtml = snap.ok ? groupedOutagesHtml(snap.houses || [], 'current', citySlug, {
+    eyebrow: 'Прямо сейчас', title: 'Текущие отключения',
+    intro: 'Активные отключения — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.',
+    idPrefix: 'current',
+  }) : '';
+  const futureHtml = snap.ok ? groupedOutagesHtml(snap.houses || [], 'future', citySlug, {
+    eyebrow: 'Заранее', title: 'Предстоящие отключения',
+    intro: 'Плановые работы, известные заранее — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.',
+    idPrefix: 'future',
+  }) : '';
 
   const otherCities = activeCities().filter((c) => c.slug !== citySlug);
   const otherCitiesHtml = otherCities.length
@@ -251,7 +174,7 @@ async function renderCity(req, res) {
     ${mapPreviewHtml({ href: `/map/${citySlug}` })}
     <div class="sec rv"><div class="eyebrow">Услуги</div><h2>Что можно проверить в ${esc(loc)}</h2></div>
     ${serviceCardsHtml}
-    ${cardsHtml ? '<div class="sec rv"><div class="eyebrow">Прямо сейчас</div><h2>Текущие отключения</h2></div>' + cardsHtml : ''}
+    ${cardsHtml}
     ${futureHtml}
     ${stepsHtml({ addressSample: sampleAddress })}
     ${trustGridHtml()}

@@ -206,6 +206,16 @@ ${jsonLdBlocks}
   .svc-tile .svc-arw{color:var(--ink-3);flex:none;transition:transform .16s,color .16s;margin-left:auto}
   .svc-tile:hover .svc-arw{transform:translateX(3px);color:var(--svc-c)}
   .more-chip{display:inline-block;font-size:11px;font-weight:700;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:1px 7px;margin-left:2px}
+  /* trust-блок "Почему нам можно верить" — у каждой иконки своя лёгкая
+     непрерывная анимация, чтобы блок не был статичной картинкой */
+  .feat:nth-child(1) .fi{animation:fiBounce 2.6s ease-in-out infinite}
+  .feat:nth-child(2) .fi{animation:fiPulse 2.6s ease-in-out infinite}
+  .feat:nth-child(3) .fi{animation:fiPulse 2.6s ease-in-out infinite .35s}
+  .feat:nth-child(4) .fi{animation:fiWiggle 3.4s ease-in-out infinite}
+  @keyframes fiBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes fiPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  @keyframes fiWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+  @media(prefers-reduced-motion:reduce){.feat .fi{animation:none!important}}
   .sec{margin-top:76px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:20px 0}
   .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s}
@@ -306,22 +316,27 @@ ${footerHtml()}
   }
 })();
 (function(){
-  // ---------- табы-фильтр "Предстоящие отключения" по ресурсу ----------
-  var tabs=document.querySelectorAll('.res-tab');
-  if(!tabs.length) return;
-  var cards=[].slice.call(document.querySelectorAll('#futureCards .outage-card'));
-  tabs.forEach(function(tab){
-    tab.addEventListener('click',function(){
-      tabs.forEach(function(t){t.classList.remove('on');});
-      tab.classList.add('on');
-      var f=tab.dataset.filter;
-      cards.forEach(function(c){
-        // плитка "+N ещё" видна только в общем виде "Все" (в конкретном ресурсе
-        // и так показаны все карточки этого ресурса, "ещё" неприменимо)
-        if(c.dataset.res==='__more__'){ c.hidden=(f!=='all'); return; }
-        var isExtra=c.hasAttribute('data-extra');
-        if(f==='all'){ c.hidden = isExtra; }
-        else { c.hidden = (c.dataset.res!==f); }
+  // ---------- табы-фильтр по ресурсу — работает НЕЗАВИСИМО для каждой группы
+  // (и "Текущие", и "Предстоящие" отключения используют один и тот же паттерн:
+  // .res-tabs, за которым сразу идёт .cards с карточками) ----------
+  document.querySelectorAll('.res-tabs').forEach(function(tabsEl){
+    var cardsEl=tabsEl.nextElementSibling;
+    if(!cardsEl) return;
+    var tabs=[].slice.call(tabsEl.querySelectorAll('.res-tab'));
+    var cards=[].slice.call(cardsEl.querySelectorAll('.outage-card'));
+    tabs.forEach(function(tab){
+      tab.addEventListener('click',function(){
+        tabs.forEach(function(t){t.classList.remove('on');});
+        tab.classList.add('on');
+        var f=tab.dataset.filter;
+        cards.forEach(function(c){
+          // плитка "+N ещё" видна только в общем виде "Все" (в конкретном ресурсе
+          // и так показаны все карточки этого ресурса, "ещё" неприменимо)
+          if(c.dataset.res==='__more__'){ c.hidden=(f!=='all'); return; }
+          var isExtra=c.hasAttribute('data-extra');
+          if(f==='all'){ c.hidden = isExtra; }
+          else { c.hidden = (c.dataset.res!==f); }
+        });
       });
     });
   });
