@@ -162,7 +162,7 @@ body {
   overflow: hidden;
 }
 .panel .head { padding: 16px 16px 12px; border-bottom: 1px solid var(--line-2); }
-.panel .head h1 { margin: 0; font-size: 16px; letter-spacing: -.2px; }
+.panel .head .map-title { margin: 0; font-size: 16px; letter-spacing: -.2px; }
 .panel .head p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-3); }
 .panel .head .count { font-weight: 700; color: var(--brand-ink); }
 
@@ -303,7 +303,7 @@ body {
   .sheet .grip .bar { width: 42px; height: 5px; border-radius: 999px; background: #cfd6e0; transition: background .2s; }
   .sheet .grip:active .bar { background: #aeb7c4; }
   .sheet .shead { padding: 2px 16px 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line-2); cursor: grab; }
-  .sheet .shead h1 { margin: 0; font-size: 15px; }
+  .sheet .shead .map-title { margin: 0; font-size: 15px; }
   .sheet .shead .count { color: var(--brand-ink); font-weight: 700; }
   .sheet .shead .fbtn {
     margin-left: auto; border: 1px solid var(--line); background: #fff; border-radius: 999px;
@@ -423,7 +423,7 @@ body.ads-off [data-ad-slot] { display: none !important; }
   width: 30px; height: 30px; flex: none; text-decoration: none;
   display: grid; place-items: center;
 }
-.head-row h1 { margin: 0; font-size: 16px; letter-spacing: -.3px; flex: 1; }
+.head-row .map-title { margin: 0; font-size: 16px; letter-spacing: -.3px; flex: 1; }
 .info-btn {
   width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-2); background: #fff;
   color: var(--ink-3); font-family: Georgia, serif; font-style: italic; font-size: 13px; cursor: pointer; flex: none;
@@ -500,7 +500,7 @@ body.ads-off [data-ad-slot] { display: none !important; }
   .lang button { padding: 0 13px; font-size: 13px; }
   .mini-search { display: none; }
   .shead .mark { width: 28px; height: 28px; text-decoration: none; display: grid; place-items: center; }
-  .shead h1 { font-size: 14px; }
+  .shead .map-title { font-size: 14px; }
   .filterbar { border-bottom: 0; }
   .sheet .filters-extra { max-height: 0; }
   .sheet.filters-open .filters-extra { max-height: 220px; }
