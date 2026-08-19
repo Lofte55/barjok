@@ -91,9 +91,54 @@ function footerHtml() {
     </div>
     <div class="foot-bot">
       <span>© 2026 ${BRAND} · Казахстан</span>
+      <button class="btn contact-open" type="button">Связаться с нами</button>
     </div>
   </div>
-</footer>`;
+</footer>
+${contactsModalHtml()}`;
+}
+
+function contactsModalHtml() {
+  return `<div class="modal-ov" id="contactsModal" aria-hidden="true">
+  <div class="modal">
+    <button class="modal-x" id="contactsClose" aria-label="Закрыть">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="modal-eyebrow">Контакты</div>
+    <h3 class="modal-title">Свяжитесь с нами</h3>
+    <p class="modal-sub">Выберите удобный способ — ответим в течение рабочего дня.</p>
+    <div class="modal-list">
+      <a class="cbtn" href="https://wa.me/77083445023" target="_blank" rel="noopener">
+        <span class="ci" style="background:var(--wa)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.5-4-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5 0-.2-.6-1.6-.9-2.2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-1.1 2.2 0 .3.9 2.2 2.6 4 2.4 2.6 4.3 3.1 5 3.3.8.2 1.5.2 2.1.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg></span>
+        <span class="ct"><span class="l">WhatsApp</span><span class="v">+7 708 344 50 23</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <a class="cbtn" href="https://t.me/artumikh" target="_blank" rel="noopener">
+        <span class="ci" style="background:var(--tg)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.5 13.1l-4.6-1.4c-1-.3-1-1 .2-1.5L20.6 3c.8-.3 1.5.2 1.3 1.3z"/></svg></span>
+        <span class="ct"><span class="l">Telegram</span><span class="v">@artumikh</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <a class="cbtn" href="tel:+77083445023">
+        <span class="ci" style="background:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg></span>
+        <span class="ct"><span class="l">Позвонить</span><span class="v">+7 708 344 50 23</span></span>
+        <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var m=document.getElementById('contactsModal');
+  if(!m)return;
+  function open(){ m.classList.add('show'); m.setAttribute('aria-hidden','false'); }
+  function close(){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); }
+  document.querySelectorAll('.contact-open').forEach(function(b){ b.addEventListener('click',open); });
+  var x=document.getElementById('contactsClose');
+  if(x)x.addEventListener('click',close);
+  m.addEventListener('click',function(e){ if(e.target===m) close(); });
+  addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+})();
+</script>`;
 }
 
 function breadcrumbsHtml(items) {
