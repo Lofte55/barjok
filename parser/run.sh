@@ -20,34 +20,10 @@ if node parser/index.js "$CITY" >> "$LOG" 2>&1; then
   # санити-чек: файл валиден и непустой
   if node -e 'const d=require("./map/data.json");if(!d.houses||!d.houses.length)process.exit(1)' 2>/dev/null; then
     echo "[$TS] === ok ===" >> "$LOG"
-
-    # Коммитим и пушим ТОЛЬКО известные data-файлы парсера (никогда git add -A —
-    # чтобы случайно не закоммитить что-то постороннее). Если нечего коммитить
-    # (данные не изменились с прошлого запуска) — молча пропускаем.
-    DATA_FILES="map/data.json map/addresses.json parser/geocache.json"
-    git add $DATA_FILES >> "$LOG" 2>&1
-    if git diff --cached --quiet -- $DATA_FILES; then
-      echo "[$TS] данные не изменились — коммит пропущен" >> "$LOG"
-      PUSHED=0
-    else
-      COUNTS="$(node -e 'const d=require("./map/data.json");console.log(d.counts.houses+" домов, "+d.counts.outages+" отключений")' 2>/dev/null)"
-      if git commit -m "parser($CITY): автообновление данных — $COUNTS [$TS]" -- $DATA_FILES >> "$LOG" 2>&1 \
-        && git pull --rebase --autostash origin main >> "$LOG" 2>&1 \
-        && git push origin main >> "$LOG" 2>&1; then
-        echo "[$TS] === закоммичено и запушено ===" >> "$LOG"
-        PUSHED=1
-      else
-        echo "[$TS] === git commit/push FAILED (см. лог выше) — данные остались только локально ===" >> "$LOG"
-        git rebase --abort >> "$LOG" 2>&1
-        PUSHED=0
-      fi
-    fi
-
-    # IndexNow имеет смысл слать ТОЛЬКО когда изменения реально ушли в git
-    # (иначе на проде ещё старые данные, и уведомление будет ложным).
-    if [ "${PUSHED:-0}" = "1" ]; then
-      node parser/indexnow-ping.js >> "$LOG" 2>&1 || echo "[$TS] indexnow ping failed (не критично)" >> "$LOG"
-    fi
+    # Коммит+пуш в git и IndexNow-пинг — ОТДЕЛЬНЫМИ шагами в
+    # .github/workflows/parser.yml (после этого скрипта), не здесь. run.sh
+    # запускается и локальным LaunchAgent, и GitHub Actions — если бы он сам
+    # пушил, при одновременном запуске из двух мест это дублировало бы коммиты.
   else
     echo "[$TS] === BAD DATA → откат ===" >> "$LOG"
     [ -f "$BACKUP" ] && cp "$BACKUP" map/data.json

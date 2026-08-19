@@ -69,6 +69,7 @@ jobs:
         run: bash parser/run.sh pavlodar
 
       - name: Commit updated data
+        id: commit
         run: |
           git config user.name "barjoq-bot"
           git config user.email "actions@users.noreply.github.com"
@@ -76,7 +77,18 @@ jobs:
           git add map/data.json parser/geocache.json
           if git diff --staged --quiet; then
             echo "Данные не изменились — коммит не нужен."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "chore(data): автообновление отключений (Павлодар)"
             git push
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # IndexNow — уведомляем Bing/Яндекс и т.д. о реальном изменении данных,
+      # чтобы не ждать планового краула. Шлём ТОЛЬКО когда выше действительно
+      # был push (иначе на проде ещё старые данные — уведомление было бы ложным;
+      # деплой Vercel по этому push тоже уже должен успеть подхватить изменения
+      # к моменту следующего запуска через час).
+      - name: Ping IndexNow
+        if: steps.commit.outputs.pushed == 'true'
+        run: node parser/indexnow-ping.js || echo "IndexNow ping failed (не критично)"
