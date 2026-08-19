@@ -1,8 +1,8 @@
 # barjok.md — Карта проекта «Бар Жоқ»
 
-> v22 · Павлодар · 2026-08 · реальные парсеры (3 источника) + слой жалоб жителей (модерация) · Vercel + serverless `api/report.js`
+> v23 · Павлодар · 2026-08 · Supabase (Postgres) + админка `/admin` + Decision Engine (авто-подтверждение по жалобам) + полноценная ADS-платформа
 > Репозиторий: `github.com/Lofte55/barjok` (push по **SSH**) · **Домен: barjok.kz**
-> **ПРОД: https://barjok.kz** (также barjok.vercel.app) — `/` лендинг · `/map/` карта · `/ads` реклама
+> **ПРОД: https://barjok.kz** (также barjok.vercel.app) — `/` лендинг · `/map/` карта · `/admin` админка · `/admin/ads` реклама
 
 **Что это.** Сервис показывает, когда в доме отключат воду/свет. Ввёл адрес → увидел отключения
 именно по своему дому (дата, время, причина). Позиционирование: информация уже существует,
@@ -83,6 +83,75 @@
   **микрорайон, который парсер не размечает** (пробел из v8, HANDOFF §6.2), а не баг рендера.
   Красные капли рядом — это Астана (названная улица). Электро на Сатпаева — `future`, на проде
   без пинов, пока не задеплоен фикс `time='all'` из v10.
+
+## Свежие изменения (v23) — Supabase + админка + Decision Engine + ADS-платформа
+
+Самое крупное изменение архитектуры с момента запуска: сервис перестал быть чисто
+статическим (Vercel + Google Sheets) — появилась настоящая БД (Supabase/Postgres) и
+полноценная админка. Три больших блока, все на проде и проверены сквозными тестами.
+
+### 1. БД + админка (`/admin`, Basic Auth: логин `admin`)
+
+Google Sheets больше не единственный способ управлять картой. Таблицы в Supabase:
+`incidents`, `user_reports`, `incident_log` (schema.sql). Админка показывает список
+incidents, даёт руками "Принудительно отключить/восстановить", фильтр по статусу,
+удаление записей. Старые жалобы из Sheet импортированы в incidents (кнопка в админке).
+
+### 2. Decision Engine — автоматическое подтверждение по жалобам жителей
+
+Реализованы правила из отдельного тех.задания («BARJOK — автоматическая система
+подтверждения отключений»): 3 уникальных жалобы с разных устройств (`actor_key` =
+cookie `bj_device`) за rolling window (360 мин на отключение / 120 мин на
+восстановление) → incident подтверждается сам, `confirmation_type=COMMUNITY`.
+15-минутный cooldown защищает от дребезга статуса. `manual_override` в админке
+имеет абсолютный приоритет — автоматика его не трогает, пока override не снят
+(снятие сразу запускает переоценку, не дожидаясь следующей жалобы).
+Модалка жалобы на карте (`map/index.html`/`app.js`) получила переключатель
+«Всё ещё нет / Уже появилось» — раньше не было способа сообщить о восстановлении
+через основную форму. `api/report.js` пишет в `user_reports` и гоняет Decision Engine
+(`api/_lib/decision-engine.js`) параллельно со старой Telegram/Sheet-отправкой —
+ничего из старого пайплайна не сломано.
+Попутно нашли и починили баг: несколько incident'ов на один адрес+ресурс (старый
+RESTORED + новый ACTIVE) — устаревший RESTORED глушил актуальный ACTIVE на карте.
+Инцидент-адаптер (`parser/adapters/incidents.js`) теперь берёт только самый свежий
+incident по паре адрес+ресурс.
+
+### 3. ADS — своя рекламная платформа (`/admin/ads`)
+
+Реализована по отдельному тех.заданию («BARJOK — ADS Management System»), в пять
+последовательных фаз (так и разрабатывали — сначала data model, в конце UI/аналитика):
+
+1. **Data model + campaign engine** — `advertisers/campaigns/creatives/placements/
+   ads_events/ads_audit_log` (schema_ads.sql) + `api/_lib/ads-engine.js`: `selectAd()`
+   реализует полную ротацию (active → schedule → targeting → exclusions → placement →
+   frequency cap → лимиты показов/кликов → category exclusivity → priority/weighted
+   rotation), `buildUtm()`/`appendUtmToUrl()` — UTM-билдер с макросами
+   `{city}/{utility}/{placement}/{campaign_id}/{creative_id}` (БЕЗ `{address}` —
+   адрес пользователя рекламодателю никогда не передаётся).
+2. **UI создания кампании** — Advertisers/Campaigns/Creatives, Validate+Publish
+   (errors блокируют публикацию, warnings — нет), Pause/Resume/Duplicate/Archive,
+   UTM Preview с реальной ссылкой.
+3. **Рендер на BARJOK** — нативный компонент (не баннер) в карточке дома
+   (`outage_detail_context` — самый контекстный placement), обязательная подпись
+   «Реклама» рекламодатель убрать не может. `api/ads-select.js` — публичный
+   эндпоинт без admin-auth.
+4. **Tracking** — `ad_rendered`/`ad_impression` (IntersectionObserver, ≥50% viewport
+   ~1с)/`ad_click` пишутся в `ads_events` через `api/ads-track.js`. Замыкает цикл:
+   frequency cap и лимиты показов/кликов из engine (фаза 1) наконец считают по
+   реальным данным, а не по пустой таблице.
+5. **Analytics + Reports** — Dashboard с KPI и алертами (кампания скоро закончится /
+   нет активного creative), аналитика по кампании (impressions/reach/CTR/frequency/
+   CPM/CPC, delivery/pacing, разбивка по creative), публичные read-only отчёты для
+   рекламодателей по токену (`/report/:token`, `api/ads-report.js`) — опциональный
+   пароль, срок действия, `disable_report`. Отчёт не показывает visitor_id/IP/точные
+   адреса — только агрегаты.
+
+Категории и placements — seed-данные на русском (`ads_categories`/`ads_placements`).
+Вкладка в админке называется «ADS» (не «Реклама»).
+
+⚠️ **Известное ограничение:** Billing/выставление счетов, графики по времени (сейчас
+только числа и таблицы), RBAC-роли (пока один админ) — сознательно не в этой версии,
+задел под них в схеме есть (permissions из документа, `pricing_model` в campaigns).
 
 ## Свежие изменения (v22) — поиск: не мешать RU/KZ варианты одной улицы
 
@@ -623,13 +692,36 @@ barjoq/                         # корень репозитория (push → 
 │   ├── lib/{docx.js,geocode.js,buildings.js}
 │   ├── build-microdistricts.js # офлайн-билдер мембершипа микрорайонов → microdistricts.json
 │   ├── microdistricts.json     # дома ядра микрорайонов по OSM-suburb (в git)
-│   └── adapters/{pavlodar.js,pvk-water.js,pts-heat.js,citizen.js,arcgis.js,pavlodar-curated.js}
+│   ├── adapters/{pavlodar.js,pvk-water.js,pts-heat.js,citizen.js,arcgis.js,pavlodar-curated.js}
+│   └── adapters/{resolved.js,incidents.js,manual-reports.js,pavon-heat.js} # resolved/incidents.js — интеграция с Supabase (см. ниже)
 ├── api/
-│   └── report.js               # SERVERLESS (Vercel): жалоба → Telegram + строка в Google-таблицу. Токен/URL в env
-├── .github/workflows/parser.yml # cron 3ч: прогон парсера + коммит data.json (env CITIZEN_FEED_URL)
-├── vercel.json                 # rewrites (/ /ads /map/pavlodar) + security-заголовки + кэш ассетов
+│   ├── report.js               # SERVERLESS: жалоба → Telegram + Sheet (легаси) + Decision Engine (user_reports)
+│   ├── admin.js, admin-data.js, admin-action.js       # /admin — incidents: список, forced outage/restored, delete
+│   ├── admin-ads.js, admin-ads-data.js, admin-ads-action.js  # /admin/ads — вся ADS-админка (SPA на хэш-роутере)
+│   ├── ads-select.js           # публичный: выбор рекламы для одного ad slot (без admin-auth)
+│   ├── ads-track.js            # публичный: пишет ad_impression/ad_click в ads_events
+│   ├── ads-report.js           # публичный: read-only отчёт по токену → /report/:token
+│   └── _lib/
+│       ├── supabase.js         # тонкий клиент к Supabase REST (без @supabase/supabase-js — проект без bundler'а)
+│       ├── auth.js              # Basic Auth для /admin* (пароль — env ADMIN_PASSWORD)
+│       ├── admin-layout.js     # общий HTML-каркас админки (сайдбар, тема)
+│       ├── decision-engine.js  # автоподтверждение incidents по жалобам (§ ниже)
+│       ├── ads-engine.js       # campaign selection engine (targeting/exclusions/frequency cap/rotation)
+│       ├── ads-tracking.js     # visitor/session cookie, origin-check, bot-filter — общее для ads-select/ads-track
+│       └── ads-analytics.js    # агрегация ads_events → campaignStats()/dashboardStats()
+├── supabase/
+│   ├── schema.sql              # incidents/user_reports/incident_log
+│   ├── schema_ads.sql          # advertisers/campaigns/creatives/placements/ads_events/ads_audit_log
+│   └── schema_ads_reports.sql  # ads_reports (публичные ссылки-отчёты)
+├── .github/workflows/parser.yml # cron: прогон парсера + коммит data.json (env CITIZEN_FEED_URL, SUPABASE_URL/SUPABASE_SECRET_KEY)
+├── vercel.json                 # rewrites (/ /map/pavlodar /admin /admin/ads /report/:token) + security-заголовки
 └── barjok.md                   # ЭТОТ ФАЙЛ
 ```
+
+**БД (Supabase/Postgres).** Env-переменные (Vercel + GitHub Actions): `SUPABASE_URL`,
+`SUPABASE_SECRET_KEY` (service_role/secret — только на сервере, никогда в браузер),
+`ADMIN_PASSWORD` (Basic Auth для `/admin*`). Клиент — самописный `api/_lib/supabase.js`
+поверх PostgREST (`fetch`), без npm-зависимостей.
 
 **Локальный запуск:** `python3 -m http.server 8177` из `cloude_v1/` →
 `localhost:8177/barjoq/landing/index.html` и `/barjoq/map/index.html`.
