@@ -143,7 +143,7 @@ function stepsHtml({ addressSample = 'Естая, 38' } = {}) {
     </div>
     <div class="demo">
       <div class="ocard">
-        <div class="h"><b>улица ${esc(addressSample)}</b><span>отключено 2 системы</span></div>
+        <div class="h"><b>${esc(addressSample)}</b><span>отключено 2 системы</span></div>
         <div class="row">
           <span class="ic" style="background:var(--hot)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/></svg></span>
           <div class="rt"><b>Горячая вода</b><span class="tag">Плановое</span>
