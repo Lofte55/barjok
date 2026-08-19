@@ -218,6 +218,16 @@ ${opts.bodyHtml}
 </div>
 </main>
 ${footerHtml()}
+<script>
+(function(){
+  var rvs=[].slice.call(document.querySelectorAll('.rv'));
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12,rootMargin:'0px 0px -6% 0px'});
+    rvs.forEach(function(el,i){el.style.transitionDelay=(Math.min(i,6)*60)+'ms';io.observe(el);});
+  } else rvs.forEach(function(el){el.classList.add('in');});
+  setTimeout(function(){rvs.forEach(function(el){el.classList.add('in');});},1400);
+})();
+</script>
 </body>
 </html>`;
 }
