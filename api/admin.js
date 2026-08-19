@@ -93,7 +93,7 @@ function render() {
 async function load() {
   const rows = document.getElementById('rows');
   try {
-    const { incidents } = await api('/api/admin-data');
+    const { incidents } = await api('/api/admin-api');
     allIncidents = incidents;
     render();
   } catch (e) {
@@ -112,7 +112,7 @@ document.getElementById('importForm').addEventListener('submit', async (e) => {
   const btn = e.target.querySelector('button');
   btn.disabled = true; btn.textContent = 'Импортирую…';
   try {
-    const r = await api('/api/admin-action', {
+    const r = await api('/api/admin-api', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action: 'import_sheet', feed_url: feedUrl }),
     });
@@ -128,7 +128,7 @@ document.getElementById('newForm').addEventListener('submit', async (e) => {
   const btn = e.target.querySelector('button');
   btn.disabled = true;
   try {
-    await api('/api/admin-action', {
+    await api('/api/admin-api', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action: 'force_outage', address: f.get('address'), utility_type: f.get('utility_type'), reason: f.get('reason') }),
     });
@@ -146,17 +146,17 @@ document.getElementById('rows').addEventListener('click', async (e) => {
   try {
     const act = btn.dataset.act;
     if (act === 'delete') {
-      await api('/api/admin-action', {
+      await api('/api/admin-api', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id: Number(btn.dataset.id) }),
       });
     } else if (act === 'force_outage_again') {
-      await api('/api/admin-action', {
+      await api('/api/admin-api', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: 'force_outage', address: btn.dataset.address, utility_type: btn.dataset.utility }),
       });
     } else {
-      await api('/api/admin-action', {
+      await api('/api/admin-api', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: act, id: Number(btn.dataset.id) }),
       });

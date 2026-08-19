@@ -2,11 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "trailingSlash": true,
   "rewrites": [
-    { "source": "/", "destination": "/api/home" },
+    { "source": "/", "destination": "/api/pages?page=home" },
     { "source": "/ads", "destination": "/landing/ads.html" },
     { "source": "/ads/", "destination": "/landing/ads.html" },
-    { "source": "/map", "destination": "/api/map-hub" },
-    { "source": "/map/", "destination": "/api/map-hub" },
+    { "source": "/map", "destination": "/api/pages?page=maphub" },
+    { "source": "/map/", "destination": "/api/pages?page=maphub" },
     { "source": "/map/pavlodar", "destination": "/map/index.html" },
     { "source": "/map/pavlodar/", "destination": "/map/index.html" },
     { "source": "/admin", "destination": "/api/admin" },
@@ -19,9 +19,9 @@
     { "source": "/admin/analytics/", "destination": "/api/admin-analytics" },
     { "source": "/report/:token", "destination": "/api/ads-report?token=:token" },
     { "source": "/report/:token/", "destination": "/api/ads-report?token=:token" },
-    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
-    { "source": "/:city/", "destination": "/api/city-page?city=:city" },
-    { "source": "/:city/:service/", "destination": "/api/service-page?city=:city&service=:service" }
+    { "source": "/sitemap.xml", "destination": "/api/pages?page=sitemap" },
+    { "source": "/:city/", "destination": "/api/pages?page=city&city=:city" },
+    { "source": "/:city/:service/", "destination": "/api/pages?page=service&city=:city&service=:service" }
   ],
   "headers": [
     {

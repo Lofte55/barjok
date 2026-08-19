@@ -33,8 +33,8 @@ function fmtDate(s) { return s ? new Date(s).toLocaleString('ru-RU', { day:'2-di
 function toInputDatetime(s) { if (!s) return ''; const d = new Date(s); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
 
 async function loadRefs() {
-  if (!CATEGORIES.length) CATEGORIES = (await api('/api/admin-ads-data?resource=categories')).categories;
-  if (!PLACEMENTS.length) PLACEMENTS = (await api('/api/admin-ads-data?resource=placements')).placements;
+  if (!CATEGORIES.length) CATEGORIES = (await api('/api/admin-ads-api?resource=categories')).categories;
+  if (!PLACEMENTS.length) PLACEMENTS = (await api('/api/admin-ads-api?resource=placements')).placements;
 }
 
 function setTab(tab) {
@@ -63,7 +63,7 @@ async function renderDashboard() {
   const view = document.getElementById('view');
   view.innerHTML = '<div class="card">Загрузка…</div>';
   try {
-    const d = await api('/api/admin-ads-data?resource=dashboard');
+    const d = await api('/api/admin-ads-api?resource=dashboard');
     const kpi = (v, l) => '<div class="card" style="text-align:center;padding:18px 8px"><div style="font-size:26px;font-weight:800">' + esc(v) + '</div><div class="muted" style="margin-top:4px">' + l + '</div></div>';
     const alerts = [];
     d.alerts.endingSoon.forEach((c) => alerts.push('⚠ Кампания «' + esc(c.name) + '» заканчивается скоро — <a href="#campaign-edit/' + c.id + '" style="color:#9ec1ff">открыть</a>'));
@@ -85,8 +85,8 @@ async function renderCampaigns() {
   document.getElementById('newCampaignBtn').onclick = () => { location.hash = '#campaign-edit/new'; };
   try {
     await loadRefs();
-    const { campaigns } = await api('/api/admin-ads-data?resource=campaigns');
-    const { advertisers } = await api('/api/admin-ads-data?resource=advertisers');
+    const { campaigns } = await api('/api/admin-ads-api?resource=campaigns');
+    const { advertisers } = await api('/api/admin-ads-api?resource=advertisers');
     ADVERTISERS = advertisers;
     const advName = (id) => { const a = advertisers.find((x) => x.id === id); return a ? esc(a.company_name) : '—'; };
     const rows = document.getElementById('campRows');
@@ -114,7 +114,7 @@ async function renderCampaigns() {
       if (!btn) return;
       if (btn.dataset.act === 'archive_campaign' && !confirm('Архивировать кампанию?')) return;
       btn.disabled = true;
-      try { await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: btn.dataset.act, id: Number(btn.dataset.id) }) }); await renderCampaigns(); }
+      try { await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: btn.dataset.act, id: Number(btn.dataset.id) }) }); await renderCampaigns(); }
       catch (err) { alert('Ошибка: ' + err.message); btn.disabled = false; }
     }, { once: true });
   } catch (e) { document.getElementById('campRows').innerHTML = '<tr><td colspan="6" class="empty">Ошибка: ' + esc(e.message) + '</td></tr>'; }
@@ -146,13 +146,13 @@ async function renderAdvertisers() {
     e.preventDefault();
     const f = new FormData(e.target);
     const body = Object.fromEntries(f.entries());
-    try { await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'save_advertiser', ...body }) }); e.target.reset(); await renderAdvertisers(); }
+    try { await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'save_advertiser', ...body }) }); e.target.reset(); await renderAdvertisers(); }
     catch (err) { alert('Ошибка: ' + err.message); }
   });
 
   try {
-    const { advertisers } = await api('/api/admin-ads-data?resource=advertisers');
-    const { campaigns } = await api('/api/admin-ads-data?resource=campaigns');
+    const { advertisers } = await api('/api/admin-ads-api?resource=advertisers');
+    const { campaigns } = await api('/api/admin-ads-api?resource=campaigns');
     const rows = document.getElementById('advRows');
     if (!advertisers.length) { rows.innerHTML = '<tr><td colspan="5" class="empty">Пока нет рекламодателей</td></tr>'; return; }
     rows.innerHTML = advertisers.map((a) => {
@@ -177,7 +177,7 @@ async function renderCampaignEdit(id) {
   const view = document.getElementById('view');
   view.innerHTML = '<div class="card">Загрузка…</div>';
   await loadRefs();
-  if (!ADVERTISERS.length) ADVERTISERS = (await api('/api/admin-ads-data?resource=advertisers')).advertisers;
+  if (!ADVERTISERS.length) ADVERTISERS = (await api('/api/admin-ads-api?resource=advertisers')).advertisers;
 
   let campaign = { name:'', advertiser_id:'', category:'', campaign_type:'local', cities:['pavlodar'], all_cities:false,
     utility_types:[], outage_statuses:[], page_contexts:[], device_targeting:'all', priority:50, weight:100,
@@ -187,7 +187,7 @@ async function renderCampaignEdit(id) {
   let creatives = [];
   let placementIds = [];
   if (id) {
-    const data = await api('/api/admin-ads-data?resource=campaign&id=' + id);
+    const data = await api('/api/admin-ads-api?resource=campaign&id=' + id);
     campaign = data.campaign; creatives = data.creatives; placementIds = data.placementIds;
   }
 
@@ -277,7 +277,7 @@ async function renderCampaignEdit(id) {
     body.category_exclusive = f.has('category_exclusive');
     body.notes = f.get('notes') || null;
     try {
-      const r = await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(body) });
+      const r = await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(body) });
       location.hash = '#campaign-edit/' + r.campaign.id;
       if (id) route();
     } catch (err) { alert('Ошибка: ' + err.message); }
@@ -338,7 +338,7 @@ function wireCreativesAndPublish(id, campaign) {
     const f = new FormData(e.target);
     const body = { action: 'save_creative', campaign_id: id, cta_enabled: f.has('cta_enabled') };
     ['internal_name','slug','headline','description','brand_name','image_url','cta_text','cta_action_type','cta_destination'].forEach((k) => { body[k] = f.get(k) || null; });
-    try { await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(body) }); await renderCampaignEdit(id); }
+    try { await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(body) }); await renderCampaignEdit(id); }
     catch (err) { alert('Ошибка: ' + err.message); }
   });
   const crRows = document.getElementById('crRows');
@@ -346,14 +346,14 @@ function wireCreativesAndPublish(id, campaign) {
     const del = e.target.closest('button[data-del-cr]');
     if (del) {
       if (!confirm('Удалить creative?')) return;
-      await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'delete_creative', id: Number(del.dataset.delCr) }) });
+      await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'delete_creative', id: Number(del.dataset.delCr) }) });
       return renderCampaignEdit(id);
     }
     const sel = e.target.closest('button[data-select-cr]');
     if (sel) {
       const box = document.getElementById('utmPreview');
       box.innerHTML = 'Считаю…';
-      const data = await api('/api/admin-ads-data?resource=campaign&id=' + id);
+      const data = await api('/api/admin-ads-api?resource=campaign&id=' + id);
       const cr = data.creatives.find((c) => c.id === Number(sel.dataset.selectCr));
       const utm = 'utm_source=barjok&utm_medium=' + (campaign.campaign_type === 'context' ? 'context' : 'ads') + '&utm_campaign=' + campaign.campaign_key + '&utm_content=' + cr.slug;
       const dest = cr.cta_destination || 'https://advertiser.example.kz/';
@@ -373,13 +373,13 @@ function wireCreativesAndPublish(id, campaign) {
     box.innerHTML = html;
   };
   if (validateBtn) validateBtn.onclick = async () => {
-    try { const r = await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'validate_campaign', id }) }); showResult(r); }
+    try { const r = await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'validate_campaign', id }) }); showResult(r); }
     catch (err) { alert('Ошибка: ' + err.message); }
   };
   if (publishBtn) publishBtn.onclick = async () => {
     if (!confirm('Опубликовать кампанию? Если дата начала уже наступила — реклама станет активной сразу.')) return;
     try {
-      const r = await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'publish_campaign', id }) });
+      const r = await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'publish_campaign', id }) });
       showResult(r);
       await renderCampaignEdit(id);
     } catch (err) {
@@ -394,7 +394,7 @@ async function loadAnalytics(id) {
   const box = document.getElementById('analyticsBox');
   if (!box) return;
   try {
-    const d = await api('/api/admin-ads-data?resource=campaign-analytics&id=' + id);
+    const d = await api('/api/admin-ads-api?resource=campaign-analytics&id=' + id);
     const o = d.overview;
     const kpi = (v, l) => '<div style="display:inline-block;min-width:110px;margin:0 14px 10px 0"><div style="font-size:20px;font-weight:800">' + esc(v) + '</div><div class="muted" style="font-size:12px">' + l + '</div></div>';
     let html = kpi(o.impressions, 'Показы') + kpi(o.reach, 'Уникальный охват') + kpi(o.clicks, 'Клики') +
@@ -426,7 +426,7 @@ async function wireReports(id) {
   const list = document.getElementById('reportsList');
   const form = document.getElementById('reportForm');
   async function reload() {
-    const { reports } = await api('/api/admin-ads-data?resource=reports&id=' + id);
+    const { reports } = await api('/api/admin-ads-api?resource=reports&id=' + id);
     if (!reports.length) { list.innerHTML = '<span class="muted">Ссылок ещё нет</span>'; return; }
     list.innerHTML = reports.map((r) => {
       const url = location.origin + '/report/' + r.token + '/';
@@ -438,7 +438,7 @@ async function wireReports(id) {
         '</div>';
     }).join('');
     list.querySelectorAll('button[data-disable]').forEach((b) => b.onclick = async () => {
-      await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'disable_report', id: Number(b.dataset.disable) }) });
+      await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'disable_report', id: Number(b.dataset.disable) }) });
       reload();
     });
   }
@@ -446,7 +446,7 @@ async function wireReports(id) {
     e.preventDefault();
     const f = new FormData(e.target);
     try {
-      await api('/api/admin-ads-action', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'create_report', campaign_id: id, valid_days: f.get('valid_days'), include_financial: f.has('include_financial') }) });
+      await api('/api/admin-ads-api', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: 'create_report', campaign_id: id, valid_days: f.get('valid_days'), include_financial: f.has('include_financial') }) });
       e.target.reset();
       await reload();
     } catch (err) { alert('Ошибка: ' + err.message); }
