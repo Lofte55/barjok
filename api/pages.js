@@ -9,6 +9,7 @@ const { getHomeSeo, getCitySeo, getServiceSeo, BRAND, ORIGIN } = require('./_lib
 const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc } = require('./_lib/seo-layout');
 const { computeSnapshot } = require('./_lib/city-stats');
 const { outageCardsHtml, countMatching, statusBlockHtml } = require('./_lib/seo-cards');
+const { statRowHtml, trustGridHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
 
 const SERVICE_CARDS = [
   ['voda', 'Вода'], ['svet', 'Свет'], ['otoplenie', 'Отопление'],
@@ -30,15 +31,18 @@ const FAQ_SERVICE = {
   ],
 };
 
-function faqBlockHtml(list) {
-  if (!list) return '';
-  return '<div class="section-title">Частые вопросы</div>' + list.map(([q, a]) =>
-    `<details class="faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('');
-}
+const FAQ_HOME = [
+  ['Как узнать об отключении воды по адресу в Павлодаре?', 'Введите улицу и номер дома на карте или на странице города — если по вашему адресу есть отключение, вы увидите дату, время и причину.'],
+  ['Когда отключат свет в моём доме в Павлодаре?', 'Плановые отключения электричества видны заранее на карте с фильтром «Плановое» — BARJOK получает график от Павлодарэнерго.'],
+  ['А как узнать про отключение отопления и горячей воды?', 'На странице города и на карте показаны все виды отключений: холодная/горячая вода, свет, отопление — по каждому дому отдельно.'],
+  ['Откуда берутся данные об отключениях?', 'Официальные источники (энергосбыт, водоканал, тепловые сети) плюс подтверждённые сообщения жителей BARJOK.'],
+  ['В каких городах работает BARJOK?', 'Сейчас полноценно работает Павлодар. Другие города Казахстана подключаются поэтапно — они уже видны в списке со статусом «Скоро».'],
+];
 
 async function renderHome(req, res) {
   const seo = getHomeSeo();
   const cities = allCities();
+  const snap = await computeSnapshot();
   const cityCardsHtml = `<div class="city-cards">${cities.map((c) => {
     const active = c.status === 'active';
     const nom = c.names.ru.nominative;
@@ -47,17 +51,20 @@ async function renderHome(req, res) {
       : `<div class="city-card disabled"><b>${esc(nom)}</b><span class="soon">Скоро</span></div>`;
   }).join('')}</div>`;
   const websiteJsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: BRAND, url: `${ORIGIN}/` };
+  const statsHtml = snap.ok ? statRowHtml(snap) : '';
   const bodyHtml = `
-    <p style="color:var(--ink-2);font-size:15px;max-width:60ch">${BRAND} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
-    <div class="section-title">Города</div>
+    <p style="color:var(--ink-2);font-size:15px;max-width:60ch">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
+    ${statsHtml}
+    <div class="sec"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
     ${cityCardsHtml}
-    <div class="section-title">Как работает ${esc(BRAND)}</div>
-    <p style="max-width:60ch;line-height:1.6">Введите адрес — увидите все отключения по своему дому: вода, свет, отопление. Дата, время, причина. Данные собираются из официальных источников (энергосбыт, водоканал, теплосети) каждые несколько часов и подтверждаются сообщениями жителей.</p>
-    <div class="section-title">Что отслеживаем</div>
-    <p style="max-width:60ch">Холодная и горячая вода, электричество, отопление — плановые и аварийные отключения, с адресами, датами и причинами.</p>
+    ${trustGridHtml()}
+    ${faqAccordionHtml(FAQ_HOME)}
+    ${ctaFinalHtml({ title: 'Проверьте свой адрес прямо сейчас', href: '/map/pavlodar' })}
   `;
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
+    heroSlogan: 'Живая карта отключений — без звонков в диспетчерскую и поиска в чатах ЖК.',
+    pillAnnText: 'Данные обновляются каждые несколько часов',
     bodyHtml, jsonLd: [organizationJsonLd(), websiteJsonLd],
   });
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -138,9 +145,11 @@ async function renderCity(req, res) {
     <button type="submit">Проверить</button>
   </form>`;
 
+  const statsHtml = snap.ok ? statRowHtml(snap) : '';
   const bodyHtml = `
     ${statusHtml}
     ${searchBoxHtml}
+    ${statsHtml}
     <div class="section-title">Услуги</div>
     ${serviceCardsHtml}
     ${cardsHtml ? '<div class="section-title">Текущие отключения</div>' + cardsHtml : ''}
@@ -149,12 +158,16 @@ async function renderCity(req, res) {
     <p><a href="/map/${citySlug}">Открыть карту отключений ${esc(loc)} →</a></p>
     <div class="section-title">Источники данных</div>
     <p>Павлодарэнерго, Павлодар-Водоканал, Павлодарские тепловые сети — обновление каждые 3 часа. Часть отключений подтверждается сообщениями жителей BARJOK.</p>
-    ${faqBlockHtml(faq)}
+    ${trustGridHtml()}
+    ${faqAccordionHtml(faq)}
     ${otherCitiesHtml}
+    ${ctaFinalHtml({ title: `Проверьте свой адрес в ${esc(loc)}`, href: `/map/${citySlug}` })}
   `;
 
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
+    heroSlogan: `Вода, свет, отопление — весь статус по вашему дому в ${esc(loc)} за секунды.`,
+    pillAnnText: 'Обновляется каждые несколько часов',
     currentCitySlug: citySlug,
     breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: nom }],
     bodyHtml,
@@ -214,13 +227,16 @@ async function renderService(req, res) {
     ${cardsHtml ? '<div class="section-title">Текущие отключения ' + esc(service.label) + '</div>' + cardsHtml : ''}
     <div class="section-title">Карта отключений</div>
     <p><a href="/map/${citySlug}">Открыть карту отключений ${esc(loc)} →</a></p>
-    ${faqBlockHtml(FAQ_SERVICE[serviceSlug])}
+    ${trustGridHtml()}
+    ${faqAccordionHtml(FAQ_SERVICE[serviceSlug] || FAQ_HOME)}
     <div class="section-title">Связанные страницы</div>
     <div class="related-links">${relatedLinks.map(([name, url]) => `<a href="${url}">${esc(name)}</a>`).join('')}</div>
+    ${ctaFinalHtml({ title: `Проверьте «${esc(service.label)}» по своему адресу`, href: `/map/${citySlug}` })}
   `;
 
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
+    heroSlogan: `${esc(service.label)} в ${esc(loc)} — статус по вашему дому.`,
     currentCitySlug: citySlug,
     breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: nom, url: `${ORIGIN}/${citySlug}/` }, { name: service.label }],
     bodyHtml,
