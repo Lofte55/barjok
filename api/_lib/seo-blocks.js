@@ -64,11 +64,12 @@ function mapPreviewHtml({ href = '/map/pavlodar', hintText = 'Актуальны
 }
 
 /* Иконка для каждой карточки своя — иначе выглядит шаблонно (все булавки). */
-const FEAT_ICONS = {
-  pin: '<path d="M12 21s-7-5.7-7-11a7 7 0 0 1 14 0c0 5.3-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/>',
-  shield: '<path d="M12 3l7 3v6c0 4.4-3 7.8-7 9-4-1.2-7-4.6-7-9V6l7-3z"/><path d="m9 12 2 2 4-4"/>',
-  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-  calendar: '<rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="m9.5 15 1.7 1.7L15 13"/>',
+// AI-иллюстрации (сгенерированы через OpenAI Images API, /images/trust-*.jpg)
+const FEAT_IMAGES = {
+  pin: '/images/trust-house-pin.jpg',
+  shield: '/images/trust-verified-data.jpg',
+  clock: '/images/trust-live-clock.jpg',
+  calendar: '/images/trust-future-calendar.jpg',
 };
 
 const TRUST_FEATURES = [
@@ -82,7 +83,7 @@ function trustGridHtml(features = TRUST_FEATURES) {
   return sectionHeadHtml('Почему нам можно верить', 'Не слухи из чатов, а данные поставщиков') + `
   <div class="feat-grid">
     ${features.map(([icon, title, desc]) => `<div class="feat rv">
-      <span class="fi" style="background:var(--accent-wash);color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${FEAT_ICONS[icon] || FEAT_ICONS.pin}</svg></span>
+      <span class="fi fi-img"><img src="${FEAT_IMAGES[icon] || FEAT_IMAGES.pin}" alt="" width="72" height="72" loading="lazy"></span>
       <h3>${esc(title)}</h3>
       <p>${esc(desc)}</p>
     </div>`).join('')}

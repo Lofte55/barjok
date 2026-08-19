@@ -154,31 +154,6 @@ async function handlePost(req, res) {
     return res.status(200).json({ ok: true, ...result });
   }
 
-  // Временный инструмент: генерация иллюстраций через OpenAI Images API
-  // (ключ только из env, за admin-авторизацией). Убрать после разовой генерации
-  // ассетов для trust-блока — не держим постоянный платный эндпоинт открытым.
-  if (action === 'generate_image') {
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) return res.status(500).json({ ok: false, error: 'no_api_key' });
-    const prompt = String(b.prompt || '').trim().slice(0, 800);
-    if (!prompt) return res.status(400).json({ ok: false, error: 'bad_input' });
-    const size = String(b.size || '1024x1024');
-    try {
-      const r = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'gpt-image-1', prompt, size, n: 1 }),
-      });
-      const j = await r.json();
-      if (!r.ok) return res.status(502).json({ ok: false, error: j.error?.message || 'openai_error' });
-      const b64 = j.data && j.data[0] && j.data[0].b64_json;
-      if (!b64) return res.status(502).json({ ok: false, error: 'no_image_returned' });
-      return res.status(200).json({ ok: true, b64 });
-    } catch (e) {
-      return res.status(500).json({ ok: false, error: e.message });
-    }
-  }
-
   return res.status(400).json({ ok: false, error: 'unknown_action' });
 }
 

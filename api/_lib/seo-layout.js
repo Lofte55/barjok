@@ -218,6 +218,9 @@ ${jsonLdBlocks}
   .feat:hover{box-shadow:0 24px 40px -24px rgba(21,32,58,.25)}
   .feat .fi{position:relative;z-index:1;background:linear-gradient(150deg,var(--accent-wash),color-mix(in srgb,var(--accent) 22%,white));
     box-shadow:0 10px 22px -10px rgba(47,107,237,.45),inset 0 1px 0 rgba(255,255,255,.7);color:var(--accent-ink)}
+  /* AI-иллюстрация вместо линейной иконки — крупнее, без фоновой плашки-квадрата */
+  .feat .fi-img{width:72px;height:72px;background:none;box-shadow:none;border-radius:0}
+  .feat .fi-img img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 8px 16px rgba(47,107,237,.28))}
   .feat h3,.feat p{position:relative;z-index:1}
   .feat:nth-child(1) .fi{animation:fiBounce 2.6s ease-in-out infinite}
   .feat:nth-child(2) .fi{animation:fiPulse 2.6s ease-in-out infinite}
