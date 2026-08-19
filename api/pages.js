@@ -213,7 +213,7 @@ async function renderCity(req, res) {
 
   const otherCities = activeCities().filter((c) => c.slug !== citySlug);
   const otherCitiesHtml = otherCities.length
-    ? '<div class="section-title">Другие города BARJOK</div><div class="related-links">' +
+    ? '<div class="sec rv"><div class="eyebrow">Ещё</div><h2>Другие города BARJOK</h2></div><div class="related-links">' +
       otherCities.map((c) => `<a href="/${c.slug}/">Отключения в ${esc(c.names.ru.locative)}</a>`).join('') + '</div>'
     : '';
 
@@ -251,11 +251,9 @@ async function renderCity(req, res) {
     ${mapPreviewHtml({ href: `/map/${citySlug}` })}
     <div class="sec rv"><div class="eyebrow">Услуги</div><h2>Что можно проверить в ${esc(loc)}</h2></div>
     ${serviceCardsHtml}
-    ${cardsHtml ? '<div class="section-title">Текущие отключения</div>' + cardsHtml : ''}
+    ${cardsHtml ? '<div class="sec rv"><div class="eyebrow">Прямо сейчас</div><h2>Текущие отключения</h2></div>' + cardsHtml : ''}
     ${futureHtml}
     ${stepsHtml({ addressSample: sampleAddress })}
-    <div class="section-title">Источники данных</div>
-    <p>Павлодарэнерго, Павлодар-Водоканал, Павлодарские тепловые сети — обновление каждые 3 часа. Часть отключений подтверждается сообщениями жителей BARJOK.</p>
     ${trustGridHtml()}
     ${reportCtaHtml({ href: `/map/${citySlug}?report=1` })}
     ${faqAccordionHtml(faq, 'faq', { contactHref: `/map/${citySlug}?report=1` })}
@@ -325,12 +323,12 @@ async function renderService(req, res) {
   const bodyHtml = `
     ${statusHtml}
     ${searchBoxHtml}
-    ${cardsHtml ? '<div class="section-title">Текущие отключения ' + esc(service.label) + '</div>' + cardsHtml : ''}
-    <div class="section-title">Карта отключений</div>
+    ${cardsHtml ? '<div class="sec rv"><div class="eyebrow">Прямо сейчас</div><h2>Текущие отключения — ' + esc(service.label) + '</h2></div>' + cardsHtml : ''}
+    <div class="sec rv"><div class="eyebrow">Карта</div><h2>Карта отключений</h2></div>
     <p><a href="/map/${citySlug}">Открыть карту отключений ${esc(loc)} →</a></p>
     ${trustGridHtml()}
     ${faqAccordionHtml(FAQ_SERVICE[serviceSlug] || FAQ_HOME)}
-    <div class="section-title">Связанные страницы</div>
+    <div class="sec rv"><div class="eyebrow">Ещё</div><h2>Связанные страницы</h2></div>
     <div class="related-links">${relatedLinks.map(([name, url]) => `<a href="${url}">${esc(name)}</a>`).join('')}</div>
     ${ctaFinalHtml({ title: `Проверьте «${esc(service.label)}» по своему адресу`, href: `/map/${citySlug}` })}
   `;

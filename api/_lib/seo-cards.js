@@ -8,6 +8,14 @@ function fmtDate(iso) {
   const d = new Date(iso);
   return d.toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' });
 }
+// Компактный формат для плотных карточек "Текущие отключения" — "17.08, 08:32"
+// вместо "17 августа в 08:32", чтобы карточка не растягивалась по высоте.
+function fmtDateShort(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(', ', ', ');
+}
+const truncate = (s, max) => (s && s.length > max ? s.slice(0, max - 1).trim() + '…' : s);
 
 /*
  * houses: массив домов из snapshot; filterFn(outage,house) => bool; limit — сколько
@@ -26,16 +34,18 @@ function outageCardsHtml(houses, filterFn, limit = 24) {
   }
   if (!rows.length) return '';
   const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
-  return '<div class="cards">' + rows.map(({ h, o }) => {
+  return '<div class="cards cards-compact">' + rows.map(({ h, o }) => {
     const color = RES_COLOR[o.resource] || 'var(--accent)';
+    const reason = truncate(o.reason || (o.type === 'emergency' ? 'Аварийные работы' : 'Плановые работы'), 70);
+    const source = o.citizen ? 'От жителей BARJOK' : truncate(o.provider || 'Официальный источник', 40);
     return `<article class="outage-card rv">
     <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[o.resource] || o.resource)}</span>
-    <h3 style="margin:8px 0 10px">${esc(h.address)}</h3>
+    <h3 style="margin:6px 0 8px">${esc(h.address)}</h3>
     <dl>
-      <dt>Начало</dt><dd>${esc(fmtDate(o.start))}</dd>
-      <dt>Ожидаемое восстановление</dt><dd>${esc(fmtDate(o.end))}</dd>
-      <dt>Причина</dt><dd>${esc(o.reason || (o.type === 'emergency' ? 'Аварийные работы' : 'Плановые работы'))}</dd>
-      <dt>Источник</dt><dd>${esc(o.citizen ? 'Подтверждено пользователями BARJOK' : (o.provider || 'Официальный источник'))}</dd>
+      <dt>Начало</dt><dd>${esc(fmtDateShort(o.start))}</dd>
+      <dt>До</dt><dd>${esc(fmtDateShort(o.end))}</dd>
+      <dt>Причина</dt><dd title="${esc(o.reason || '')}">${esc(reason)}</dd>
+      <dt>Источник</dt><dd>${esc(source)}</dd>
     </dl>
   </article>`;
   }).join('') + '</div>';

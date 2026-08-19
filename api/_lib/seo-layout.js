@@ -209,6 +209,14 @@ ${jsonLdBlocks}
   .sec{margin-top:76px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:20px 0}
   .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s}
+  /* компактный вариант — "Текущие отключения" может быть десятки карточек подряд,
+     полные подписи ("Ожидаемое восстановление", месяц словом) растягивали их по
+     высоте; тут короткие подписи + числовые даты + обрезанный текст причины */
+  .cards-compact{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+  .cards-compact .outage-card{padding:14px 16px}
+  .cards-compact .outage-card h3{font-size:14px}
+  .cards-compact .outage-card dl{grid-template-columns:auto 1fr;gap:3px 8px;font-size:12.5px}
+  .cards-compact .outage-card dd{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .outage-card:hover{border-color:var(--ink-3)}
   .outage-card h3{font-size:15.5px;font-weight:800;letter-spacing:-.01em;margin-bottom:10px}
   .outage-card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13.5px}
