@@ -71,7 +71,7 @@ function footerHtml() {
   <div class="wrap">
     <div class="foot-cta rv">
       <div class="foot-cta-text">
-        <b>Остались вопросы или хотите подключить свой город?</b>
+        <b>Остались вопросы или хотите посотрудничать?</b>
         <span>Ответим в течение рабочего дня — WhatsApp, Telegram или звонок.</span>
       </div>
       <button class="btn primary lg contact-open" type="button">Связаться с нами</button>
