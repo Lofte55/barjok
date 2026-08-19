@@ -101,4 +101,14 @@ function getMapSeo(citySlug) {
   };
 }
 
-module.exports = { BRAND, ORIGIN, getHomeSeo, getCitySeo, getServiceSeo, getMapSeo, SERVICE_META };
+function getAboutSeo() {
+  return {
+    url: `${ORIGIN}/about/`,
+    title: `О проекте — ${BRAND}`,
+    description: `${BRAND} — сервис живого отслеживания отключений воды, света и отопления в Казахстане. Кто делает, зачем и какие планы на ближайшие годы.`,
+    h1: 'О проекте BARJOK',
+    canonical: `${ORIGIN}/about/`,
+  };
+}
+
+module.exports = { BRAND, ORIGIN, getHomeSeo, getCitySeo, getServiceSeo, getMapSeo, getAboutSeo, SERVICE_META };

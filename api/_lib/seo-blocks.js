@@ -242,6 +242,22 @@ function faqAccordionHtml(list, idPrefix = 'faq', { contactHref = '/map/?report=
   </section>`;
 }
 
+/* Вертикальный таймлайн (история проекта / roadmap) — тонкая линия + точки-статусы,
+   каждый пункт с классом .rv, чтобы появляться по одному при скролле, как и весь
+   остальной сайт (используется в /about/). status: 'done' | 'active' | 'next'. */
+function timelineHtml(items, { eyebrow, title, intro } = {}) {
+  const head = eyebrow || title ? sectionHeadHtml(eyebrow, title, intro) : '';
+  return head + `
+  <div class="timeline">
+    ${items.map((it) => `<div class="tl-item rv">
+      <span class="tl-dot ${esc(it.status || 'next')}"><span class="in"></span></span>
+      <div class="tl-year">${esc(it.year)}</div>
+      <h3>${esc(it.title)}</h3>
+      <p>${esc(it.text)}</p>
+    </div>`).join('')}
+  </div>`;
+}
+
 function ctaFinalHtml({ title = 'Проверьте свой адрес прямо сейчас', text = 'Вода, свет, отопление — весь статус по дому за 5 секунд.', href = '/map/pavlodar', btnText = 'Открыть карту' } = {}) {
   const pins = [
     { c: 'var(--hot)', x: '8%', y: '18%', dl: '0s' },
@@ -262,4 +278,4 @@ function ctaFinalHtml({ title = 'Проверьте свой адрес прям
   </section>`;
 }
 
-module.exports = { sectionHeadHtml, statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, TRUST_FEATURES };
+module.exports = { sectionHeadHtml, statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, timelineHtml, TRUST_FEATURES };

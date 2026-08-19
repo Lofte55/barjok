@@ -30,6 +30,7 @@ function navHtml(currentCitySlug) {
     <div class="nav-links">
       <a href="/pavlodar/">Павлодар</a>
       <a href="/map/">Карта</a>
+      <a href="/about/">О проекте</a>
       <a href="/#faq">Вопросы</a>
     </div>
     <div class="nav-right">
@@ -47,6 +48,7 @@ function navHtml(currentCitySlug) {
     <div class="mobile-menu" id="mobileMenu">
       <a href="/pavlodar/">Павлодар</a>
       <a href="/map/">Карта</a>
+      <a href="/about/">О проекте</a>
       <a class="btn primary" href="/map/pavlodar">Открыть карту</a>
     </div>
   </div>
@@ -67,10 +69,23 @@ function navHtml(currentCitySlug) {
 function footerHtml() {
   return `<footer>
   <div class="wrap">
+    <div class="foot-cta rv">
+      <div class="foot-cta-text">
+        <b>Остались вопросы или хотите подключить свой город?</b>
+        <span>Ответим в течение рабочего дня — WhatsApp, Telegram или звонок.</span>
+      </div>
+      <button class="btn primary lg contact-open" type="button">Связаться с нами</button>
+    </div>
     <div class="foot-top">
-      <div>
+      <div class="foot-brand">
         <a class="logo" href="/"><img class="logo-img" src="/barjok.svg" alt="BARJOK" width="105" height="26"></a>
         <p>Живая карта отключений воды, света и отопления в городах Казахстана. Данные от официальных поставщиков, обновление каждые несколько часов.</p>
+        <div class="foot-social">
+          <a href="https://instagram.com/barjok.kz" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>
+            <span>@barjok.kz</span>
+          </a>
+        </div>
       </div>
       <div class="foot-links">
         <div class="fcol">
@@ -84,14 +99,14 @@ function footerHtml() {
           <a href="/pavlodar/otoplenie/">Отопление</a>
         </div>
         <div class="fcol">
-          <h4>Карта</h4>
+          <h4>Проект</h4>
+          <a href="/about/">О проекте</a>
           <a href="/map/pavlodar">Открыть карту</a>
         </div>
       </div>
     </div>
     <div class="foot-bot">
       <span>© 2026 ${BRAND} · Казахстан</span>
-      <button class="btn contact-open" type="button">Связаться с нами</button>
     </div>
   </div>
 </footer>
@@ -362,6 +377,43 @@ ${jsonLdBlocks}
   .faq-pill[open] .faq-chev{transform:rotate(180deg);color:var(--accent)}
   .faq-pill .faq-a{padding:0 50px 18px 22px;color:var(--ink-2);line-height:1.62;font-size:14.5px}
   @media(max-width:820px){.faq-layout{grid-template-columns:1fr}.faq-side{position:static}}
+  /* футер: вместо кнопки-корки в углу — отдельная заметная CTA-полоса над
+     основным блоком ссылок, plus соцсети рядом с описанием */
+  .foot-cta{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+    background:var(--accent-wash);border-radius:18px;padding:22px 26px;margin-bottom:36px}
+  .foot-cta-text b{display:block;font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+  .foot-cta-text span{display:block;font-size:13.5px;color:var(--ink-2);margin-top:4px}
+  .foot-cta .btn{flex:none}
+  @media(max-width:560px){.foot-cta{flex-direction:column;align-items:flex-start}.foot-cta .btn{width:100%}}
+  .foot-brand{max-width:340px}
+  .foot-social{display:flex;gap:10px;margin-top:16px}
+  .foot-social a{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink-2);
+    border:1px solid var(--line);border-radius:999px;padding:7px 14px 7px 10px;transition:border-color .16s,color .16s}
+  .foot-social a:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .foot-social svg{width:17px;height:17px}
+  /* вертикальный таймлайн (история/roadmap на /about/) — тонкая линия слева +
+     точки-статусы, каждый пункт .rv появляется по одному при скролле */
+  .timeline{position:relative;margin-top:40px;padding-left:36px}
+  .timeline::before{content:"";position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:var(--line)}
+  .tl-item{position:relative;padding-bottom:38px}
+  .tl-item:last-child{padding-bottom:0}
+  .tl-dot{position:absolute;left:-36px;top:1px;width:20px;height:20px;border-radius:50%;background:var(--canvas);
+    border:2px solid var(--line);display:grid;place-items:center}
+  .tl-dot .in{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .tl-dot.done{border-color:var(--accent)}
+  .tl-dot.done .in{background:var(--accent)}
+  .tl-dot.active{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-wash)}
+  .tl-dot.active .in{background:var(--accent);animation:beat 2s infinite}
+  .tl-year{font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-ink)}
+  .tl-item h3{margin-top:5px;font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .tl-item p{margin-top:6px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:58ch}
+  /* нумерованные пункты боли — те же .k-бейджи, что и в шагах "Как начать" */
+  .pain-grid{display:flex;flex-direction:column;gap:22px;margin-top:34px}
+  .pain-item{display:flex;gap:18px;align-items:flex-start}
+  .pain-item .k{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;
+    background:var(--accent-wash);color:var(--accent-ink);font-weight:800;font-size:15px;flex:none}
+  .pain-item h3{font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .pain-item p{margin-top:6px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:60ch}
 </style>
 </head>
 <body>

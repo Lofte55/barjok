@@ -5,11 +5,11 @@
  * ?page=home|maphub|city|service|sitemap, роутится из vercel.json rewrites.
  */
 const { getCity, allCities, activeCities, SERVICES, getService } = require('./_lib/seo-cities');
-const { getHomeSeo, getCitySeo, getServiceSeo, BRAND, ORIGIN } = require('./_lib/seo');
+const { getHomeSeo, getCitySeo, getServiceSeo, getAboutSeo, BRAND, ORIGIN } = require('./_lib/seo');
 const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc } = require('./_lib/seo-layout');
 const { computeSnapshot } = require('./_lib/city-stats');
 const { groupedOutagesHtml, countMatching } = require('./_lib/seo-cards');
-const { statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
+const { statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml, timelineHtml } = require('./_lib/seo-blocks');
 
 const SERVICE_CARDS = [
   ['voda', 'Вода'], ['svet', 'Свет'], ['otoplenie', 'Отопление'],
@@ -302,12 +302,94 @@ async function renderService(req, res) {
   res.status(200).send(html);
 }
 
+async function renderAbout(req, res) {
+  const seo = getAboutSeo();
+
+  const painItems = [
+    ['Информация разбросана', 'У энергосбыта, водоканала и тепловых сетей — свои сайты, свой формат объявлений и разное качество обновления. Чтобы узнать, что происходит в городе, нужно проверять три-четыре источника вместо одного.'],
+    ['Не видно свой дом', 'Официальные объявления пишут «улица Естая» — а не «какие именно дома». Люди не понимают, коснётся ли отключение их квартиры, пока не останутся без воды или света.'],
+    ['Авария случается быстрее новости', 'Пока источник опубликует информацию, соседи уже часами сидят без воды в чатах ЖК и гадают, авария это или сосед перекрыл стояк.'],
+  ];
+  const painHtml = sectionHeadHtml('Какую боль решаем', 'Отключения есть всегда — понятной информации о них почти никогда',
+    'BARJOK не производит отключения и не может их отменить. Мы делаем то, что должно было существовать с самого начала: один понятный источник, который показывает, что происходит именно с вашим домом.') + `
+  <div class="pain-grid">
+    ${painItems.map(([title, text], i) => `<div class="pain-item rv">
+      <span class="k">${i + 1}</span>
+      <div><h3>${esc(title)}</h3><p>${esc(text)}</p></div>
+    </div>`).join('')}
+  </div>`;
+
+  const storyHtml = timelineHtml([
+    { year: 'Идея', status: 'done', title: 'Одни и те же вопросы в чатах ЖК', text: 'Каждый день в чатах Павлодара повторялись одни вопросы: «а у вас есть вода?», «когда дадут свет?». Решили сделать так, чтобы ответ был виден сразу — без вопроса в чат.' },
+    { year: 'Разработка', status: 'done', title: 'Парсер данных поставщиков', text: 'Написали парсер, который каждые несколько часов собирает объявления Павлодарэнерго, Водоканала и тепловых сетей и превращает список улиц в конкретные дома на карте.' },
+    { year: 'Запуск', status: 'done', title: 'Карта и страницы по Павлодару', text: 'Запустили живую карту и страницы по городу и услугам — первому городу, где сервис работает полноценно: проверка по адресу, текущие и будущие отключения.' },
+    { year: 'Сейчас', status: 'active', title: 'Точность данных и обратная связь', text: 'Донастраиваем привязку адресов по каждому дому и добавляем возможность сообщить о проблеме, которую поставщик ещё не опубликовал.' },
+  ], { eyebrow: 'История', intro: 'Коротко о том, как появился BARJOK.' });
+
+  const roadmapHtml = timelineHtml([
+    { year: '2026', status: 'active', title: 'Павлодар — основной город', text: 'Отладка точности данных, разбор адресов по каждому дому и обратная связь от жителей — фундамент, на котором строится всё остальное.' },
+    { year: '2027', status: 'next', title: 'Следующие города Казахстана', text: 'Подключаем крупные города по той же архитектуре — без необходимости переписывать сервис заново под каждый город.' },
+    { year: '2028', status: 'next', title: 'Единая система по всей стране', text: 'Один интерфейс и одни правила для любого города Казахстана — независимо от того, сколько открытых данных публикует местный поставщик.' },
+    { year: '2029', status: 'next', title: 'Подписка на свой дом', text: 'Персональные уведомления: сообщаем о плановых работах и авариях по вашему дому заранее — до отключения, а не после. Плюс возможность сообщить о проблеме прямо со своего адреса.' },
+  ], { eyebrow: 'Куда движемся', title: 'Цели на ближайшие 3 года', intro: 'План простой: подключить все города Казахстана к единой системе, чтобы каждый житель видел статус своего дома и мог и сообщить о проблеме, и получать уведомления о ней.' });
+
+  const contactHtml = `<section class="contact rv">
+    <div class="in">
+      <div>
+        <h2>Автор и контакты</h2>
+        <p>BARJOK делает Артур Михейлис. Если есть вопрос, предложение по городу или хотите быть частью проекта — пишите напрямую, отвечаю сам.</p>
+      </div>
+      <div class="contact-btns">
+        <a class="cbtn" href="https://wa.me/77083445023" target="_blank" rel="noopener">
+          <span class="ci" style="background:var(--wa)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.5-4-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5 0-.2-.6-1.6-.9-2.2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-1.1 2.2 0 .3.9 2.2 2.6 4 2.4 2.6 4.3 3.1 5 3.3.8.2 1.5.2 2.1.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg></span>
+          <span class="ct"><span class="l">WhatsApp</span><span class="v">+7 708 344 50 23</span></span>
+          <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+        <a class="cbtn" href="https://t.me/artumikh" target="_blank" rel="noopener">
+          <span class="ci" style="background:var(--tg)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.5 13.1l-4.6-1.4c-1-.3-1-1 .2-1.5L20.6 3c.8-.3 1.5.2 1.3 1.3z"/></svg></span>
+          <span class="ct"><span class="l">Telegram</span><span class="v">@artumikh</span></span>
+          <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+        <a class="cbtn" href="https://instagram.com/barjok.kz" target="_blank" rel="noopener">
+          <span class="ci" style="background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg></span>
+          <span class="ct"><span class="l">Instagram</span><span class="v">@barjok.kz</span></span>
+          <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>`;
+
+  const bodyHtml = `
+    ${painHtml}
+    ${storyHtml}
+    ${roadmapHtml}
+    ${trustGridHtml()}
+    ${contactHtml}
+    ${ctaFinalHtml({ title: 'Сейчас работает Павлодар', text: 'Откройте карту и проверьте свой адрес — вода, свет, отопление за 5 секунд.', href: '/map/pavlodar' })}
+  `;
+
+  const html = renderSeoPage({
+    title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
+    breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: 'О проекте' }],
+    bodyHtml,
+    jsonLd: [
+      organizationJsonLd(),
+      webPageJsonLd({ url: seo.canonical, title: seo.title, description: seo.description }),
+      breadcrumbsJsonLd([{ name: BRAND, url: `${ORIGIN}/` }, { name: 'О проекте', url: seo.canonical }]),
+    ],
+  });
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1800');
+  res.status(200).send(html);
+}
+
 async function renderSitemap(req, res) {
   const snap = await computeSnapshot();
   const now = snap.generatedAt || new Date().toISOString();
   const urls = [
     { loc: `${ORIGIN}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${ORIGIN}/map/`, changefreq: 'daily', priority: '0.5' },
+    { loc: `${ORIGIN}/about/`, changefreq: 'monthly', priority: '0.4' },
   ];
   for (const city of activeCities()) {
     urls.push({ loc: `${ORIGIN}/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
@@ -336,6 +418,7 @@ module.exports = async (req, res) => {
     if (page === 'maphub') return await renderMapHub(req, res);
     if (page === 'city') return await renderCity(req, res);
     if (page === 'service') return await renderService(req, res);
+    if (page === 'about') return await renderAbout(req, res);
     if (page === 'sitemap') return await renderSitemap(req, res);
     return res.status(404).send('Not found');
   } catch (e) {
