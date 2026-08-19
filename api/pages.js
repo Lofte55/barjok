@@ -148,12 +148,11 @@ async function renderCity(req, res) {
         const houseCount = g.houses.length || 1;
         const preview = g.houses.slice(0, 6).join(', ');
         const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
-        return `<article class="outage-card rv" style="border-top-color:${color}">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <span class="ic" style="background:${color};width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" fill="#fff" style="width:16px;height:16px">${icon}</svg></span>
-            <div style="min-width:0"><h3 style="margin:0;line-height:1.25">${esc(g.street)}</h3><span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')} · ${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span></div>
-          </div>
-          <div style="font-size:13px;color:var(--ink-2);line-height:1.5">Дома: ${esc(preview)}${more}</div>
+        return `<article class="outage-card rv">
+          <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span>
+          <h3 style="margin:8px 0 2px">${esc(g.street)}</h3>
+          <span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
+          <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:8px">Дома: ${esc(preview)}${more}</div>
           <dl style="margin-top:8px"><dt>Начало</dt><dd>с ${esc(new Date(g.minStart).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl>
         </article>`;
       }).join('') + '</div>';

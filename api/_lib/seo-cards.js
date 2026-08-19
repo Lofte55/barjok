@@ -25,15 +25,20 @@ function outageCardsHtml(houses, filterFn, limit = 24) {
     if (rows.length >= limit) break;
   }
   if (!rows.length) return '';
-  return '<div class="cards">' + rows.map(({ h, o }) => `<article class="outage-card">
-    <h3>${esc(RES_LABEL_NOM[o.resource] || o.resource)} — ${esc(h.address)}</h3>
+  const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
+  return '<div class="cards">' + rows.map(({ h, o }) => {
+    const color = RES_COLOR[o.resource] || 'var(--accent)';
+    return `<article class="outage-card rv">
+    <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[o.resource] || o.resource)}</span>
+    <h3 style="margin:8px 0 10px">${esc(h.address)}</h3>
     <dl>
       <dt>Начало</dt><dd>${esc(fmtDate(o.start))}</dd>
       <dt>Ожидаемое восстановление</dt><dd>${esc(fmtDate(o.end))}</dd>
       <dt>Причина</dt><dd>${esc(o.reason || (o.type === 'emergency' ? 'Аварийные работы' : 'Плановые работы'))}</dd>
       <dt>Источник</dt><dd>${esc(o.citizen ? 'Подтверждено пользователями BARJOK' : (o.provider || 'Официальный источник'))}</dd>
     </dl>
-  </article>`).join('') + '</div>';
+  </article>`;
+  }).join('') + '</div>';
 }
 
 function countMatching(houses, filterFn) {

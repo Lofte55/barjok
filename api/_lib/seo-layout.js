@@ -170,46 +170,46 @@ ${jsonLdBlocks}
   .mini-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:34px 48px;margin:34px 0 6px;text-align:left}
   .mini-stats .mstat b{display:block;font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .mini-stats .mstat span{font-size:13px;color:var(--ink-3);font-weight:600}
-  /* case-card: акцентная полоса сверху вместо полной рамки-коробки, крупный hover-lift */
-  .city-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:2px;margin:22px 0;background:var(--line-2);border-radius:var(--radius)}
-  .city-card{background:var(--canvas);padding:26px 24px;text-decoration:none;color:var(--ink);transition:transform .18s,box-shadow .18s;display:block;position:relative}
-  .city-card:first-child{border-top-left-radius:var(--radius);border-bottom-left-radius:var(--radius)}
-  .city-card:last-child{border-top-right-radius:var(--radius);border-bottom-right-radius:var(--radius)}
-  .city-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .22s}
-  .city-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);z-index:1}
-  .city-card:hover::before{transform:scaleX(1)}
-  .city-card b{font-size:18px;display:block;font-weight:800;letter-spacing:-.015em;line-height:1.25}
+  /* case-card: border-first (hairline-рамка держит форму, не тень) — паттерн Dub.co,
+     hover = граница темнеет + лёгкий подъём, а не разрастающаяся тень */
+  .city-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:22px 0}
+  .city-card{background:var(--canvas);border:1px solid var(--line);border-radius:14px;padding:24px;text-decoration:none;color:var(--ink);
+    transition:transform .16s cubic-bezier(.16,1,.3,1),border-color .16s;display:block;position:relative}
+  .city-card:hover{transform:translateY(-2px);border-color:var(--ink-3)}
+  .city-card:active{transform:translateY(0) scale(.99)}
+  .city-card b{font-size:17px;display:block;font-weight:800;letter-spacing:-.015em;line-height:1.3}
   .city-card.disabled{opacity:.5;pointer-events:none}
   .city-card .soon{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:2px 8px;margin-top:10px;display:inline-block}
   /* related-links: chip-теги вместо синего списка */
   .related-links{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
   .related-links a{color:var(--ink-2);font-size:13.5px;font-weight:700;text-decoration:none;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:9px 16px;transition:border-color .18s,color .18s}
   .related-links a:hover{border-color:var(--accent);color:var(--accent-ink)}
-  /* цветные плитки услуг — у каждого ресурса свой акцент + описание, не однотонный список ссылок */
-  .svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:26px 0}
-  .svc-tile{display:flex;flex-direction:column;align-items:flex-start;gap:0;background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);
-    padding:22px 22px 20px;text-decoration:none;color:var(--ink);position:relative;overflow:hidden;
-    transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s,border-color .2s}
-  .svc-tile::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--svc-c);transform:scaleX(0);transform-origin:left;transition:transform .3s cubic-bezier(.16,1,.3,1)}
-  .svc-tile::after{content:"";position:absolute;top:-30%;right:-20%;width:140px;height:140px;border-radius:50%;background:var(--svc-c);opacity:0;filter:blur(30px);transition:opacity .3s}
-  .svc-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:transparent}
-  .svc-tile:hover::before{transform:scaleX(1)}
-  .svc-tile:hover::after{opacity:.08}
-  .svc-tile .svc-ic{width:46px;height:46px;border-radius:13px;flex:none;display:grid;place-items:center;background:color-mix(in srgb, var(--svc-c) 15%, white);color:var(--svc-c);margin-bottom:14px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
-  .svc-tile:hover .svc-ic{transform:scale(1.1) rotate(-4deg)}
-  .svc-tile .svc-ic svg{width:22px;height:22px}
+  /* цветные плитки услуг — border-first (hairline-рамка + акцентная граница на hover,
+     без разрастающихся теней и декоративного свечения) */
+  .svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:26px 0}
+  .svc-tile{display:flex;flex-direction:column;align-items:flex-start;gap:0;background:var(--canvas);border:1px solid var(--line);border-radius:14px;
+    padding:22px 22px 20px;text-decoration:none;color:var(--ink);position:relative;
+    transition:transform .16s cubic-bezier(.16,1,.3,1),border-color .16s}
+  .svc-tile:hover{transform:translateY(-2px);border-color:var(--svc-c)}
+  .svc-tile:active{transform:translateY(0) scale(.99)}
+  .svc-tile .svc-ic{width:40px;height:40px;border-radius:11px;flex:none;display:grid;place-items:center;background:color-mix(in srgb, var(--svc-c) 15%, white);color:var(--svc-c);margin-bottom:14px;transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+  .svc-tile:hover .svc-ic{transform:scale(1.08)}
+  .svc-tile .svc-ic svg{width:20px;height:20px}
   .svc-tile b{position:relative;font-size:16px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:6px;width:100%}
   .svc-tile .svc-desc{position:relative;font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:6px;font-weight:500}
-  .svc-tile .svc-arw{color:var(--ink-3);flex:none;transition:transform .18s,color .18s;margin-left:auto}
+  .svc-tile .svc-arw{color:var(--ink-3);flex:none;transition:transform .16s,color .16s;margin-left:auto}
   .svc-tile:hover .svc-arw{transform:translateX(3px);color:var(--svc-c)}
   .more-chip{display:inline-block;font-size:11px;font-weight:700;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:1px 7px;margin-left:2px}
-  .sec{margin-top:56px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin:20px 0}
-  .outage-card{border-top:3px solid var(--accent);border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--canvas);padding:20px;box-shadow:var(--shadow-sm)}
+  .sec{margin-top:76px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:20px 0}
+  .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s}
+  .outage-card:hover{border-color:var(--ink-3)}
   .outage-card h3{font-size:15.5px;font-weight:800;letter-spacing:-.01em;margin-bottom:10px}
   .outage-card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13.5px}
   .outage-card dt{color:var(--ink-3);font-weight:600}
   .outage-card dd{color:var(--ink-2)}
+  .res-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px 3px 7px;margin-bottom:2px}
+  .res-pill .dot{width:6px;height:6px;border-radius:50%;flex:none}
   .updated{font-size:13px;color:var(--ink-3);margin-top:18px;font-weight:600}
   .faq-col .faq-item{border-bottom:1px solid var(--line-2)}
   .faq-col .faq-item summary{cursor:pointer;padding:16px 34px 16px 0;position:relative;font-weight:700;font-size:16px;line-height:1.4;color:var(--ink);list-style:none}
