@@ -161,9 +161,12 @@ async function renderCity(req, res) {
     [`Откуда берутся данные об отключениях?`, `Официальные источники (Павлодарэнерго, Павлодар-Водоканал, Павлодарские тепловые сети) плюс подтверждённые сообщения жителей BARJOK.`],
   ];
 
-  const searchBoxHtml = `<form class="search-box" action="/map/${citySlug}" method="get">
-    <input type="text" name="address" placeholder="Улица и номер дома" aria-label="Адрес">
-    <button type="submit">Проверить</button>
+  const searchBoxHtml = `<form class="capture search-box rv" action="/map/${citySlug}" method="get" style="max-width:560px;margin:22px 0">
+    <label class="field">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+      <input type="text" name="address" placeholder="Улица и номер дома" aria-label="Адрес" autocomplete="off">
+    </label>
+    <button class="btn primary" type="submit">Проверить</button>
   </form>`;
 
   const miniStats = snap.ok ? minimalStatsHtml([
@@ -243,9 +246,12 @@ async function renderService(req, res) {
     ['Карта ' + nom, `/map/${citySlug}`],
   ].filter(([, url]) => !url.endsWith(`/${serviceSlug}/`));
 
-  const searchBoxHtml = `<form class="search-box" action="/map/${citySlug}" method="get">
-    <input type="text" name="address" placeholder="Улица и номер дома" aria-label="Адрес">
-    <button type="submit">Проверить</button>
+  const searchBoxHtml = `<form class="capture search-box rv" action="/map/${citySlug}" method="get" style="max-width:560px;margin:22px 0">
+    <label class="field">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+      <input type="text" name="address" placeholder="Улица и номер дома" aria-label="Адрес" autocomplete="off">
+    </label>
+    <button class="btn primary" type="submit">Проверить</button>
   </form>`;
 
   const bodyHtml = `

@@ -165,9 +165,7 @@ ${jsonLdBlocks}
   /* status/search — тонкая рамка снизу вместо коробки, в духе awesomic (данные без "плашек") */
   .status-block{border-top:1px solid var(--line);padding:20px 0;margin:22px 0;line-height:1.6}
   .status-block b{color:var(--ink)}
-  .search-box{display:flex;gap:10px;margin:22px 0}
-  .search-box input{flex:1;height:52px;border:1px solid var(--line);border-radius:999px;padding:0 20px;font-size:15px;font-family:inherit;background:var(--canvas)}
-  .search-box input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-wash)}
+  .search-box.capture{margin-left:0}
   /* unboxed-цифры под hero, как "20 000+ completed projects" на awesomic.com */
   .mini-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:34px 48px;margin:34px 0 6px;text-align:left}
   .mini-stats .mstat b{display:block;font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
