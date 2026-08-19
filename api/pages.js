@@ -60,11 +60,13 @@ async function renderHome(req, res) {
   const seo = getHomeSeo();
   const cities = allCities();
   const snap = await computeSnapshot();
-  const cityCardsHtml = `<div class="city-cards">${cities.map((c) => {
+  // Горизонтальная прокручиваемая лента, а не растущая сетка — при добавлении
+  // новых городов блок не раздувается по высоте, просто становится длиннее лента.
+  const cityCardsHtml = `<div class="city-cards city-cards-scroll">${cities.map((c) => {
     const active = c.status === 'active';
     const nom = c.names.ru.nominative;
     return active
-      ? `<a class="city-card" href="/${c.slug}/"><b>Отключения воды и света в ${esc(nom)}</b></a>`
+      ? `<a class="city-card" href="/${c.slug}/"><b>${esc(nom)}</b><span class="city-card-sub">Отключения воды и света</span></a>`
       : `<div class="city-card disabled"><b>${esc(nom)}</b><span class="soon">Скоро</span></div>`;
   }).join('')}</div>`;
   const websiteJsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: BRAND, url: `${ORIGIN}/` };
@@ -75,6 +77,7 @@ async function renderHome(req, res) {
     ${mapPreviewHtml({ href: '/map/pavlodar' })}
     <div class="sec rv"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
     ${cityCardsHtml}
+    ${stepsHtml({})}
     ${trustGridHtml()}
     ${reportCtaHtml({ href: '/map/pavlodar?report=1' })}
     ${faqAccordionHtml(FAQ_HOME)}
@@ -93,11 +96,11 @@ async function renderHome(req, res) {
 
 async function renderMapHub(req, res) {
   const cities = allCities();
-  const cityCardsHtml = `<div class="city-cards">${cities.map((c) => {
+  const cityCardsHtml = `<div class="city-cards city-cards-scroll">${cities.map((c) => {
     const active = c.status === 'active';
     const nom = c.names.ru.nominative;
     return active
-      ? `<a class="city-card" href="/map/${c.slug}"><b>Карта отключений — ${esc(nom)}</b></a>`
+      ? `<a class="city-card" href="/map/${c.slug}"><b>${esc(nom)}</b><span class="city-card-sub">Карта отключений</span></a>`
       : `<div class="city-card disabled"><b>${esc(nom)}</b><span class="soon">Скоро</span></div>`;
   }).join('')}</div>`;
   const bodyHtml = `<p style="color:var(--ink-2)">Выберите город, чтобы открыть карту отключений воды, света и отопления.</p>${cityCardsHtml}`;
@@ -249,6 +252,7 @@ async function renderService(req, res) {
     ${cardsHtml ? '<div class="sec rv"><div class="eyebrow">Прямо сейчас</div><h2>Текущие отключения — ' + esc(service.label) + '</h2></div>' + cardsHtml : ''}
     <div class="sec rv"><div class="eyebrow">Карта</div><h2>Карта отключений</h2></div>
     <p><a href="/map/${citySlug}">Открыть карту отключений ${esc(loc)} →</a></p>
+    ${stepsHtml({})}
     ${trustGridHtml()}
     ${faqAccordionHtml(FAQ_SERVICE[serviceSlug] || FAQ_HOME)}
     <div class="sec rv"><div class="eyebrow">Ещё</div><h2>Связанные страницы</h2></div>

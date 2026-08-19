@@ -179,11 +179,17 @@ ${jsonLdBlocks}
   /* case-card: border-first (hairline-рамка держит форму, не тень) — паттерн Dub.co,
      hover = граница темнеет + лёгкий подъём, а не разрастающаяся тень */
   .city-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:22px 0}
+  /* горизонтальная лента вместо растущей сетки — добавление городов не раздувает
+     блок по высоте, лента просто становится длиннее и скроллится вбок */
+  .city-cards-scroll{display:flex;overflow-x:auto;scroll-snap-type:x proximity;gap:10px;margin:22px 0;
+    padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .city-cards-scroll .city-card{flex:0 0 240px;scroll-snap-align:start}
   .city-card{background:var(--canvas);border:1px solid var(--line);border-radius:14px;padding:24px;text-decoration:none;color:var(--ink);
     transition:transform .16s cubic-bezier(.16,1,.3,1),border-color .16s;display:block;position:relative}
   .city-card:hover{transform:translateY(-2px);border-color:var(--ink-3)}
   .city-card:active{transform:translateY(0) scale(.99)}
   .city-card b{font-size:17px;display:block;font-weight:800;letter-spacing:-.015em;line-height:1.3}
+  .city-card-sub{font-size:13px;color:var(--ink-3);font-weight:600;margin-top:6px;display:block}
   .city-card.disabled{opacity:.5;pointer-events:none}
   .city-card .soon{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:2px 8px;margin-top:10px;display:inline-block}
   /* related-links: chip-теги вместо синего списка */
