@@ -159,23 +159,34 @@ ${jsonLdBlocks}
   .crumbs a:hover{color:var(--ink)}
   .page-hero{padding:38px 0 8px}
   .page-hero h1{font-size:clamp(28px,4.6vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1.08;margin-top:14px;max-width:22ch}
-  .status-block{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:22px 0;line-height:1.6;box-shadow:var(--shadow-sm)}
+  /* status/search — тонкая рамка снизу вместо коробки, в духе awesomic (данные без "плашек") */
+  .status-block{border-top:1px solid var(--line);padding:20px 0;margin:22px 0;line-height:1.6}
   .status-block b{color:var(--ink)}
   .search-box{display:flex;gap:10px;margin:22px 0}
   .search-box input{flex:1;height:52px;border:1px solid var(--line);border-radius:999px;padding:0 20px;font-size:15px;font-family:inherit;background:var(--canvas)}
   .search-box input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-wash)}
-  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin:20px 0}
-  .city-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:22px 0}
-  .city-card{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);padding:22px;text-decoration:none;color:var(--ink);transition:transform .18s,border-color .18s,box-shadow .18s;display:block}
-  .city-card:hover{border-color:var(--ink-3);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
-  .city-card b{font-size:17px;display:block;font-weight:800;letter-spacing:-.01em}
-  .city-card.disabled{opacity:.55;pointer-events:none}
-  .city-card .soon{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:2px 8px;margin-top:8px;display:inline-block}
-  .related-links{display:flex;flex-wrap:wrap;gap:10px 20px;font-size:14.5px;font-weight:600;margin:18px 0}
-  .related-links a{color:var(--accent-ink)}
+  /* unboxed-цифры под hero, как "20 000+ completed projects" на awesomic.com */
+  .mini-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:34px 48px;margin:34px 0 6px;text-align:left}
+  .mini-stats .mstat b{display:block;font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .mini-stats .mstat span{font-size:13px;color:var(--ink-3);font-weight:600}
+  /* case-card: акцентная полоса сверху вместо полной рамки-коробки, крупный hover-lift */
+  .city-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:2px;margin:22px 0;background:var(--line-2);border-radius:var(--radius)}
+  .city-card{background:var(--canvas);padding:26px 24px;text-decoration:none;color:var(--ink);transition:transform .18s,box-shadow .18s;display:block;position:relative}
+  .city-card:first-child{border-top-left-radius:var(--radius);border-bottom-left-radius:var(--radius)}
+  .city-card:last-child{border-top-right-radius:var(--radius);border-bottom-right-radius:var(--radius)}
+  .city-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .22s}
+  .city-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);z-index:1}
+  .city-card:hover::before{transform:scaleX(1)}
+  .city-card b{font-size:18px;display:block;font-weight:800;letter-spacing:-.015em;line-height:1.25}
+  .city-card.disabled{opacity:.5;pointer-events:none}
+  .city-card .soon{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:2px 8px;margin-top:10px;display:inline-block}
+  /* related-links: chip-теги вместо синего списка */
+  .related-links{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+  .related-links a{color:var(--ink-2);font-size:13.5px;font-weight:700;text-decoration:none;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:9px 16px;transition:border-color .18s,color .18s}
+  .related-links a:hover{border-color:var(--accent);color:var(--accent-ink)}
   .sec{margin-top:56px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin:20px 0}
-  .outage-card{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);padding:20px;box-shadow:var(--shadow-sm)}
+  .outage-card{border-top:3px solid var(--accent);border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--canvas);padding:20px;box-shadow:var(--shadow-sm)}
   .outage-card h3{font-size:15.5px;font-weight:800;letter-spacing:-.01em;margin-bottom:10px}
   .outage-card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13.5px}
   .outage-card dt{color:var(--ink-3);font-weight:600}
@@ -187,6 +198,10 @@ ${jsonLdBlocks}
   .faq-col .faq-item summary::after{content:"+";position:absolute;right:8px;top:15px;font-weight:400;font-size:26px;line-height:1;color:var(--accent);transition:transform .25s}
   .faq-col .faq-item[open] summary::after{transform:rotate(45deg)}
   .faq-col .faq-item .faq-a{padding:2px 34px 18px 0;color:var(--ink-2);line-height:1.62;font-size:15px}
+  /* trust-карточки: тонкая верхняя линия вместо полной рамки-коробки (awesomic-style) */
+  .feat{background:transparent;border:0;border-top:2px solid var(--line);border-radius:0;padding:22px 0 0}
+  .feat:hover{transform:none;box-shadow:none}
+  .feat .fi{width:38px;height:38px;border-radius:11px}
 </style>
 </head>
 <body>

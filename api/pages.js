@@ -9,7 +9,7 @@ const { getHomeSeo, getCitySeo, getServiceSeo, BRAND, ORIGIN } = require('./_lib
 const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc } = require('./_lib/seo-layout');
 const { computeSnapshot } = require('./_lib/city-stats');
 const { outageCardsHtml, countMatching, statusBlockHtml } = require('./_lib/seo-cards');
-const { statRowHtml, trustGridHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
+const { statRowHtml, minimalStatsHtml, mapPreviewHtml, trustGridHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
 
 const SERVICE_CARDS = [
   ['voda', 'Вода'], ['svet', 'Свет'], ['otoplenie', 'Отопление'],
@@ -51,10 +51,15 @@ async function renderHome(req, res) {
       : `<div class="city-card disabled"><b>${esc(nom)}</b><span class="soon">Скоро</span></div>`;
   }).join('')}</div>`;
   const websiteJsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: BRAND, url: `${ORIGIN}/` };
-  const statsHtml = snap.ok ? statRowHtml(snap) : '';
+  const miniStats = snap.ok ? minimalStatsHtml([
+    [snap.affectedAddresses.toLocaleString('ru-RU') + '+', 'адресов затронуто'],
+    [snap.electricityAffected.toLocaleString('ru-RU'), 'домов без света'],
+    [snap.hotWaterAffected.toLocaleString('ru-RU'), 'без горячей воды'],
+  ]) : '';
   const bodyHtml = `
-    <p style="color:var(--ink-2);font-size:15px;max-width:60ch">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
-    ${statsHtml}
+    <p style="color:var(--ink-2);font-size:15px;max-width:60ch;margin:0 auto;text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
+    ${miniStats}
+    ${mapPreviewHtml({ href: '/map/pavlodar' })}
     <div class="sec"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
     ${cityCardsHtml}
     ${trustGridHtml()}
@@ -145,11 +150,16 @@ async function renderCity(req, res) {
     <button type="submit">Проверить</button>
   </form>`;
 
-  const statsHtml = snap.ok ? statRowHtml(snap) : '';
+  const miniStats = snap.ok ? minimalStatsHtml([
+    [snap.affectedAddresses.toLocaleString('ru-RU') + '+', 'адресов затронуто'],
+    [snap.electricityAffected.toLocaleString('ru-RU'), 'домов без света'],
+    [snap.hotWaterAffected.toLocaleString('ru-RU'), 'без горячей воды'],
+  ]) : '';
   const bodyHtml = `
     ${statusHtml}
     ${searchBoxHtml}
-    ${statsHtml}
+    ${miniStats}
+    ${mapPreviewHtml({ href: `/map/${citySlug}` })}
     <div class="section-title">Услуги</div>
     ${serviceCardsHtml}
     ${cardsHtml ? '<div class="section-title">Текущие отключения</div>' + cardsHtml : ''}

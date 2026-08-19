@@ -24,6 +24,36 @@ function statRowHtml({ affectedAddresses, electricityAffected, hotWaterAffected,
   </section>`;
 }
 
+/* Компактные unboxed-цифры под hero — в духе awesomic.com (не боксы, просто число+подпись в ряд). */
+function minimalStatsHtml(pairs) {
+  return `<div class="mini-stats rv">
+    ${pairs.map(([n, l]) => `<div class="mstat"><b>${esc(String(n))}</b><span>${esc(l)}</span></div>`).join('')}
+  </div>`;
+}
+
+/* Превью карты как в первом блоке лендинга — браузерная рамка + скриншот + CTA + пульсирующий hint. */
+function mapPreviewHtml({ href = '/map/pavlodar', hintText = 'Актуальные данные по адресам · обновляется каждый час' } = {}) {
+  return `<section class="screen-sec wrap rv" id="mapsec">
+    <div class="browser">
+      <div class="bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">barjok.kz<b>/map</b></span>
+        <span style="width:44px"></span>
+      </div>
+      <a class="mapshot" href="${esc(href)}" aria-label="Открыть карту">
+        <img class="mapshot-img" src="/map-preview.jpg" alt="Живая карта отключений" loading="lazy" width="1600" height="863">
+        <div class="map-cta">
+          <span class="btn primary lg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 7v13M15 4v13"/></svg>
+            <span>Открыть карту</span>
+          </span>
+          <span class="map-hint"><span class="ld"></span><span class="map-hint-text">${esc(hintText)}</span></span>
+        </div>
+      </a>
+    </div>
+  </section>`;
+}
+
 const TRUST_FEATURES = [
   ['Точная привязка к дому', 'Разворачиваем «улицу» в конкретные дома и показываем отключение только тем, кого оно реально касается.'],
   ['Данные поставщиков, не слухи', 'Каждое отключение — из официального источника, с датой и причиной, плюс подтверждение жителями.'],
@@ -69,4 +99,4 @@ function ctaFinalHtml({ title = 'Проверьте свой адрес прям
   </section>`;
 }
 
-module.exports = { sectionHeadHtml, statRowHtml, trustGridHtml, faqAccordionHtml, ctaFinalHtml, TRUST_FEATURES };
+module.exports = { sectionHeadHtml, statRowHtml, minimalStatsHtml, mapPreviewHtml, trustGridHtml, faqAccordionHtml, ctaFinalHtml, TRUST_FEATURES };
