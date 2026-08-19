@@ -404,16 +404,20 @@ ${jsonLdBlocks}
   .tl-dot.done .in{background:var(--accent)}
   .tl-dot.active{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-wash)}
   .tl-dot.active .in{background:var(--accent);animation:beat 2s infinite}
-  .tl-year{font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-ink)}
-  .tl-item h3{margin-top:5px;font-size:18px;font-weight:800;letter-spacing:-.01em}
-  .tl-item p{margin-top:6px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:58ch}
-  /* нумерованные пункты боли — те же .k-бейджи, что и в шагах "Как начать" */
-  .pain-grid{display:flex;flex-direction:column;gap:22px;margin-top:34px}
-  .pain-item{display:flex;gap:18px;align-items:flex-start}
-  .pain-item .k{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;
-    background:var(--accent-wash);color:var(--accent-ink);font-weight:800;font-size:15px;flex:none}
-  .pain-item h3{font-size:17px;font-weight:800;letter-spacing:-.01em}
-  .pain-item p{margin-top:6px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:60ch}
+  .tl-year{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-3)}
+  .tl-item h3{margin-top:8px;font-size:clamp(19px,2.4vw,23px);font-weight:800;letter-spacing:-.015em;line-height:1.25}
+  .tl-item p{margin-top:8px;color:var(--ink-2);font-size:14px;line-height:1.6;max-width:58ch}
+  /* нумерованные пункты боли — номер встроен в одну строку с заголовком (flex
+     внутри h3), а не отдельным блоком слева, иначе на пунктах с переносом текста
+     цифра "плавает" отдельно от заголовка. Разделитель — тонкая линия сверху,
+     border-first, тот же приём, что и в .feat ниже по странице. */
+  .pain-grid{margin-top:34px}
+  .pain-item{border-top:1px solid var(--line);padding:22px 0}
+  .pain-item:first-child{border-top:0;padding-top:0}
+  .pain-item h3{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .pain-item .k{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;
+    background:var(--accent-wash);color:var(--accent-ink);font-weight:800;font-size:13px;flex:none}
+  .pain-item p{margin-top:8px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:60ch}
 </style>
 </head>
 <body>
