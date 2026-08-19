@@ -236,7 +236,9 @@ ${jsonLdBlocks}
   a.street-card{display:block;text-decoration:none;color:inherit;cursor:pointer;outline:none}
   a.street-card:hover{border-color:var(--accent);box-shadow:0 10px 24px -14px rgba(21,32,58,.22)}
   a.street-card:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
-  a.street-card h3{display:inline-flex;align-items:center;gap:5px;color:var(--ink)}
+  a.street-card{display:flex;flex-direction:column}
+  a.street-card .res-pill{align-self:flex-start}
+  a.street-card h3{display:flex;align-items:center;gap:5px;color:var(--ink)}
   a.street-card h3 svg{color:var(--ink-3);flex:none;transition:transform .16s,color .16s}
   a.street-card:hover h3 svg{transform:translate(2px,-2px);color:var(--accent-ink)}
   /* компактный вариант — "Текущие отключения" может быть десятки карточек подряд,
