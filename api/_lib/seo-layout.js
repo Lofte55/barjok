@@ -187,6 +187,20 @@ ${jsonLdBlocks}
   .related-links{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
   .related-links a{color:var(--ink-2);font-size:13.5px;font-weight:700;text-decoration:none;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:9px 16px;transition:border-color .18s,color .18s}
   .related-links a:hover{border-color:var(--accent);color:var(--accent-ink)}
+  /* цветные плитки услуг — у каждого ресурса свой акцент, а не однотонный список */
+  .svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:24px 0}
+  .svc-tile{display:flex;align-items:center;gap:14px;background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:16px 16px;text-decoration:none;color:var(--ink);position:relative;overflow:hidden;
+    transition:transform .18s cubic-bezier(.16,1,.3,1),box-shadow .18s,border-color .18s}
+  .svc-tile::before{content:"";position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--svc-c);transform:scaleY(0);transform-origin:bottom;transition:transform .25s cubic-bezier(.16,1,.3,1)}
+  .svc-tile:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:transparent}
+  .svc-tile:hover::before{transform:scaleY(1)}
+  .svc-tile .svc-ic{width:40px;height:40px;border-radius:11px;flex:none;display:grid;place-items:center;background:color-mix(in srgb, var(--svc-c) 14%, white);color:var(--svc-c);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+  .svc-tile:hover .svc-ic{transform:scale(1.1) rotate(-4deg)}
+  .svc-tile .svc-ic svg{width:20px;height:20px}
+  .svc-tile b{flex:1;font-size:15px;font-weight:800;letter-spacing:-.01em}
+  .svc-tile .svc-arw{color:var(--ink-3);flex:none;transition:transform .18s,color .18s}
+  .svc-tile:hover .svc-arw{transform:translateX(3px);color:var(--svc-c)}
   .sec{margin-top:56px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin:20px 0}
   .outage-card{border-top:3px solid var(--accent);border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--canvas);padding:20px;box-shadow:var(--shadow-sm)}

@@ -110,6 +110,98 @@ function reportCtaHtml({ href = '/map/?report=1' } = {}) {
   </section>`;
 }
 
+/* Блок "3 шага" — как найти свой адрес. Живой мокап (поиск → карточка дома →
+   итог дня), тот же паттерн, что был в первом экране лендинга (.step/.demo). */
+function stepsHtml({ addressSample = 'Естая, 38' } = {}) {
+  return sectionHeadHtml('Как это работает', 'Три шага до ответа «есть или нет»',
+    `Информация об отключениях уже существует — она просто разбросана по сайтам поставщиков и чатам. Мы собираем её каждые несколько часов и показываем по твоему дому.`) + `
+  <div class="step rv wrap">
+    <div class="txt">
+      <span class="k">1</span>
+      <h3>Введи адрес</h3>
+      <p>Улица и номер дома — подсказки помогут найти нужный дом быстро.</p>
+    </div>
+    <div class="demo">
+      <div class="searchbox">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+        ${esc(addressSample)}<span class="cur"></span>
+      </div>
+      <div class="filters">
+        <span class="fchip"><span class="d" style="background:var(--hot)"></span><span>Горячая вода</span></span>
+        <span class="fchip"><span class="d" style="background:var(--elec)"></span><span>Свет</span></span>
+        <span class="fchip"><span class="d" style="background:var(--cold)"></span><span>Холодная вода</span></span>
+        <span class="fchip"><span class="d" style="background:var(--hot)"></span><span>Отопление</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step rev rv wrap">
+    <div class="txt">
+      <span class="k">2</span>
+      <h3>Увидь, что отключено</h3>
+      <p>Карточка по дому: какая система, когда отключили, когда восстановят и почему. Ничего лишнего с чужих улиц.</p>
+    </div>
+    <div class="demo">
+      <div class="ocard">
+        <div class="h"><b>улица ${esc(addressSample)}</b><span>отключено 2 системы</span></div>
+        <div class="row">
+          <span class="ic" style="background:var(--hot)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/></svg></span>
+          <div class="rt"><b>Горячая вода</b><span class="tag">Плановое</span>
+            <div class="when">Восстановят <b>сегодня, 23:59</b></div>
+            <div class="meta">Гидравлические испытания теплосети</div></div>
+        </div>
+        <div class="row">
+          <span class="ic" style="background:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>
+          <div class="rt"><b>Электричество</b><span class="tag">Плановое</span>
+            <div class="when">Восстановят <b>17:00</b></div>
+            <div class="meta">Капитальный ремонт · ТП-5РУ</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step rv wrap">
+    <div class="txt">
+      <span class="k">3</span>
+      <h3>Планируй день</h3>
+      <p>Набрать воды заранее, зарядить технику, перенести стирку. Видно и текущие, и будущие отключения на карте.</p>
+    </div>
+    <div class="demo" style="padding:0;overflow:hidden">
+      <div style="padding:18px 20px;border-bottom:1px solid var(--line-2);display:flex;gap:10px;align-items:center">
+        <span class="ic" style="background:var(--accent);width:30px;height:30px"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M5 12l5 5 9-11"/></svg></span>
+        <div><b style="font-weight:800">По вашему адресу всё в порядке</b><div style="font-size:12.5px;color:var(--ink-3)">Вода и свет в норме</div></div>
+      </div>
+      <div style="padding:14px 20px;display:flex;gap:22px">
+        <div><div style="font-size:22px;font-weight:800;color:var(--accent)">927</div><div style="font-size:12px;color:var(--ink-3);font-weight:600">сейчас</div></div>
+        <div><div style="font-size:22px;font-weight:800;color:var(--ink)">2 612</div><div style="font-size:12px;color:var(--ink-3);font-weight:600">скоро</div></div>
+        <div><div style="font-size:22px;font-weight:800;color:var(--hot)">941</div><div style="font-size:12px;color:var(--ink-3);font-weight:600">без гор. воды</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Цветные интерактивные плитки услуг вместо шаблонных белых карточек —
+   у каждого ресурса свой фирменный акцент (совпадает с .fchip/.ic на карте). */
+const SERVICE_TILE_META = {
+  voda: { color: 'var(--cold)', icon: '<path d="M12 3c3.2 4.2 6 7.6 6 11a6 6 0 1 1-12 0c0-3.4 2.8-6.8 6-11z"/>' },
+  svet: { color: 'var(--elec)', icon: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>' },
+  otoplenie: { color: 'var(--hot)', icon: '<path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/>' },
+  'planovye-otklyucheniya': { color: 'var(--accent)', icon: '<rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/>' },
+  'avariynye-otklyucheniya': { color: 'var(--emerg)', icon: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>' },
+  'po-adresu': { color: 'var(--ink)', icon: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/>' },
+};
+
+function serviceTilesHtml(citySlug, items) {
+  return `<div class="svc-grid rv wrap">${items.map(([slug, label]) => {
+    const meta = SERVICE_TILE_META[slug] || SERVICE_TILE_META['po-adresu'];
+    return `<a class="svc-tile" href="/${citySlug}/${slug}/" style="--svc-c:${meta.color}">
+      <span class="svc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${meta.icon}</svg></span>
+      <b>${esc(label)}</b>
+      <svg class="svc-arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>`;
+  }).join('')}</div>`;
+}
+
 function faqAccordionHtml(list, idPrefix = 'faq') {
   if (!list || !list.length) return '';
   return `<section class="sec wrap rv" id="${esc(idPrefix)}">
@@ -137,4 +229,4 @@ function ctaFinalHtml({ title = 'Проверьте свой адрес прям
   </section>`;
 }
 
-module.exports = { sectionHeadHtml, statRowHtml, minimalStatsHtml, mapPreviewHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, TRUST_FEATURES };
+module.exports = { sectionHeadHtml, statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, TRUST_FEATURES };

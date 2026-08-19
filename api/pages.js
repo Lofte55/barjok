@@ -8,8 +8,16 @@ const { getCity, allCities, activeCities, SERVICES, getService } = require('./_l
 const { getHomeSeo, getCitySeo, getServiceSeo, BRAND, ORIGIN } = require('./_lib/seo');
 const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc } = require('./_lib/seo-layout');
 const { computeSnapshot } = require('./_lib/city-stats');
-const { outageCardsHtml, countMatching, statusBlockHtml } = require('./_lib/seo-cards');
-const { statRowHtml, minimalStatsHtml, mapPreviewHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
+const { outageCardsHtml, countMatching, statusBlockHtml, RES_LABEL_NOM } = require('./_lib/seo-cards');
+const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
+const RES_ICON = {
+  cold_water: '<path d="M12 3c3.2 4.2 6 7.6 6 11a6 6 0 1 1-12 0c0-3.4 2.8-6.8 6-11z"/>',
+  hot_water: '<path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/>',
+  electricity: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
+  heating: '<path d="M12 22a5.5 5.5 0 0 0 5.5-5.5c0-3.4-5.5-8.5-5.5-8.5s-5.5 5.1-5.5 8.5A5.5 5.5 0 0 0 12 22z"/>',
+  gas: '<circle cx="12" cy="12" r="8"/>',
+};
+const { statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
 
 const SERVICE_CARDS = [
   ['voda', 'Вода'], ['svet', 'Свет'], ['otoplenie', 'Отопление'],
@@ -113,8 +121,7 @@ async function renderCity(req, res) {
     electricityAffected: snap.electricityAffected || 0, hotWaterAffected: snap.hotWaterAffected || 0,
     coldWaterAffected: snap.coldWaterAffected || 0, generatedAt: snap.generatedAt, ok: snap.ok,
   });
-  const serviceCardsHtml = `<div class="city-cards">${SERVICE_CARDS.map(([slug, label]) =>
-    `<a class="city-card" href="/${citySlug}/${slug}/"><b>${esc(label)}</b></a>`).join('')}</div>`;
+  const serviceCardsHtml = serviceTilesHtml(citySlug, SERVICE_CARDS);
   const cardsHtml = snap.ok ? outageCardsHtml(snap.houses || [], () => true, 16) : '';
 
   let futureHtml = '';
@@ -129,9 +136,17 @@ async function renderCity(req, res) {
       if (futureRows.length >= 10) break;
     }
     if (futureRows.length) {
-      futureHtml = '<div class="section-title">Предстоящие отключения</div><div class="cards">' + futureRows.map(({ h, o }) =>
-        `<article class="outage-card"><h3>${esc(h.address)}</h3><dl><dt>Начало</dt><dd>${esc(new Date(o.start).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl></article>`
-      ).join('') + '</div>';
+      futureHtml = '<div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2></div><div class="cards rv wrap">' + futureRows.map(({ h, o }) => {
+        const color = RES_COLOR[o.resource] || 'var(--accent)';
+        const icon = RES_ICON[o.resource] || RES_ICON.electricity;
+        return `<article class="outage-card" style="border-top-color:${color}">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <span class="ic" style="background:${color};width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" fill="#fff" style="width:15px;height:15px">${icon}</svg></span>
+            <h3 style="margin:0">${esc(h.address)}</h3>
+          </div>
+          <dl><dt>${esc(RES_LABEL_NOM[o.resource] || 'Ресурс')}</dt><dd>с ${esc(new Date(o.start).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl>
+        </article>`;
+      }).join('') + '</div>';
     }
   }
 
@@ -156,17 +171,17 @@ async function renderCity(req, res) {
     [snap.electricityAffected.toLocaleString('ru-RU'), 'домов без света'],
     [snap.hotWaterAffected.toLocaleString('ru-RU'), 'без горячей воды'],
   ]) : '';
+  const sampleAddress = (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
   const bodyHtml = `
     ${statusHtml}
     ${searchBoxHtml}
     ${miniStats}
     ${mapPreviewHtml({ href: `/map/${citySlug}` })}
-    <div class="section-title">Услуги</div>
+    <div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Услуги</div><h2>Что можно проверить в ${esc(loc)}</h2></div>
     ${serviceCardsHtml}
     ${cardsHtml ? '<div class="section-title">Текущие отключения</div>' + cardsHtml : ''}
     ${futureHtml}
-    <div class="section-title">Карта</div>
-    <p><a href="/map/${citySlug}">Открыть карту отключений ${esc(loc)} →</a></p>
+    ${stepsHtml({ addressSample: sampleAddress })}
     <div class="section-title">Источники данных</div>
     <p>Павлодарэнерго, Павлодар-Водоканал, Павлодарские тепловые сети — обновление каждые 3 часа. Часть отключений подтверждается сообщениями жителей BARJOK.</p>
     ${trustGridHtml()}
