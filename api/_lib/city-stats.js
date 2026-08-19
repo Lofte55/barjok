@@ -45,6 +45,15 @@ async function computeSnapshot() {
     houses.filter((h) => (h.outages || []).some((o) => o.status === 'current')).map((h) => h.id)
   ).size;
 
+  // "Предстоящие" — известные заранее плановые работы (status:future). Когда активных
+  // отключений 0 (частая ситуация), это единственная реальная цифра, которая сейчас
+  // происходит — без неё блок цифр выглядит пустым/"неживым".
+  const future = [];
+  houses.forEach((h) => (h.outages || []).forEach((o) => { if (o.status === 'future') future.push(o); }));
+  const futureAffectedAddresses = new Set(
+    houses.filter((h) => (h.outages || []).some((o) => o.status === 'future')).map((h) => h.id)
+  ).size;
+
   cache = {
     ok: true,
     generatedAt: new Date().toISOString(),
@@ -56,6 +65,8 @@ async function computeSnapshot() {
     heatingAffected: byResource('heating'),
     plannedCount,
     emergencyCount,
+    futureCount: future.length,
+    futureAffectedAddresses,
     houses, // сырые дома — постранично используется для карточек отключений
   };
   cacheAt = now;

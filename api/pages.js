@@ -39,6 +39,23 @@ const FAQ_SERVICE = {
   ],
 };
 
+/* Цифры под hero должны честно отражать то, что парсер видит ПРЯМО СЕЙЧАС.
+   Активных отключений часто 0 (это нормально и хорошо) — в этом случае
+   первой цифрой показываем не голый ноль, а реальное число адресов с уже
+   известными плановыми работами (snap.futureAffectedAddresses), иначе
+   блок выглядит "не подключённым", хотя данные живые. */
+function buildMiniStats(snap) {
+  const hasActive = !!snap.affectedAddresses;
+  const primary = hasActive ? snap.affectedAddresses : (snap.futureAffectedAddresses || 0);
+  const primaryLabel = hasActive ? 'адресов затронуто сейчас' : 'адресов ждут плановых работ';
+  return minimalStatsHtml([
+    [primary, primaryLabel, primary ? '+' : ''],
+    [snap.electricityAffected, 'без света сейчас', '', 'var(--elec)'],
+    [snap.hotWaterAffected, 'без горячей воды сейчас', '', 'var(--hot)'],
+    [snap.coldWaterAffected, 'без холодной воды сейчас', '', 'var(--cold)'],
+  ], { allZero: !snap.activeOutages });
+}
+
 const FAQ_HOME = [
   ['Как узнать об отключении воды по адресу в Павлодаре?', 'Введите улицу и номер дома на карте или на странице города — если по вашему адресу есть отключение, вы увидите дату, время и причину.'],
   ['Когда отключат свет в моём доме в Павлодаре?', 'Плановые отключения электричества видны заранее на карте с фильтром «Плановое» — BARJOK получает график от Павлодарэнерго.'],
@@ -59,12 +76,7 @@ async function renderHome(req, res) {
       : `<div class="city-card disabled"><b>${esc(nom)}</b><span class="soon">Скоро</span></div>`;
   }).join('')}</div>`;
   const websiteJsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: BRAND, url: `${ORIGIN}/` };
-  const miniStats = snap.ok ? minimalStatsHtml([
-    [snap.affectedAddresses, 'адресов затронуто', '+'],
-    [snap.electricityAffected, 'без света', '', 'var(--elec)'],
-    [snap.hotWaterAffected, 'без горячей воды', '', 'var(--hot)'],
-    [snap.coldWaterAffected, 'без холодной воды', '', 'var(--cold)'],
-  ], { allZero: !snap.activeOutages }) : '';
+  const miniStats = snap.ok ? buildMiniStats(snap) : '';
   const bodyHtml = `
     <p class="lead rv" style="text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
     ${miniStats}
@@ -125,6 +137,11 @@ async function renderCity(req, res) {
     return idx === -1 ? { street: address, house: '' } : { street: address.slice(0, idx).trim(), house: address.slice(idx + 1).trim() };
   };
 
+  const RES_TABS = [
+    ['all', 'Все'], ['electricity', 'Электричество'], ['cold_water', 'Холодная вода'],
+    ['hot_water', 'Горячая вода'], ['heating', 'Отопление'],
+  ];
+
   let futureHtml = '';
   if (snap.ok) {
     // Группируем по улице+ресурсу — иначе один и тот же дом-ряд (10 карточек
@@ -141,22 +158,43 @@ async function renderCity(req, res) {
         if (new Date(o.start) < new Date(g.minStart)) g.minStart = o.start;
       }
     }
-    const groupList = [...groups.values()].sort((a, b) => b.houses.length - a.houses.length).slice(0, 9);
+    // Топ-N НА КАЖДЫЙ ресурс, а не топ-N по всем сразу — иначе табы "Вода"/"Отопление"
+    // остаются пустыми, если электричество просто численно больше в базе.
+    const byResource = new Map();
+    for (const g of groups.values()) {
+      const list = byResource.get(g.resource) || [];
+      list.push(g);
+      byResource.set(g.resource, list);
+    }
+    let groupList = [];
+    for (const list of byResource.values()) {
+      list.sort((a, b) => b.houses.length - a.houses.length);
+      groupList = groupList.concat(list.slice(0, 6));
+    }
+    groupList.sort((a, b) => b.houses.length - a.houses.length);
+
+    const presentResources = new Set(groupList.map((g) => g.resource));
+    const tabsToShow = RES_TABS.filter(([key]) => key === 'all' || presentResources.has(key));
+
     if (groupList.length) {
-      futureHtml = '<div class="sec rv"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице, чтобы не листать десятки одинаковых карточек.</p></div><div class="cards">' + groupList.map((g) => {
+      const tabsHtml = tabsToShow.length > 2 ? `<div class="res-tabs rv" role="tablist">
+        ${tabsToShow.map(([key, label], i) => `<button class="res-tab${i === 0 ? ' on' : ''}" data-filter="${key}" type="button">${esc(label)}</button>`).join('')}
+      </div>` : '';
+      const cardsHtml2 = groupList.map((g) => {
         const color = RES_COLOR[g.resource] || 'var(--accent)';
-        const icon = RES_ICON[g.resource] || RES_ICON.electricity;
         const houseCount = g.houses.length || 1;
         const preview = g.houses.slice(0, 6).join(', ');
         const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
-        return `<article class="outage-card rv">
+        const mapHref = `/map/${citySlug}?q=${encodeURIComponent(g.street)}`;
+        return `<article class="outage-card rv" data-res="${esc(g.resource)}">
           <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span>
-          <h3 style="margin:8px 0 2px">${esc(g.street)}</h3>
+          <h3 style="margin:8px 0 2px"><a href="${mapHref}" class="street-link">${esc(g.street)}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></a></h3>
           <span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
           <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:8px">Дома: ${esc(preview)}${more}</div>
           <dl style="margin-top:8px"><dt>Начало</dt><dd>с ${esc(new Date(g.minStart).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl>
         </article>`;
-      }).join('') + '</div>';
+      }).join('');
+      futureHtml = `<div class="sec rv"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.</p></div>${tabsHtml}<div class="cards" id="futureCards">${cardsHtml2}</div>`;
     }
   }
 
@@ -168,11 +206,9 @@ async function renderCity(req, res) {
 
   const faq = [
     [`Как узнать об отключении воды по адресу в ${loc}?`, `Найдите свой адрес на карте или введите его в поиске выше — если по нему есть плановое или аварийное отключение, вы увидите дату и время начала и окончания работ.`],
-    [`Когда отключат свет в моём доме в ${loc}?`, `Плановые отключения электричества видны заранее на карте с фильтром «Плановое» — BARJOK получает график от Павлодарэнерго.`],
-    [`А как узнать про отключение отопления и горячей воды?`, `На этой странице и на карте показаны все виды отключений: холодная и горячая вода, свет, отопление — по каждому дому отдельно, с датой и причиной.`],
+    [`А как узнать про отопление и горячую воду?`, `На этой странице и на карте показаны все виды отключений: холодная и горячая вода, свет, отопление — по каждому дому отдельно, с датой и причиной.`],
     [`Откуда берутся данные об отключениях?`, `Официальные источники (Павлодарэнерго, Павлодар-Водоканал, Павлодарские тепловые сети) плюс подтверждённые сообщения жителей BARJOK.`],
-    [`Почему по моему адресу ничего не показывает, хотя света нет?`, `Иногда авария случается раньше, чем поставщик её опубликует. Нажмите «Сообщить о проблеме» ниже — после проверки отключение появится на карте.`],
-    [`Можно ли посмотреть будущие плановые работы заранее?`, `Да — раздел «Предстоящие отключения» на этой странице и фильтр «Будущие» на карте показывают то, что уже запланировано.`],
+    [`Почему по адресу ничего не показывает, хотя света нет?`, `Иногда авария случается раньше, чем поставщик её опубликует. Нажмите «Сообщить о проблеме» ниже — после проверки отключение появится на карте.`],
     [`В каких городах ещё работает BARJOK?`, `Сейчас полноценно работает Павлодар. Другие города Казахстана подключаются поэтапно — они уже видны в списке со статусом «Скоро».`],
   ];
 
@@ -196,12 +232,7 @@ async function renderCity(req, res) {
   </div>
   ${updatedAt ? `<p class="cap-note rv">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
 
-  const miniStats = snap.ok ? minimalStatsHtml([
-    [snap.affectedAddresses, 'адресов затронуто', '+'],
-    [snap.electricityAffected, 'без света', '', 'var(--elec)'],
-    [snap.hotWaterAffected, 'без горячей воды', '', 'var(--hot)'],
-    [snap.coldWaterAffected, 'без холодной воды', '', 'var(--cold)'],
-  ], { allZero: !snap.activeOutages }) : '';
+  const miniStats = snap.ok ? buildMiniStats(snap) : '';
   const sampleAddress = (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
   const bodyHtml = `
     <div style="text-align:center;padding-top:6px">

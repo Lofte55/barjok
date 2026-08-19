@@ -216,10 +216,21 @@ ${jsonLdBlocks}
   .outage-card dd{color:var(--ink-2)}
   .res-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px 3px 7px;margin-bottom:2px}
   .res-pill .dot{width:6px;height:6px;border-radius:50%;flex:none}
+  /* переключатель ресурса над "Предстоящими отключениями" — фильтрует карточки на клиенте */
+  .res-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 4px}
+  .res-tab{font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-2);background:var(--canvas);
+    border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;transition:border-color .16s,color .16s,background .16s}
+  .res-tab:hover{border-color:var(--ink-3)}
+  .res-tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .outage-card[hidden]{display:none}
+  .street-link{display:inline-flex;align-items:center;gap:5px;color:var(--ink);text-decoration:none}
+  .street-link:hover{color:var(--accent-ink)}
+  .street-link svg{color:var(--ink-3);flex:none}
+  .street-link:hover svg{color:var(--accent-ink)}
   .updated{font-size:13px;color:var(--ink-3);margin-top:18px;font-weight:600}
   /* FAQ — двухколоночная раскладка в духе awesomic.com: слева заголовок+контакт,
      справа pill-строки вопросов на тонированном фоне (не белые карточки с рамкой) */
-  .faq-layout{display:grid;grid-template-columns:300px 1fr;gap:40px;align-items:start;margin-top:26px}
+  .faq-layout{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:40px;align-items:start;margin-top:26px}
   .faq-side{position:sticky;top:90px}
   .faq-contact{margin-top:24px;background:var(--canvas);border:1px solid var(--line);border-radius:16px;padding:20px}
   .faq-contact b{display:block;font-size:16px;font-weight:800;letter-spacing:-.01em}
@@ -276,6 +287,23 @@ ${footerHtml()}
       nums.forEach(function(el){io3.observe(el);});
     } else nums.forEach(countUp);
   }
+})();
+(function(){
+  // ---------- табы-фильтр "Предстоящие отключения" по ресурсу ----------
+  var tabs=document.querySelectorAll('.res-tab');
+  if(!tabs.length) return;
+  var cards=[].slice.call(document.querySelectorAll('#futureCards .outage-card'));
+  tabs.forEach(function(tab){
+    tab.addEventListener('click',function(){
+      tabs.forEach(function(t){t.classList.remove('on');});
+      tab.classList.add('on');
+      var f=tab.dataset.filter;
+      cards.forEach(function(c){
+        var show=(f==='all')||(c.dataset.res===f);
+        c.hidden=!show;
+      });
+    });
+  });
 })();
 (function(){
   // ---------- живые подсказки адреса (тот же паттерн, что на карте) ----------

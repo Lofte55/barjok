@@ -220,7 +220,7 @@ function faqAccordionHtml(list, idPrefix = 'faq', { contactHref = '/map/?report=
     <div class="faq-layout">
       <div class="faq-side">
         <div class="eyebrow">Частые вопросы</div>
-        <h2>Отвечаем на главное</h2>
+        <h2 style="white-space:nowrap">Есть вопросы?</h2>
         <div class="faq-contact rv">
           <b>Остались вопросы?</b>
           <p>Напишите нам — ответим и, если нужно, дополним этот список.</p>
