@@ -68,7 +68,7 @@ async function renderHome(req, res) {
     <p class="lead rv" style="text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
     ${miniStats}
     ${mapPreviewHtml({ href: '/map/pavlodar' })}
-    <div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
+    <div class="sec rv"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
     ${cityCardsHtml}
     ${trustGridHtml()}
     ${reportCtaHtml({ href: '/map/pavlodar?report=1' })}
@@ -142,13 +142,13 @@ async function renderCity(req, res) {
     }
     const groupList = [...groups.values()].sort((a, b) => b.houses.length - a.houses.length).slice(0, 9);
     if (groupList.length) {
-      futureHtml = '<div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице, чтобы не листать десятки одинаковых карточек.</p></div><div class="cards rv wrap">' + groupList.map((g) => {
+      futureHtml = '<div class="sec rv"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице, чтобы не листать десятки одинаковых карточек.</p></div><div class="cards">' + groupList.map((g) => {
         const color = RES_COLOR[g.resource] || 'var(--accent)';
         const icon = RES_ICON[g.resource] || RES_ICON.electricity;
         const houseCount = g.houses.length || 1;
         const preview = g.houses.slice(0, 6).join(', ');
         const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
-        return `<article class="outage-card" style="border-top-color:${color}">
+        return `<article class="outage-card rv" style="border-top-color:${color}">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <span class="ic" style="background:${color};width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" fill="#fff" style="width:16px;height:16px">${icon}</svg></span>
             <div style="min-width:0"><h3 style="margin:0;line-height:1.25">${esc(g.street)}</h3><span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')} · ${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span></div>
@@ -203,7 +203,7 @@ async function renderCity(req, res) {
     </div>
     ${miniStats}
     ${mapPreviewHtml({ href: `/map/${citySlug}` })}
-    <div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Услуги</div><h2>Что можно проверить в ${esc(loc)}</h2></div>
+    <div class="sec rv"><div class="eyebrow">Услуги</div><h2>Что можно проверить в ${esc(loc)}</h2></div>
     ${serviceCardsHtml}
     ${cardsHtml ? '<div class="section-title">Текущие отключения</div>' + cardsHtml : ''}
     ${futureHtml}

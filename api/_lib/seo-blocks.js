@@ -6,7 +6,7 @@
 const { esc } = require('./seo-layout');
 
 function sectionHeadHtml(eyebrow, h2, intro) {
-  return `<div class="sec wrap rv" style="padding-left:0;padding-right:0">
+  return `<div class="sec rv">
     <div class="eyebrow">${esc(eyebrow)}</div>
     <h2>${esc(h2)}</h2>
     ${intro ? `<p class="intro">${esc(intro)}</p>` : ''}
@@ -14,7 +14,7 @@ function sectionHeadHtml(eyebrow, h2, intro) {
 }
 
 function statRowHtml({ affectedAddresses, electricityAffected, hotWaterAffected, coldWaterAffected }) {
-  return `<section class="stats wrap rv">
+  return `<section class="stats rv">
     <div class="stat-row">
       <div class="stat a"><div class="n">${(affectedAddresses || 0).toLocaleString('ru-RU')}</div><div class="l">адресов затронуто</div></div>
       <div class="stat b"><div class="n">${(electricityAffected || 0).toLocaleString('ru-RU')}</div><div class="l">домов без света</div></div>
@@ -34,7 +34,7 @@ function minimalStatsHtml(pairs) {
 
 /* Превью карты как в первом блоке лендинга — браузерная рамка + скриншот + CTA + пульсирующий hint. */
 function mapPreviewHtml({ href = '/map/pavlodar', hintText = 'Актуальные данные по адресам · обновляется каждый час' } = {}) {
-  return `<section class="screen-sec wrap rv" id="mapsec">
+  return `<section class="screen-sec rv" id="mapsec">
     <div class="browser">
       <div class="bar">
         <span class="dots"><i></i><i></i><i></i></span>
@@ -72,8 +72,8 @@ const TRUST_FEATURES = [
 
 function trustGridHtml(features = TRUST_FEATURES) {
   return sectionHeadHtml('Почему нам можно верить', 'Не слухи из чатов, а данные поставщиков') + `
-  <div class="feat-grid rv wrap">
-    ${features.map(([icon, title, desc]) => `<div class="feat">
+  <div class="feat-grid">
+    ${features.map(([icon, title, desc]) => `<div class="feat rv">
       <span class="fi" style="background:var(--accent-wash);color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${FEAT_ICONS[icon] || FEAT_ICONS.pin}</svg></span>
       <h3>${esc(title)}</h3>
       <p>${esc(desc)}</p>
@@ -84,7 +84,7 @@ function trustGridHtml(features = TRUST_FEATURES) {
 /* Анимированный блок "Сообщить о проблеме" — живой мокап с печатающимся текстом
    и чек-анимацией отправки, как в первом экране лендинга (#report-cta/.rc-band). */
 function reportCtaHtml({ href = '/map/?report=1' } = {}) {
-  return `<section class="wrap rv" id="report-cta">
+  return `<section class="rv" id="report-cta">
     <div class="rc-band">
       <div class="rc-text">
         <div class="eyebrow">Не нашли своё отключение?</div>
@@ -116,7 +116,7 @@ function reportCtaHtml({ href = '/map/?report=1' } = {}) {
 function stepsHtml({ addressSample = 'Естая, 38' } = {}) {
   return sectionHeadHtml('Как это работает', 'Три шага до ответа «есть или нет»',
     `Информация об отключениях уже существует — она просто разбросана по сайтам поставщиков и чатам. Мы собираем её каждые несколько часов и показываем по твоему дому.`) + `
-  <div class="step rv wrap">
+  <div class="step rv">
     <div class="txt">
       <span class="k">1</span>
       <h3>Введи адрес</h3>
@@ -136,7 +136,7 @@ function stepsHtml({ addressSample = 'Естая, 38' } = {}) {
     </div>
   </div>
 
-  <div class="step rev rv wrap">
+  <div class="step rev rv">
     <div class="txt">
       <span class="k">2</span>
       <h3>Увидь, что отключено</h3>
@@ -161,7 +161,7 @@ function stepsHtml({ addressSample = 'Естая, 38' } = {}) {
     </div>
   </div>
 
-  <div class="step rv wrap">
+  <div class="step rv">
     <div class="txt">
       <span class="k">3</span>
       <h3>Планируй день</h3>
@@ -193,9 +193,9 @@ const SERVICE_TILE_META = {
 };
 
 function serviceTilesHtml(citySlug, items) {
-  return `<div class="svc-grid rv wrap">${items.map(([slug, label]) => {
+  return `<div class="svc-grid">${items.map(([slug, label]) => {
     const meta = SERVICE_TILE_META[slug] || SERVICE_TILE_META['po-adresu'];
-    return `<a class="svc-tile" href="/${citySlug}/${slug}/" style="--svc-c:${meta.color}">
+    return `<a class="svc-tile rv" href="/${citySlug}/${slug}/" style="--svc-c:${meta.color}">
       <span class="svc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${meta.icon}</svg></span>
       <b>${esc(label)}<svg class="svc-arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></b>
       <span class="svc-desc">${esc(meta.desc)}</span>
@@ -205,7 +205,7 @@ function serviceTilesHtml(citySlug, items) {
 
 function faqAccordionHtml(list, idPrefix = 'faq') {
   if (!list || !list.length) return '';
-  return `<section class="sec wrap rv" id="${esc(idPrefix)}">
+  return `<section class="sec rv" id="${esc(idPrefix)}">
     <div class="eyebrow">Частые вопросы</div>
     <h2>Отвечаем на главное</h2>
     <div class="faq-col" style="margin-top:26px">
@@ -218,7 +218,7 @@ function faqAccordionHtml(list, idPrefix = 'faq') {
 }
 
 function ctaFinalHtml({ title = 'Проверьте свой адрес прямо сейчас', text = 'Вода, свет, отопление — весь статус по дому за 5 секунд.', href = '/map/pavlodar', btnText = 'Открыть карту' } = {}) {
-  return `<section class="wrap rv" style="margin-top:56px">
+  return `<section class="rv" style="margin-top:56px">
     <div class="cta-final">
       <div class="shine"></div>
       <div class="cta-in" style="position:relative;z-index:2;padding:48px 40px;text-align:center;color:#fff">
