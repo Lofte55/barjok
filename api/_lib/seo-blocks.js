@@ -244,7 +244,7 @@ function ctaFinalHtml({ title = 'Проверьте свой адрес прям
     { c: 'var(--cold)', x: '15%', y: '74%', dl: '1.7s' },
     { c: '#fff', x: '92%', y: '70%', dl: '.4s' },
   ];
-  return `<section class="rv" style="margin-top:56px">
+  return `<section class="rv" style="margin-top:76px">
     <div class="cta-final">
       <div class="shine"></div>
       ${pins.map((p) => `<span class="fpin" style="--c:${p.c};--x:${p.x};--y:${p.y};--dl:${p.dl}"></span>`).join('')}
