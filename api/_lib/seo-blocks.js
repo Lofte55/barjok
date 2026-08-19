@@ -211,28 +211,47 @@ function serviceTilesHtml(citySlug, items) {
   }).join('')}</div>`;
 }
 
-function faqAccordionHtml(list, idPrefix = 'faq') {
+/* Двухколоночный FAQ в духе awesomic.com: слева заголовок + карточка "остались
+   вопросы", справа — вопросы pill-строками (не белые карточки с рамкой, а
+   мягкий тонированный фон) с шевроном, который поворачивается при открытии. */
+function faqAccordionHtml(list, idPrefix = 'faq', { contactHref = '/map/?report=1' } = {}) {
   if (!list || !list.length) return '';
   return `<section class="sec rv" id="${esc(idPrefix)}">
-    <div class="eyebrow">Частые вопросы</div>
-    <h2>Отвечаем на главное</h2>
-    <div class="faq-col" style="margin-top:26px">
-      ${list.map(([q, a]) => `<details class="faq-item">
-        <summary>${esc(q)}</summary>
-        <div class="faq-a">${esc(a)}</div>
-      </details>`).join('')}
+    <div class="faq-layout">
+      <div class="faq-side">
+        <div class="eyebrow">Частые вопросы</div>
+        <h2>Отвечаем на главное</h2>
+        <div class="faq-contact rv">
+          <b>Остались вопросы?</b>
+          <p>Напишите нам — ответим и, если нужно, дополним этот список.</p>
+          <a class="btn primary" href="${esc(contactHref)}">Написать нам</a>
+        </div>
+      </div>
+      <div class="faq-list">
+        ${list.map(([q, a]) => `<details class="faq-pill rv">
+          <summary>${esc(q)}<svg class="faq-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="faq-a">${esc(a)}</div>
+        </details>`).join('')}
+      </div>
     </div>
   </section>`;
 }
 
 function ctaFinalHtml({ title = 'Проверьте свой адрес прямо сейчас', text = 'Вода, свет, отопление — весь статус по дому за 5 секунд.', href = '/map/pavlodar', btnText = 'Открыть карту' } = {}) {
+  const pins = [
+    { c: 'var(--hot)', x: '8%', y: '18%', dl: '0s' },
+    { c: 'var(--elec)', x: '88%', y: '22%', dl: '.9s' },
+    { c: 'var(--cold)', x: '15%', y: '74%', dl: '1.7s' },
+    { c: '#fff', x: '92%', y: '70%', dl: '.4s' },
+  ];
   return `<section class="rv" style="margin-top:56px">
     <div class="cta-final">
       <div class="shine"></div>
-      <div class="cta-in" style="position:relative;z-index:2;padding:48px 40px;text-align:center;color:#fff">
-        <h2 style="color:#fff;font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.02em">${esc(title)}</h2>
-        <p style="color:rgba(255,255,255,.85);margin-top:12px;font-size:16px">${esc(text)}</p>
-        <a class="btn lg cta-btn" href="${esc(href)}" style="margin-top:22px;background:#fff;color:var(--accent-ink);display:inline-flex">${esc(btnText)}</a>
+      ${pins.map((p) => `<span class="fpin" style="--c:${p.c};--x:${p.x};--y:${p.y};--dl:${p.dl}"></span>`).join('')}
+      <div class="cta-in" style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;color:#fff">
+        <h2 style="color:#fff;font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.02em;max-width:20ch">${esc(title)}</h2>
+        <p style="color:rgba(255,255,255,.85);margin-top:12px;font-size:16px;max-width:46ch">${esc(text)}</p>
+        <a class="btn lg cta-btn" href="${esc(href)}" style="background:#fff;color:var(--accent-ink)">${esc(btnText)}</a>
       </div>
     </div>
   </section>`;

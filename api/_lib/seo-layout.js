@@ -217,12 +217,23 @@ ${jsonLdBlocks}
   .res-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px 3px 7px;margin-bottom:2px}
   .res-pill .dot{width:6px;height:6px;border-radius:50%;flex:none}
   .updated{font-size:13px;color:var(--ink-3);margin-top:18px;font-weight:600}
-  .faq-col .faq-item{border-bottom:1px solid var(--line-2)}
-  .faq-col .faq-item summary{cursor:pointer;padding:16px 34px 16px 0;position:relative;font-weight:700;font-size:16px;line-height:1.4;color:var(--ink);list-style:none}
-  .faq-col .faq-item summary::-webkit-details-marker{display:none}
-  .faq-col .faq-item summary::after{content:"+";position:absolute;right:8px;top:15px;font-weight:400;font-size:26px;line-height:1;color:var(--accent);transition:transform .25s}
-  .faq-col .faq-item[open] summary::after{transform:rotate(45deg)}
-  .faq-col .faq-item .faq-a{padding:2px 34px 18px 0;color:var(--ink-2);line-height:1.62;font-size:15px}
+  /* FAQ — двухколоночная раскладка в духе awesomic.com: слева заголовок+контакт,
+     справа pill-строки вопросов на тонированном фоне (не белые карточки с рамкой) */
+  .faq-layout{display:grid;grid-template-columns:300px 1fr;gap:40px;align-items:start;margin-top:26px}
+  .faq-side{position:sticky;top:90px}
+  .faq-contact{margin-top:24px;background:var(--canvas);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .faq-contact b{display:block;font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .faq-contact p{font-size:13.5px;color:var(--ink-2);line-height:1.5;margin:8px 0 14px}
+  .faq-contact .btn{width:100%}
+  .faq-list{display:flex;flex-direction:column;gap:10px}
+  .faq-pill{background:var(--bg);border-radius:16px;transition:background .18s}
+  .faq-pill:hover{background:var(--line-2)}
+  .faq-pill summary{cursor:pointer;padding:18px 50px 18px 22px;position:relative;font-weight:700;font-size:15.5px;line-height:1.4;color:var(--ink);list-style:none}
+  .faq-pill summary::-webkit-details-marker{display:none}
+  .faq-chev{position:absolute;right:20px;top:18px;color:var(--ink-3);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+  .faq-pill[open] .faq-chev{transform:rotate(180deg);color:var(--accent)}
+  .faq-pill .faq-a{padding:0 50px 18px 22px;color:var(--ink-2);line-height:1.62;font-size:14.5px}
+  @media(max-width:820px){.faq-layout{grid-template-columns:1fr}.faq-side{position:static}}
 </style>
 </head>
 <body>
