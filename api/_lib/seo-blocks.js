@@ -64,12 +64,12 @@ function mapPreviewHtml({ href = '/map/pavlodar', hintText = 'Актуальны
 }
 
 /* Иконка для каждой карточки своя — иначе выглядит шаблонно (все булавки). */
-// AI-иллюстрации (сгенерированы через OpenAI Images API, /images/trust-*.jpg)
+// AI-иллюстрации с прозрачным фоном (OpenAI Images API, gpt-image-1, background:transparent)
 const FEAT_IMAGES = {
-  pin: '/images/trust-house-pin.jpg',
-  shield: '/images/trust-verified-data.jpg',
-  clock: '/images/trust-live-clock.jpg',
-  calendar: '/images/trust-future-calendar.jpg',
+  pin: '/images/trust-house-pin.png',
+  shield: '/images/trust-verified-data.png',
+  clock: '/images/trust-live-clock.png',
+  calendar: '/images/trust-future-calendar.png',
 };
 
 const TRUST_FEATURES = [
@@ -79,11 +79,13 @@ const TRUST_FEATURES = [
   ['calendar', 'Видно и будущее', 'Плановые работы показываем заранее — можно набрать воды или зарядить технику до отключения.'],
 ];
 
+// Без карточек-коробок (border-first anti-pattern при большом кол-ве плашек) —
+// иллюстрация без фона + тонкая верхняя линия-разделитель, текст рядом крупным блоком.
 function trustGridHtml(features = TRUST_FEATURES) {
   return sectionHeadHtml('Почему нам можно верить', 'Не слухи из чатов, а данные поставщиков') + `
   <div class="feat-grid">
     ${features.map(([icon, title, desc]) => `<div class="feat rv">
-      <span class="fi fi-img"><img src="${FEAT_IMAGES[icon] || FEAT_IMAGES.pin}" alt="" width="72" height="72" loading="lazy"></span>
+      <img class="fi-img" src="${FEAT_IMAGES[icon] || FEAT_IMAGES.pin}" alt="" width="96" height="96" loading="lazy">
       <h3>${esc(title)}</h3>
       <p>${esc(desc)}</p>
     </div>`).join('')}
