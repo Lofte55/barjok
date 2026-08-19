@@ -311,7 +311,7 @@ async function renderSitemap(req, res) {
   ];
   for (const city of activeCities()) {
     urls.push({ loc: `${ORIGIN}/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
-    urls.push({ loc: `${ORIGIN}/map/${city.slug}`, changefreq: 'hourly', priority: '0.9' });
+    urls.push({ loc: `${ORIGIN}/map/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
     for (const service of SERVICES) urls.push({ loc: `${ORIGIN}/${city.slug}/${service.slug}/`, changefreq: 'hourly', priority: '0.8' });
   }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

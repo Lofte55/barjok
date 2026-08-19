@@ -13,10 +13,12 @@ const esc = (s) => String(s == null ? '' : s).replace(/[<&>"]/g, (c) => ({ '<': 
 
 function navHtml(currentCitySlug) {
   const cities = allCities();
+  // Реальный <a href>, а не <button onclick=location.href=...> — чтобы ссылка на
+  // город была обычной crawlable-ссылкой для поисковых роботов (SEO discovery §4).
   const cityMenuItems = cities.map((c) => {
     const active = c.status === 'active';
     return active
-      ? `<button class="${c.slug === currentCitySlug ? 'on' : ''}" onclick="location.href='/${c.slug}/'"><span>${esc(c.names.ru.nominative)}</span></button>`
+      ? `<a href="/${c.slug}/" class="${c.slug === currentCitySlug ? 'on' : ''}"><span>${esc(c.names.ru.nominative)}</span></a>`
       : `<button disabled><span>${esc(c.names.ru.nominative)}</span><span class="soon">скоро</span></button>`;
   }).join('');
   const current = currentCitySlug ? cities.find((c) => c.slug === currentCitySlug) : null;
@@ -236,6 +238,13 @@ ${jsonLdBlocks}
   @media(prefers-reduced-motion:reduce){.feat .fi-img{animation:none!important}.feat{transition:none}}
   .sec{margin-top:76px}
   #report-cta{margin-top:76px}
+  /* city-menu теперь <a href> вместо <button onclick> (crawlable-ссылка) — те же
+     стили, что и .city-menu button в shared.css, но для нового тега */
+  .city-menu a{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;background:none;border:0;
+    font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);padding:10px 12px;border-radius:9px;cursor:pointer;
+    text-align:left;text-decoration:none}
+  .city-menu a:hover{background:var(--bg)}
+  .city-menu a.on{color:var(--accent-ink)}
   /* на широкой 1344px-вёрстке 18ch/46ch из лендинга (рассчитано на узкий hero)
      выглядят как узкая колонка текста с пустым синим полем справа —
      даём заголовку/описанию больше места под фактическую ширину grid-колонки */
@@ -325,6 +334,10 @@ ${opts.bodyHtml}
 </main>
 ${footerHtml()}
 ${a11yWidgetHtml()}
+<!-- Яндекс.Метрика + cookie-баннер — единый скрипт на все страницы (map/index.html
+     подключает его так же). Раньше этот блок отсутствовал в SSR-шаблоне SEO-страниц —
+     аналитика не считала визиты на / и /{city}/... вообще. -->
+<script defer src="/cookie-consent.js?v=2"></script>
 <script>
 (function(){
   var rvs=[].slice.call(document.querySelectorAll('.rv'));

@@ -20,6 +20,9 @@ if node parser/index.js "$CITY" >> "$LOG" 2>&1; then
   # санити-чек: файл валиден и непустой
   if node -e 'const d=require("./map/data.json");if(!d.houses||!d.houses.length)process.exit(1)' 2>/dev/null; then
     echo "[$TS] === ok ===" >> "$LOG"
+    # Данные реально обновились — уведомляем IndexNow (Bing/Яндекс и т.д.),
+    # чтобы не ждать планового краула. Не блокируем скрипт при сбое сети.
+    node parser/indexnow-ping.js >> "$LOG" 2>&1 || echo "[$TS] indexnow ping failed (не критично)" >> "$LOG"
   else
     echo "[$TS] === BAD DATA → откат ===" >> "$LOG"
     [ -f "$BACKUP" ] && cp "$BACKUP" map/data.json
