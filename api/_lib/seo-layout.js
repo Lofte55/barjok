@@ -226,10 +226,10 @@ ${jsonLdBlocks}
   /* "+N ещё" — замыкающая плитка сетки вместо тихого обрезания списка, ведёт
      на общий вид карты (без фильтра по конкретной улице) */
   .outage-more{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-    text-decoration:none;color:var(--ink);background:var(--bg);border-style:dashed;gap:2px}
+    text-decoration:none;color:var(--ink);background:var(--bg);border-style:dashed;gap:2px;padding:20px 16px}
   .outage-more:hover{background:var(--line-2);border-color:var(--ink-3)}
   .outage-more-n{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--accent-ink)}
-  .outage-more-label{font-size:12.5px;color:var(--ink-3);font-weight:600;max-width:16ch}
+  .outage-more-label{font-size:12.5px;color:var(--ink-3);font-weight:600;max-width:26ch;line-height:1.4}
   .outage-more-cta{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--accent-ink);margin-top:10px}
   .street-link{display:inline-flex;align-items:center;gap:5px;color:var(--ink);text-decoration:none}
   .street-link:hover{color:var(--accent-ink)}
