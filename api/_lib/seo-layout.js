@@ -206,8 +206,19 @@ ${jsonLdBlocks}
   .svc-tile .svc-arw{color:var(--ink-3);flex:none;transition:transform .16s,color .16s;margin-left:auto}
   .svc-tile:hover .svc-arw{transform:translateX(3px);color:var(--svc-c)}
   .more-chip{display:inline-block;font-size:11px;font-weight:700;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:1px 7px;margin-left:2px}
-  /* trust-блок "Почему нам можно верить" — у каждой иконки своя лёгкая
-     непрерывная анимация, чтобы блок не был статичной картинкой */
+  /* trust-блок "Почему нам можно верить" — 3D-наклон карточки за курсором +
+     прожектор-подсветка границы (без картинок — чистый CSS/JS), плюс у каждой
+     иконки своя непрерывная анимация */
+  .feat{position:relative;overflow:hidden;transition:box-shadow .25s,border-color .25s;will-change:transform}
+  .feat::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+    background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%), var(--accent) 0%, transparent 72%);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .35s}
+  .feat:hover::before{opacity:1}
+  .feat:hover{box-shadow:0 24px 40px -24px rgba(21,32,58,.25)}
+  .feat .fi{position:relative;z-index:1;background:linear-gradient(150deg,var(--accent-wash),color-mix(in srgb,var(--accent) 22%,white));
+    box-shadow:0 10px 22px -10px rgba(47,107,237,.45),inset 0 1px 0 rgba(255,255,255,.7);color:var(--accent-ink)}
+  .feat h3,.feat p{position:relative;z-index:1}
   .feat:nth-child(1) .fi{animation:fiBounce 2.6s ease-in-out infinite}
   .feat:nth-child(2) .fi{animation:fiPulse 2.6s ease-in-out infinite}
   .feat:nth-child(3) .fi{animation:fiPulse 2.6s ease-in-out infinite .35s}
@@ -215,7 +226,7 @@ ${jsonLdBlocks}
   @keyframes fiBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   @keyframes fiPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
   @keyframes fiWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
-  @media(prefers-reduced-motion:reduce){.feat .fi{animation:none!important}}
+  @media(prefers-reduced-motion:reduce){.feat .fi{animation:none!important}.feat{transition:none}}
   .sec{margin-top:76px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:20px 0}
   .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s}
@@ -338,6 +349,26 @@ ${footerHtml()}
           else { c.hidden = (c.dataset.res!==f); }
         });
       });
+    });
+  });
+})();
+(function(){
+  // ---------- 3D-наклон карточек trust-блока за курсором (Parallax Tilt Card) ----------
+  if(!window.matchMedia || !matchMedia('(hover:hover)').matches) return;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  document.querySelectorAll('.feat').forEach(function(card){
+    card.style.transition='transform .12s ease-out, box-shadow .25s, border-color .25s';
+    card.addEventListener('mousemove',function(e){
+      var r=card.getBoundingClientRect();
+      var px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
+      var rx=(py-.5)*-7, ry=(px-.5)*7;
+      card.style.transform='perspective(900px) rotateX('+rx+'deg) rotateY('+ry+'deg) translateY(-2px)';
+      card.style.setProperty('--mx',(px*100)+'%');
+      card.style.setProperty('--my',(py*100)+'%');
+    });
+    card.addEventListener('mouseleave',function(){
+      card.style.transition='transform .35s cubic-bezier(.16,1,.3,1), box-shadow .25s, border-color .25s';
+      card.style.transform='';
     });
   });
 })();
