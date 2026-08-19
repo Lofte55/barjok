@@ -244,10 +244,8 @@ ${jsonLdBlocks}
   .faq-contact b{display:block;font-size:16px;font-weight:800;letter-spacing:-.01em}
   .faq-contact p{font-size:13.5px;color:var(--ink-2);line-height:1.5;margin:8px 0 14px}
   .faq-contact .btn{width:100%}
-  .faq-list{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
-  .faq-pill{display:inline-block;max-width:100%;background:var(--line-2);border-radius:16px;transition:background .18s}
-  .faq-pill summary{white-space:normal}
-  .faq-pill[open]{max-width:min(100%,640px)}
+  .faq-list{display:flex;flex-direction:column;gap:10px}
+  .faq-pill{background:var(--line-2);border-radius:16px;transition:background .18s}
   .faq-pill:hover{background:var(--accent-wash)}
   .faq-pill[open]{background:var(--accent-wash)}
   .faq-pill summary{cursor:pointer;padding:18px 50px 18px 22px;position:relative;font-weight:700;font-size:15.5px;line-height:1.4;color:var(--ink);list-style:none}
