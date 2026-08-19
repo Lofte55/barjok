@@ -223,6 +223,14 @@ ${jsonLdBlocks}
   .res-tab:hover{border-color:var(--ink-3)}
   .res-tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .outage-card[hidden]{display:none}
+  /* "+N ещё" — замыкающая плитка сетки вместо тихого обрезания списка, ведёт
+     на общий вид карты (без фильтра по конкретной улице) */
+  .outage-more{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    text-decoration:none;color:var(--ink);background:var(--bg);border-style:dashed;gap:2px}
+  .outage-more:hover{background:var(--line-2);border-color:var(--ink-3)}
+  .outage-more-n{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--accent-ink)}
+  .outage-more-label{font-size:12.5px;color:var(--ink-3);font-weight:600;max-width:16ch}
+  .outage-more-cta{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--accent-ink);margin-top:10px}
   .street-link{display:inline-flex;align-items:center;gap:5px;color:var(--ink);text-decoration:none}
   .street-link:hover{color:var(--accent-ink)}
   .street-link svg{color:var(--ink-3);flex:none}
@@ -237,8 +245,9 @@ ${jsonLdBlocks}
   .faq-contact p{font-size:13.5px;color:var(--ink-2);line-height:1.5;margin:8px 0 14px}
   .faq-contact .btn{width:100%}
   .faq-list{display:flex;flex-direction:column;gap:10px}
-  .faq-pill{background:var(--bg);border-radius:16px;transition:background .18s}
-  .faq-pill:hover{background:var(--line-2)}
+  .faq-pill{background:var(--line-2);border-radius:16px;transition:background .18s}
+  .faq-pill:hover{background:var(--accent-wash)}
+  .faq-pill[open]{background:var(--accent-wash)}
   .faq-pill summary{cursor:pointer;padding:18px 50px 18px 22px;position:relative;font-weight:700;font-size:15.5px;line-height:1.4;color:var(--ink);list-style:none}
   .faq-pill summary::-webkit-details-marker{display:none}
   .faq-chev{position:absolute;right:20px;top:18px;color:var(--ink-3);transition:transform .25s cubic-bezier(.16,1,.3,1)}
@@ -299,8 +308,12 @@ ${footerHtml()}
       tab.classList.add('on');
       var f=tab.dataset.filter;
       cards.forEach(function(c){
-        var show=(f==='all')||(c.dataset.res===f);
-        c.hidden=!show;
+        // плитка "+N ещё" видна только в общем виде "Все" (в конкретном ресурсе
+        // и так показаны все карточки этого ресурса, "ещё" неприменимо)
+        if(c.dataset.res==='__more__'){ c.hidden=(f!=='all'); return; }
+        var isExtra=c.hasAttribute('data-extra');
+        if(f==='all'){ c.hidden = isExtra; }
+        else { c.hidden = (c.dataset.res!==f); }
       });
     });
   });

@@ -180,13 +180,21 @@ async function renderCity(req, res) {
       const tabsHtml = tabsToShow.length > 2 ? `<div class="res-tabs rv" role="tablist">
         ${tabsToShow.map(([key, label], i) => `<button class="res-tab${i === 0 ? ' on' : ''}" data-filter="${key}" type="button">${esc(label)}</button>`).join('')}
       </div>` : '';
-      const cardsHtml2 = groupList.map((g) => {
+      // В общем виде ("Все") показываем не больше 12 плиток: 11 реальных улиц +
+      // плитка "+N ещё", ведущая на карту БЕЗ фильтра по конкретному адресу (вся
+      // область целиком) — так пользователь видит масштаб, а не тонет в карточках.
+      // При переключении на конкретный ресурс (таб) ограничение снимается — там и
+      // так не больше 6 (см. top-N-на-ресурс выше).
+      const MAX_VISIBLE = 11;
+      const overflowCount = Math.max(0, groupList.length - MAX_VISIBLE);
+      const cardsHtml2 = groupList.map((g, idx) => {
         const color = RES_COLOR[g.resource] || 'var(--accent)';
         const houseCount = g.houses.length || 1;
         const preview = g.houses.slice(0, 6).join(', ');
         const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
         const mapHref = `/map/${citySlug}?q=${encodeURIComponent(g.street)}`;
-        return `<article class="outage-card rv" data-res="${esc(g.resource)}">
+        const extraAttrs = idx >= MAX_VISIBLE ? ' hidden data-extra="1"' : '';
+        return `<article class="outage-card rv" data-res="${esc(g.resource)}"${extraAttrs}>
           <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span>
           <h3 style="margin:8px 0 2px"><a href="${mapHref}" class="street-link">${esc(g.street)}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></a></h3>
           <span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
@@ -194,7 +202,12 @@ async function renderCity(req, res) {
           <dl style="margin-top:8px"><dt>Начало</dt><dd>с ${esc(new Date(g.minStart).toLocaleString('ru-RU', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }))}</dd></dl>
         </article>`;
       }).join('');
-      futureHtml = `<div class="sec rv"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.</p></div>${tabsHtml}<div class="cards" id="futureCards">${cardsHtml2}</div>`;
+      const moreTile = overflowCount > 0 ? `<a class="outage-card outage-more rv" data-res="__more__" href="/map/${citySlug}">
+        <span class="outage-more-n">+${overflowCount}</span>
+        <span class="outage-more-label">ещё ${overflowCount === 1 ? 'улица' : 'улиц'} с плановыми работами</span>
+        <span class="outage-more-cta">Смотреть всё на карте<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>` : '';
+      futureHtml = `<div class="sec rv"><div class="eyebrow">Заранее</div><h2>Предстоящие отключения</h2><p class="intro">Плановые работы, известные заранее — сгруппированы по улице. Нажмите на улицу, чтобы открыть её на карте.</p></div>${tabsHtml}<div class="cards" id="futureCards">${cardsHtml2}${moreTile}</div>`;
     }
   }
 
