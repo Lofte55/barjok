@@ -153,12 +153,15 @@ ${jsonLdBlocks}
 <link rel="stylesheet" href="/shared.css?v=1">
 <style>
   /* Доп. стили для SEO-контентных блоков (status/cards/faq) поверх дизайна лендинга */
-  .crumbs{font-size:12.5px;color:var(--ink-3);margin:18px 0 0}
+  .crumbs{font-size:12.5px;color:var(--ink-3);margin:18px 0 0;text-align:center}
   .crumbs .sep{margin:0 5px}
   .crumbs a{color:var(--ink-3)}
   .crumbs a:hover{color:var(--ink)}
-  .page-hero{padding:38px 0 8px}
-  .page-hero h1{font-size:clamp(28px,4.6vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1.08;margin-top:14px;max-width:22ch}
+  /* hero — центрированный, как на лендинге (pill-ann/hero-h1/hero-slogan уже определены в shared.css) */
+  .page-hero{padding:30px 0 8px;text-align:center}
+  .page-hero h1{font-size:clamp(32px,5.4vw,56px);font-weight:800;letter-spacing:-.035em;line-height:1.06;margin:22px auto 0;max-width:19ch;text-wrap:balance}
+  .page-hero .hero-slogan{margin:12px auto 0}
+  .page-hero .lead{font-size:clamp(15.5px,2vw,18px);color:var(--ink-2);max-width:56ch;margin:18px auto 0;line-height:1.55}
   /* status/search — тонкая рамка снизу вместо коробки, в духе awesomic (данные без "плашек") */
   .status-block{border-top:1px solid var(--line);padding:20px 0;margin:22px 0;line-height:1.6}
   .status-block b{color:var(--ink)}
@@ -198,10 +201,6 @@ ${jsonLdBlocks}
   .faq-col .faq-item summary::after{content:"+";position:absolute;right:8px;top:15px;font-weight:400;font-size:26px;line-height:1;color:var(--accent);transition:transform .25s}
   .faq-col .faq-item[open] summary::after{transform:rotate(45deg)}
   .faq-col .faq-item .faq-a{padding:2px 34px 18px 0;color:var(--ink-2);line-height:1.62;font-size:15px}
-  /* trust-карточки: тонкая верхняя линия вместо полной рамки-коробки (awesomic-style) */
-  .feat{background:transparent;border:0;border-top:2px solid var(--line);border-radius:0;padding:22px 0 0}
-  .feat:hover{transform:none;box-shadow:none}
-  .feat .fi{width:38px;height:38px;border-radius:11px}
 </style>
 </head>
 <body>

@@ -9,7 +9,7 @@ const { getHomeSeo, getCitySeo, getServiceSeo, BRAND, ORIGIN } = require('./_lib
 const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc } = require('./_lib/seo-layout');
 const { computeSnapshot } = require('./_lib/city-stats');
 const { outageCardsHtml, countMatching, statusBlockHtml } = require('./_lib/seo-cards');
-const { statRowHtml, minimalStatsHtml, mapPreviewHtml, trustGridHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
+const { statRowHtml, minimalStatsHtml, mapPreviewHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml } = require('./_lib/seo-blocks');
 
 const SERVICE_CARDS = [
   ['voda', 'Вода'], ['svet', 'Свет'], ['otoplenie', 'Отопление'],
@@ -57,12 +57,13 @@ async function renderHome(req, res) {
     [snap.hotWaterAffected.toLocaleString('ru-RU'), 'без горячей воды'],
   ]) : '';
   const bodyHtml = `
-    <p style="color:var(--ink-2);font-size:15px;max-width:60ch;margin:0 auto;text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
+    <p class="lead rv" style="text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
     ${miniStats}
     ${mapPreviewHtml({ href: '/map/pavlodar' })}
-    <div class="sec"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
+    <div class="sec wrap rv" style="padding-left:0;padding-right:0"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
     ${cityCardsHtml}
     ${trustGridHtml()}
+    ${reportCtaHtml({ href: '/map/pavlodar?report=1' })}
     ${faqAccordionHtml(FAQ_HOME)}
     ${ctaFinalHtml({ title: 'Проверьте свой адрес прямо сейчас', href: '/map/pavlodar' })}
   `;
@@ -169,6 +170,7 @@ async function renderCity(req, res) {
     <div class="section-title">Источники данных</div>
     <p>Павлодарэнерго, Павлодар-Водоканал, Павлодарские тепловые сети — обновление каждые 3 часа. Часть отключений подтверждается сообщениями жителей BARJOK.</p>
     ${trustGridHtml()}
+    ${reportCtaHtml({ href: `/map/${citySlug}?report=1` })}
     ${faqAccordionHtml(faq)}
     ${otherCitiesHtml}
     ${ctaFinalHtml({ title: `Проверьте свой адрес в ${esc(loc)}`, href: `/map/${citySlug}` })}
