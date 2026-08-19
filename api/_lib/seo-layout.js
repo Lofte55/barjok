@@ -230,6 +230,13 @@ ${jsonLdBlocks}
   @media(prefers-reduced-motion:reduce){.feat .fi-img{animation:none!important}.feat{transition:none}}
   .sec{margin-top:76px}
   #report-cta{margin-top:76px}
+  /* на широкой 1344px-вёрстке 18ch/46ch из лендинга (рассчитано на узкий hero)
+     выглядят как узкая колонка текста с пустым синим полем справа —
+     даём заголовку/описанию больше места под фактическую ширину grid-колонки */
+  .rc-band{grid-template-columns:1.5fr .5fr}
+  .rc-band h2{max-width:24ch;font-size:clamp(28px,3.4vw,40px)}
+  .rc-band p{max-width:52ch;font-size:17px}
+  @media(max-width:760px){.rc-band{grid-template-columns:1fr}}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:20px 0}
   .outage-card{border:1px solid var(--line);border-radius:14px;background:var(--canvas);padding:18px 20px;transition:border-color .16s,box-shadow .16s}
   /* карточка улицы — целиком ссылка на карту, не только название улицы */
