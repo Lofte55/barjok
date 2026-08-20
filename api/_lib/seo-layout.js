@@ -47,6 +47,7 @@ function navHtml(currentCitySlug) {
     <div class="mobile-menu" id="mobileMenu">
       <a href="/pavlodar/">Павлодар</a>
       <a href="/map/">Карта</a>
+      <a href="/#faq">Вопросы</a>
       <a class="btn primary" href="/map/pavlodar">Открыть карту</a>
     </div>
   </div>
@@ -362,6 +363,11 @@ ${jsonLdBlocks}
   .outage-card[hidden]{display:none}
   /* "+N ещё" — замыкающая плитка сетки вместо тихого обрезания списка, ведёт
      на общий вид карты (без фильтра по конкретной улице) */
+  /* мобильная плитка "+N ещё" (после 6-й карточки) скрыта по умолчанию —
+     переопределяется обратно display:flex внутри @media(max-width:760px) ниже,
+     важен порядок: эта строка должна идти РАНЬШЕ media-блока, иначе на мобильном
+     базовое правило (та же специфичность) победит override по source order */
+  .outage-more-mobile{display:none}
   .outage-more{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     text-decoration:none;color:var(--ink);background:var(--bg);border-style:dashed;gap:2px;padding:20px 16px;outline:none}
   .outage-more:hover{background:var(--line-2);border-color:var(--ink-3)}
@@ -437,15 +443,27 @@ ${jsonLdBlocks}
      карточки городов, related-links, FAQ, футер-CTA. Тот же приём, что у навигации
      и кнопок в shared.css, вынесен отдельным блоком, чтобы не трогать десктоп. */
   @media(max-width:760px){
-    .svc-tile b{font-size:calc(16px * var(--fs, 1))}
-    .svc-tile .svc-desc{font-size:calc(13px * var(--fs, 1))}
-    .city-card b{font-size:calc(17px * var(--fs, 1))}
-    .city-card-sub{font-size:calc(13px * var(--fs, 1))}
+    .svc-tile b{font-size:calc(17px * var(--fs, 1))}
+    .svc-tile .svc-desc{font-size:calc(14px * var(--fs, 1))}
+    .city-card b{font-size:calc(18px * var(--fs, 1))}
+    .city-card-sub{font-size:calc(14px * var(--fs, 1))}
     .related-links a{font-size:calc(13.5px * var(--fs, 1));padding:calc(9px * var(--fs, 1)) calc(16px * var(--fs, 1))}
     .faq-pill summary{font-size:calc(15.5px * var(--fs, 1))}
     .faq-pill .faq-a{font-size:calc(14.5px * var(--fs, 1))}
     .foot-cta-text b{font-size:calc(16px * var(--fs, 1))}
     .foot-cta-text span{font-size:calc(13.5px * var(--fs, 1))}
+    /* кнопка по ширине текста (пилюля), а не на всю ширину карточки — как в
+       .foot-cta "Связаться с нами" */
+    .faq-contact{text-align:center}
+    .faq-contact .btn{width:auto;display:inline-flex}
+
+    /* Текущие/Предстоящие отключения на мобильном — 6 карточек + "+N ещё"
+       (десктоп показывает до 11). Плитка десктопа скрыта, показывается своя,
+       вставленная сразу за 6-й карточкой (см. seo-cards.js). Действует только
+       во вкладке "Все" (.tab-all) — в конкретном ресурсе лимита нет вообще. */
+    .cards.tab-all .outage-card.mobile-hide{display:none}
+    .cards .outage-more:not(.outage-more-mobile){display:none}
+    .outage-more-mobile{display:flex}
   }
 </style>
 </head>
@@ -509,6 +527,10 @@ ${a11yWidgetHtml()}
         tabs.forEach(function(t){t.classList.remove('on');});
         tab.classList.add('on');
         var f=tab.dataset.filter;
+        // .mobile-hide (карточки 7–11, скрытые на мобильном CSS'ом до 6+"ещё")
+        // должны прятаться ТОЛЬКО во вкладке "Все" — в конкретном ресурсе лимита
+        // нет вообще, все карточки этого ресурса должны быть видны.
+        cardsEl.classList.toggle('tab-all', f==='all');
         cards.forEach(function(c){
           // плитка "+N ещё" видна только в общем виде "Все" (в конкретном ресурсе
           // и так показаны все карточки этого ресурса, "ещё" неприменимо)

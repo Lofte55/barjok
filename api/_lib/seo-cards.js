@@ -107,9 +107,21 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
   // В общем виде ("Все") — не больше 12 плиток: 11 реальных улиц + плитка
   // "+N ещё" на карту без фильтра по адресу. В конкретном ресурсе (таб)
   // ограничение снимается — там и так не больше 6 (top-N-на-ресурс выше).
+  // Десктоп показывает до 11 карточек + плитку "+N ещё" (grid, несколько колонок).
+  // Мобильный — только до 6, потом своя плитка "+N ещё" (одна колонка, иначе
+  // список из 11+ полноразмерных карточек требует слишком много скролла).
+  // Обе плитки рендерятся в SSR (SEO/crawlability), видимость переключается CSS
+  // по брейкпоинту 760px — см. .mobile-hide/.outage-more-mobile в seo-layout.js.
   const MAX_VISIBLE = 11;
+  const MAX_VISIBLE_MOBILE = 6;
   const overflowCount = Math.max(0, groupList.length - MAX_VISIBLE);
+  const overflowCountMobile = Math.max(0, groupList.length - MAX_VISIBLE_MOBILE);
   const dateLabel = statusValue === 'current' ? 'с' : 'с';
+  const mobileMoreTile = overflowCountMobile > 0 ? `<a class="outage-card outage-more outage-more-mobile rv" data-res="__more__" href="/map/${citySlug}">
+    <span class="outage-more-n">+${overflowCountMobile}</span>
+    <span class="outage-more-label">ещё ${overflowCountMobile === 1 ? 'улица' : 'улиц'} с отключениями</span>
+    <span class="outage-more-cta">Смотреть всё на карте<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  </a>` : '';
   const cardsHtml = groupList.map((g, idx) => {
     const color = RES_COLOR[g.resource] || 'var(--accent)';
     const houseCount = g.houses.length || 1;
@@ -117,13 +129,17 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
     const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
     const mapHref = `/map/${citySlug}?q=${encodeURIComponent(g.street)}`;
     const extraAttrs = idx >= MAX_VISIBLE ? ' hidden data-extra="1"' : '';
-    return `<a class="outage-card street-card rv" data-res="${esc(g.resource)}"${extraAttrs} href="${mapHref}">
+    const mobileHideClass = idx >= MAX_VISIBLE_MOBILE && idx < MAX_VISIBLE ? ' mobile-hide' : '';
+    const card = `<a class="outage-card street-card rv${mobileHideClass}" data-res="${esc(g.resource)}"${extraAttrs} href="${mapHref}">
       <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span>
       <h3 style="margin:8px 0 2px">${esc(g.street)}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></h3>
       <span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
       <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:8px">Дома: ${esc(preview)}${more}</div>
       <dl style="margin-top:8px"><dt>Начало</dt><dd>${dateLabel} ${esc(fmtDate(g.minStart))}</dd></dl>
     </a>`;
+    // Мобильная плитка "+N ещё" встаёт сразу за 6-й карточкой — на мобильном
+    // это последнее видимое, на десктопе она display:none и не мешает grid'у.
+    return idx === MAX_VISIBLE_MOBILE - 1 ? card + mobileMoreTile : card;
   }).join('');
   const moreTile = overflowCount > 0 ? `<a class="outage-card outage-more rv" data-res="__more__" href="/map/${citySlug}">
     <span class="outage-more-n">+${overflowCount}</span>
@@ -131,7 +147,7 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
     <span class="outage-more-cta">Смотреть всё на карте<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
   </a>` : '';
 
-  return `<div class="sec rv"><div class="eyebrow">${esc(eyebrow)}</div><h2>${esc(title)}</h2>${intro ? `<p class="intro">${esc(intro)}</p>` : ''}</div>${tabsHtml}<div class="cards" id="${esc(idPrefix)}Cards">${cardsHtml}${moreTile}</div>`;
+  return `<div class="sec rv"><div class="eyebrow">${esc(eyebrow)}</div><h2>${esc(title)}</h2>${intro ? `<p class="intro">${esc(intro)}</p>` : ''}</div>${tabsHtml}<div class="cards tab-all" id="${esc(idPrefix)}Cards">${cardsHtml}${moreTile}</div>`;
 }
 
 function countMatching(houses, filterFn) {

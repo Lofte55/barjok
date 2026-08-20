@@ -297,8 +297,11 @@
     .mobile-menu a{font-size:calc(16px * var(--fs, 1));font-weight:700;color:var(--ink);padding:13px 4px;text-align:center}
     .mobile-menu a.btn{margin-top:8px;padding:15px 20px;color:#fff}
 
-    /* Плашка «Реальные данные Павлодара» — в одну строку (не переносить) */
-    .pill-ann{font-size:calc(12px * var(--fs, 1));gap:7px;padding:6px 7px 6px 12px}
+    /* Плашка «Данные обновляются...» — на узких экранах в одну строку не помещается
+       (текст + бейдж "обновлено сегодня"), раньше просто обрезалась за край экрана
+       (body{overflow-x:hidden} прятал остаток без скролла — выглядело как "уехало
+       вбок"). Теперь переносится на 2 строки вместо обрезания. */
+    .pill-ann{font-size:calc(12px * var(--fs, 1));gap:7px;padding:8px 12px;flex-wrap:wrap;justify-content:center;max-width:100%}
     .pill-ann>span{white-space:nowrap}
     .pill-ann .go{font-size:calc(10.5px * var(--fs, 1));padding:3px 8px}
 
@@ -322,6 +325,20 @@
     .sec .eyebrow,.sec h2,.sec p.intro,.step .txt,.feat{text-align:center}
     .sec h2,.sec p.intro,.step .txt p{margin-left:auto;margin-right:auto}
     .feat .fi{margin-left:auto;margin-right:auto}
+    /* .feat{text-align:center} выше центрирует ТЕКСТ, но flex-column с
+       align-items:flex-start (из .feat-grid media query) держит саму иконку и
+       блок текста прижатыми влево — несовпадение давало "сломанный" вид
+       (иконка слева, текст в узкой левой колонке). Центрируем весь flex-item. */
+    .feat{align-items:center}
+    .feat .fi-img{margin:0 auto}
+    .feat-text{width:100%}
+
+    /* Заголовок крупнее, вспомогательный текст не мельче 14px — на десктопных
+       clamp() минимумы были рассчитаны консервативно, на мобильном экране
+       выглядели мелко */
+    .hero-h1{font-size:clamp(38px, 9vw, 68px)}
+    .foot-top p{font-size:14px}
+    .fcol a{font-size:14.5px}
   }
   @media(max-width:400px){
     .logo .wm{font-size:16px}
