@@ -23,7 +23,8 @@
     { "source": "/report/:token/", "destination": "/api/ads-report?token=:token" },
     { "source": "/sitemap.xml", "destination": "/api/pages?page=sitemap" },
     { "source": "/:city/", "destination": "/api/pages?page=city&city=:city" },
-    { "source": "/:city/:service/", "destination": "/api/pages?page=service&city=:city&service=:service" }
+    { "source": "/:city/:service/", "destination": "/api/pages?page=service&city=:city&service=:service" },
+    { "source": "/(.*)", "destination": "/api/pages?page=notfound" }
   ],
   "headers": [
     {

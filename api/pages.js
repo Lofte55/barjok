@@ -121,7 +121,7 @@ async function renderMapHub(req, res) {
 async function renderCity(req, res) {
   const citySlug = String((req.query || {}).city || '');
   const city = getCity(citySlug);
-  if (!city || city.status !== 'active') return res.status(404).send('Not found');
+  if (!city || city.status !== 'active') return renderNotFound(req, res);
 
   const seo = getCitySeo(citySlug);
   const snap = await computeSnapshot();
@@ -219,7 +219,7 @@ async function renderService(req, res) {
   const serviceSlug = String((req.query || {}).service || '');
   const city = getCity(citySlug);
   const service = getService(serviceSlug);
-  if (!city || !service || city.status !== 'active') return res.status(404).send('Not found');
+  if (!city || !service || city.status !== 'active') return renderNotFound(req, res);
 
   const seo = getServiceSeo(citySlug, serviceSlug);
   const snap = await computeSnapshot();
@@ -402,6 +402,67 @@ async function renderAbout(req, res) {
   res.status(200).send(html);
 }
 
+/*
+ * Catch-all 404 — Vercel НЕ подхватывает статический /404.html автоматически,
+ * когда в vercel.json уже есть rewrites (проверено на живом деплое: без этого
+ * обработчика на несуществующий путь отдавался голый текст "Not found" без
+ * стилей). Ловится через rewrite "/(.*)" ПОСЛЕДНИМ пунктом в vercel.json —
+ * то есть только для путей, которые не совпали ни с одним более ранним
+ * правилом и не являются существующим статическим файлом (Vercel резолвит
+ * реальные файлы раньше rewrites, поэтому barjok.svg/shared.css/map/data.json
+ * и т.п. этим catch-all не задевает).
+ */
+async function renderNotFound(req, res) {
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Страница не найдена — ${BRAND}</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f3f4f6;--canvas:#ffffff;--ink:#15171c;--ink-2:#565d6b;--ink-3:#8b919d;
+    --line:#e6e8ec;--accent:#2f6bed;--accent-ink:#1c4fc4;--sans:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);color:var(--ink);background:var(--bg);min-height:100dvh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
+    background-image:radial-gradient(rgba(21,32,58,.055) 1px, transparent 1px);background-size:26px 26px;background-position:-13px -13px}
+  a{color:inherit;text-decoration:none}
+  .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:40px}
+  .logo img{height:28px;width:auto;display:block}
+  .code{font-size:clamp(64px,14vw,120px);font-weight:800;letter-spacing:-.04em;line-height:1;color:var(--accent);
+    text-shadow:0 12px 30px rgba(47,107,237,.18)}
+  h1{font-size:clamp(22px,3.4vw,30px);font-weight:800;letter-spacing:-.02em;margin-top:14px;max-width:20ch}
+  p{color:var(--ink-2);font-size:15.5px;margin-top:12px;max-width:44ch;line-height:1.55}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:28px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:700;font-size:14px;
+    border-radius:999px;padding:12px 22px;border:1px solid var(--line);cursor:pointer;transition:.15s}
+  .btn.primary{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(47,107,237,.6)}
+  .btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost{background:var(--canvas);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--ink-3)}
+</style>
+</head>
+<body>
+  <a class="logo" href="/"><img src="/barjok.svg" alt="${BRAND}"></a>
+  <div class="code">404</div>
+  <h1>Такой страницы нет</h1>
+  <p>Возможно, адрес устарел или введён с опечаткой. Отключения по вашему дому всё ещё можно проверить на карте.</p>
+  <div class="actions">
+    <a class="btn primary" href="/map/pavlodar">Открыть карту</a>
+    <a class="btn ghost" href="/">На главную</a>
+  </div>
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.status(404).send(html);
+}
+
 async function renderSitemap(req, res) {
   const snap = await computeSnapshot();
   const now = snap.generatedAt || new Date().toISOString();
@@ -438,7 +499,8 @@ module.exports = async (req, res) => {
     if (page === 'service') return await renderService(req, res);
     if (page === 'about') return await renderAbout(req, res);
     if (page === 'sitemap') return await renderSitemap(req, res);
-    return res.status(404).send('Not found');
+    if (page === 'notfound') return await renderNotFound(req, res);
+    return await renderNotFound(req, res);
   } catch (e) {
     console.error('pages.js failed:', e.message);
     res.status(500).send('Internal error');
