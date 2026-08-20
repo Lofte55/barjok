@@ -293,7 +293,10 @@
   </div>
 </div>
 <style>
-  #a11y-widget{position:fixed;right:20px;bottom:20px;z-index:9999;font-family:var(--sans);text-align:left}
+  /* bottom:82px, а не 20px — на карте в этом же углу лежит круглая/пилюльная
+     кнопка "Сообщить о проблеме" (.report-fab), иначе виджет доступности
+     наезжает на неё */
+  #a11y-widget{position:fixed;right:20px;bottom:82px;z-index:9999;font-family:var(--sans);text-align:left}
   #a11yFab{width:52px;height:52px;border-radius:50%;background:var(--brand);color:#fff;border:0;cursor:pointer;
     display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(31,111,235,.55);transition:transform .18s}
   #a11yFab:hover{transform:scale(1.06)}
