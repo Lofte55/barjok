@@ -241,15 +241,21 @@
 
       <div class="rm-field" data-rm-catwrap>
         <label class="rm-lbl">Что случилось</label>
-        <select class="rm-select" id="rmCategory">
-          <option value="">Выберите проблему…</option>
-          <option value="hot_water">Нет горячей воды</option>
-          <option value="cold_water">Нет холодной воды</option>
-          <option value="electricity">Нет электричества</option>
-          <option value="water_light">Нет воды и света</option>
-          <option value="heating">Нет тепла</option>
-          <option value="gas">Нет газа</option>
-        </select>
+        <!-- Кастомный (не системный) выпадающий список — см. .csel в styles.css
+             и общий скрипт-инициализатор в конце файла. Любой другой <select>
+             на сайте, который нужно оформить так же, достаточно обернуть в
+             <div class="csel" data-csel> — инициализация автоматическая. -->
+        <div class="csel" data-csel>
+          <select class="rm-select csel-native" id="rmCategory">
+            <option value="">Выберите проблему…</option>
+            <option value="hot_water">Нет горячей воды</option>
+            <option value="cold_water">Нет холодной воды</option>
+            <option value="electricity">Нет электричества</option>
+            <option value="water_light">Нет воды и света</option>
+            <option value="heating">Нет тепла</option>
+            <option value="gas">Нет газа</option>
+          </select>
+        </div>
       </div>
 
       <div class="rm-field" data-rm-statewrap>
@@ -289,6 +295,70 @@
   <script defer src="/map/app.js?v=1788300000"></script>
 <!-- Яндекс.Метрика + информационный баннер о cookie — в /cookie-consent.js (единое место на все страницы) -->
 <script defer src="/cookie-consent.js?v=2"></script>
+
+<!-- Кастомный select (.csel, см. styles.css) — общесайтовый компонент вместо
+     системного <select>: оборачиваем select в <div class="csel" data-csel> —
+     остальное строится и обслуживается этим скриптом автоматически, ничего
+     руками дублировать не надо. Работает с любым числом селектов на странице. -->
+<script defer>
+document.addEventListener('DOMContentLoaded', function () {
+  function buildCsel(wrap) {
+    var sel = wrap.querySelector('select');
+    if (!sel || wrap.dataset.cselReady) return;
+    wrap.dataset.cselReady = '1';
+    sel.setAttribute('tabindex', '-1');
+    sel.setAttribute('aria-hidden', 'true');
+
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'csel-btn';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<span class="csel-val"></span>' +
+      '<svg class="csel-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+    var menu = document.createElement('div');
+    menu.className = 'csel-menu'; menu.setAttribute('role', 'listbox'); menu.hidden = true;
+
+    var valEl = btn.querySelector('.csel-val');
+    var opts = [];
+
+    function renderLabel() {
+      var opt = sel.options[sel.selectedIndex];
+      var text = opt ? opt.textContent : '';
+      valEl.textContent = text;
+      valEl.classList.toggle('placeholder', !!(opt && !opt.value));
+      opts.forEach(function (o) { o.el.classList.toggle('on', o.opt === opt); o.el.setAttribute('aria-selected', o.opt === opt ? 'true' : 'false'); });
+    }
+
+    [].slice.call(sel.options).forEach(function (opt) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'csel-opt'; b.setAttribute('role', 'option');
+      b.innerHTML = '<span>' + opt.textContent + '</span><svg class="csel-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg>';
+      if (opt.disabled) b.disabled = true;
+      b.addEventListener('click', function () {
+        sel.value = opt.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        renderLabel(); close();
+      });
+      menu.appendChild(b);
+      opts.push({ opt: opt, el: b });
+    });
+
+    function open() { wrap.classList.add('open'); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
+    function close() { wrap.classList.remove('open'); menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+    btn.addEventListener('click', function (e) { e.stopPropagation(); wrap.classList.contains('open') ? close() : open(); });
+    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
+    wrap.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); btn.focus(); } });
+    // select.value может меняться и не через клик по кастомному меню (напр. form.reset()) —
+    // держим подпись синхронной в любом случае.
+    sel.addEventListener('change', renderLabel);
+
+    wrap.appendChild(btn); wrap.appendChild(menu);
+    renderLabel();
+  }
+  document.querySelectorAll('[data-csel]').forEach(buildCsel);
+});
+</script>
 
 <!-- Виджет доступности — плавающая кнопка снизу справа, едет со скроллом (тот же
      паттерн, что на SEO-страницах, api/_lib/seo-layout.js:a11yWidgetHtml, но с

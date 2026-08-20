@@ -1135,7 +1135,7 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
     errBox.textContent = ''; errBox.classList.remove('show');
     submit.disabled = false; submit.textContent = 'Отправить';
     setKind('complaint'); setState('outage');
-    catSel.value = ''; msgEl.value = ''; hp.value = '';
+    catSel.value = ''; catSel.dispatchEvent(new Event('change')); msgEl.value = ''; hp.value = '';
     addrInput.value = prefill || '';
     suggestBox.classList.remove('show');
     modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
