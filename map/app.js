@@ -307,6 +307,7 @@ function houseColor(outs) {
   return { color: RESOURCES[outs[0].resource].color, emerg };
 }
 function pinIcon(outs, size = 30) {
+  size = Math.round(size * (window.BARJOK_FS || 1));   // автомасштаб на мобильных, см. <script> в index.html
   const { color, emerg } = houseColor(outs);
   // Сообщение жителя (весь дом — только citizen-наряды) рисуем ОТДЕЛЬНЫМ стилем:
   // белый пин с пунктирной рамкой цвета ресурса + уголковая метка «житель».
@@ -323,7 +324,7 @@ function pinIcon(outs, size = 30) {
     html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color};font-size:${size * 0.5}px;${ring}">${icon}${badge}</div>` });
 }
 function clusterIcon(count, emerg) {
-  const size = count > 80 ? 52 : count > 25 ? 44 : 36;
+  const size = Math.round((count > 80 ? 52 : count > 25 ? 44 : 36) * (window.BARJOK_FS || 1));
   const color = emerg ? '#c0392b' : '#1f6feb';
   return L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
     html: `<div class="cluster" style="width:${size}px;height:${size}px;background:${color};font-size:${count>99?12:14}px">${count}</div>` });

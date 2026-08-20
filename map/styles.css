@@ -303,16 +303,28 @@ body {
   .sheet .grip .bar { width: 42px; height: 5px; border-radius: 999px; background: #cfd6e0; transition: background .2s; }
   .sheet .grip:active .bar { background: #aeb7c4; }
   .sheet .shead { padding: 2px 16px 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line-2); cursor: grab; }
-  .sheet .shead .map-title { margin: 0; font-size: 15px; }
+  .sheet .shead .map-title { margin: 0; font-size: calc(15px * var(--fs, 1)); }
   .sheet .shead .count { color: var(--brand-ink); font-weight: 700; }
   .sheet .shead .fbtn {
     margin-left: auto; border: 1px solid var(--line); background: #fff; border-radius: 999px;
-    padding: 7px 13px; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer;
+    padding: calc(7px * var(--fs, 1)) calc(13px * var(--fs, 1)); font-size: calc(13px * var(--fs, 1)); font-weight: 600; color: var(--ink-2); cursor: pointer;
     display: flex; align-items: center; gap: 6px;
   }
   .sheet .filters { display: none; }
   .sheet.filters-open .filters { display: block; }
   .sheet .list { padding: 8px 10px; }
+  /* чипы ресурсов (Горячая/Холодная вода, Электричество...) и карточки списка —
+     тот же автомасштаб, что и у шапки выше */
+  .sheet .rchip { padding: calc(6px * var(--fs, 1)) calc(10px * var(--fs, 1)) calc(6px * var(--fs, 1)) calc(7px * var(--fs, 1));
+    font-size: calc(12.5px * var(--fs, 1)); }
+  .sheet .rchip .ic { width: calc(20px * var(--fs, 1)); height: calc(20px * var(--fs, 1)); }
+  .sheet .card { padding: calc(12px * var(--fs, 1)); }
+  .sheet .card .rname { font-size: calc(14px * var(--fs, 1)); }
+  .sheet .card .badge { font-size: calc(10.5px * var(--fs, 1)); padding: calc(3px * var(--fs, 1)) calc(8px * var(--fs, 1)); }
+  .sheet .card .addr { font-size: calc(13px * var(--fs, 1)); }
+  .sheet .card .meta { font-size: calc(12px * var(--fs, 1)); }
+  .sheet .card .when { font-size: calc(12.5px * var(--fs, 1)); }
+  .sheet .card .ricon { width: calc(30px * var(--fs, 1)); height: calc(30px * var(--fs, 1)); font-size: calc(15px * var(--fs, 1)); }
 
   .fab {
     display: grid; position: absolute; z-index: 16; right: 14px; bottom: calc(42vh + 14px);
@@ -482,25 +494,28 @@ body.ads-off [data-ad-slot] { display: none !important; }
      под ними поиск на всю ширину, крупнее (главное действие). */
   .topbar { flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 10px 8px;
     top: 10px; left: 12px; right: 12px; }
-  .topbar .mapbrand { order: 0; display: inline-flex; align-items: center; gap: 7px; height: 42px;
+  /* Автомасштаб (--fs, см. <script> в map/index.html): высота/шрифт растут вместе
+     с шириной экрана вместо того, чтобы оставаться "мелкими" на больших телефонах
+     при том же наборе фиксированных px, что и на iPhone SE. */
+  .topbar .mapbrand { order: 0; display: inline-flex; align-items: center; gap: 7px; height: calc(42px * var(--fs, 1));
     padding: 0 13px 0 10px; background: #fff; border: 1px solid var(--line); border-radius: 999px;
     box-shadow: var(--shadow-sm); text-decoration: none; color: var(--ink); }
-  .topbar .mapbrand .logo-img { height: 26px; width: auto; display: block; }
+  .topbar .mapbrand .logo-img { height: calc(26px * var(--fs, 1)); width: auto; display: block; }
   .topbar .tb-right { position: static; order: 1; margin-left: auto; width: auto;
     display: flex; align-items: center; gap: 8px; }
   .topbar .mapcity { flex: 0 1 auto; min-width: 0; }
-  .topbar .mapcity-btn { height: 42px; max-width: 100%; }
+  .topbar .mapcity-btn { height: calc(42px * var(--fs, 1)); max-width: 100%; font-size: calc(13.5px * var(--fs, 1)); }
   .topbar .mapcity-btn #mapCityName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 84px; }
-  .topbar .lang { position: static; flex: none; height: 42px; }
+  .topbar .lang { position: static; flex: none; height: calc(42px * var(--fs, 1)); }
   .topbar .search { order: 2; width: 100%; flex: 1 1 100%; max-width: none; min-width: 0; }
-  .topbar .search input { height: 52px; font-size: 16px; padding: 0 48px;
+  .topbar .search input { height: calc(52px * var(--fs, 1)); font-size: calc(16px * var(--fs, 1)); padding: 0 48px;
     box-shadow: 0 4px 16px rgba(20,30,50,.10); }
   .topbar .search .ico { left: 17px; }
   .topbar .search input::placeholder { color: var(--ink-3); opacity: 1; }
-  .lang button { padding: 0 13px; font-size: 13px; }
+  .lang button { padding: 0 13px; font-size: calc(13px * var(--fs, 1)); }
   .mini-search { display: none; }
   .shead .mark { width: 28px; height: 28px; text-decoration: none; display: grid; place-items: center; }
-  .shead .map-title { font-size: 14px; }
+  .shead .map-title { font-size: calc(14px * var(--fs, 1)); }
   .filterbar { border-bottom: 0; }
   .sheet .filters-extra { max-height: 0; }
   .sheet.filters-open .filters-extra { max-height: 220px; }

@@ -19,6 +19,34 @@
   <link rel="stylesheet" href="/map/vendor/maplibre-gl/maplibre-gl.css?v=1788300000" />
   <link rel="stylesheet" href="/map/styles.css?v=1788300000" />
 
+  <!-- Автомасштаб мобильной "обвязки" (шапка/шторка/чипы/карточки/пины) по ширине
+       окна — CSS-переменная --fs, растёт от 1 (375px, iPhone SE/13) до ~1.17 (440px,
+       Pro Max), выше 440 не растёт дальше. На десктопе (>900px, там своя раскладка
+       .panel) --fs всегда 1 — иначе ресайз окна браузера случайно масштабировал бы
+       десктопную карту. Применяется через calc() в styles.css и напрямую в app.js
+       (pinIcon/clusterIcon читают window.BARJOK_FS).
+       ВАЖНО: НЕ zoom и НЕ transform — те ломают попиксельные координаты кликов Leaflet
+       (см. комментарий про CSS zoom и виджет доступности ниже по файлу). --fs влияет
+       только на font-size/padding/height/размер маркеров через обычный CSS/JS, систему
+       координат карты не трогает. -->
+  <script>
+  (function(){
+    var MIN_W = 375, MAX_W = 440;
+    function apply(){
+      var fs = 1;
+      if (innerWidth <= 900) {
+        var w = Math.min(Math.max(innerWidth, MIN_W), MAX_W);
+        fs = w / MIN_W;
+      }
+      document.documentElement.style.setProperty('--fs', fs.toFixed(4));
+      window.BARJOK_FS = fs;   // читает app.js для размера маркеров на карте (pinIcon/clusterIcon)
+    }
+    apply();
+    addEventListener('resize', apply);
+    addEventListener('orientationchange', apply);
+  })();
+  </script>
+
   <!-- Schema.org: карта-приложение отключений для Павлодара + хлебные крошки -->
   <script type="application/ld+json">
   {
