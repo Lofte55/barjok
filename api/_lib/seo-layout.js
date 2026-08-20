@@ -576,6 +576,15 @@ function a11yWidgetHtml() {
       </div>
     </div>
     <div class="a11y-group">
+      <div class="a11y-label">Для дальтоников</div>
+      <div class="a11y-seg a11y-seg-wrap" data-group="colorblind" role="group">
+        <button data-val="default" class="on">Обычный</button>
+        <button data-val="deuteranopia">Дейтеранопия</button>
+        <button data-val="protanopia">Протанопия</button>
+        <button data-val="tritanopia">Тританопия</button>
+      </div>
+    </div>
+    <div class="a11y-group">
       <div class="a11y-label">Вспомогательные функции</div>
       <button class="a11y-toggle" data-toggle="readable-font"><span>Читаемый шрифт</span><span class="a11y-state">Выкл</span></button>
       <button class="a11y-toggle" data-toggle="highlight-links"><span>Выделить ссылки</span><span class="a11y-state">Выкл</span></button>
@@ -585,6 +594,22 @@ function a11yWidgetHtml() {
     <button id="a11yReset" type="button">Сбросить всё</button>
   </div>
 </div>
+<!-- Коррекция цвета для дальтоников (feColorMatrix daltonize) — сама SVG нигде не
+     рисуется (width/height:0), только объявляет фильтры, применяемые через
+     html.a11y-cb-*{filter:url(#...)} ниже -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="a11y-cb-protanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="0 2.02344 -2.52581 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+    </filter>
+    <filter id="a11y-cb-deuteranopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0.494207 0 1.24827 0 0  0 0 1 0 0  0 0 0 1 0"/>
+    </filter>
+    <filter id="a11y-cb-tritanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  -0.395913 0.801109 0 0 0  0 0 0 1 0"/>
+    </filter>
+  </defs>
+</svg>
 <style>
   #a11y-widget{position:fixed;right:20px;bottom:20px;z-index:9999;font-family:var(--sans);text-align:left}
   #a11yFab{width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:0;cursor:pointer;
@@ -602,6 +627,10 @@ function a11yWidgetHtml() {
   .a11y-seg button{flex:1;background:none;border:0;border-radius:7px;padding:8px 4px;font-family:inherit;font-weight:700;
     color:var(--ink-2);cursor:pointer}
   .a11y-seg button.on{background:var(--canvas);color:var(--accent-ink);box-shadow:var(--shadow-sm)}
+  /* 4 пункта (Обычный/Дейтеранопия/Протанопия/Тританопия) не помещаются в один ряд
+     при 300px-панели — сетка 2×2 вместо одной строки */
+  .a11y-seg-wrap{flex-wrap:wrap}
+  .a11y-seg-wrap button{flex:1 1 44%;font-size:11.5px;padding:8px 2px}
   .a11y-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);
     border:0;border-radius:10px;padding:11px 14px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);
     cursor:pointer;margin-top:8px}
@@ -616,6 +645,12 @@ function a11yWidgetHtml() {
   html.a11y-contrast-high{--ink:#000;--ink-2:#111;--ink-3:#333;--bg:#fff;--canvas:#fff;--line:#000;--line-2:#000;
     --accent:#0033cc;--accent-ink:#002499;--accent-wash:#dbe6ff}
   html.a11y-contrast-bw{filter:grayscale(1)}
+  /* коррекция для дальтоников использует тот же CSS-свойство filter, что и Ч/Б —
+     одновременно оба режима не сочетаются (последний применённый класс победит),
+     это осознанное упрощение, а не баг */
+  html.a11y-cb-protanopia{filter:url(#a11y-cb-protanopia)}
+  html.a11y-cb-deuteranopia{filter:url(#a11y-cb-deuteranopia)}
+  html.a11y-cb-tritanopia{filter:url(#a11y-cb-tritanopia)}
   html.a11y-readable-font body, html.a11y-readable-font input, html.a11y-readable-font button{font-family:Verdana,Arial,sans-serif!important}
   html.a11y-highlight-links a{text-decoration:underline!important;text-decoration-thickness:2px!important;text-underline-offset:2px}
   html.a11y-big-cursor, html.a11y-big-cursor *{cursor:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22 viewBox=%220 0 24 24%22><path d=%22M4 2l14 8-6 1.5L14 20l-3-1.5L8 12H4z%22 fill=%22black%22 stroke=%22white%22 stroke-width=%221%22/></svg>') 4 4, auto!important}
@@ -628,17 +663,21 @@ function a11yWidgetHtml() {
   var STORE_KEY='barjok_a11y';
   function load(){ try{return JSON.parse(localStorage.getItem(STORE_KEY))||{};}catch(e){return {};} }
   function save(s){ try{localStorage.setItem(STORE_KEY, JSON.stringify(s));}catch(e){} }
-  var state=Object.assign({text:1, contrast:'default', toggles:{}}, load());
+  var state=Object.assign({text:1, contrast:'default', colorblind:'default', toggles:{}}, load());
 
   function apply(){
     document.body.style.zoom = state.text===1?'': (100+(state.text-1)*12)+'%';
     root.classList.toggle('a11y-contrast-high', state.contrast==='high');
     root.classList.toggle('a11y-contrast-bw', state.contrast==='bw');
+    root.classList.toggle('a11y-cb-protanopia', state.colorblind==='protanopia');
+    root.classList.toggle('a11y-cb-deuteranopia', state.colorblind==='deuteranopia');
+    root.classList.toggle('a11y-cb-tritanopia', state.colorblind==='tritanopia');
     ['readable-font','highlight-links','big-cursor','reduce-motion'].forEach(function(k){
       root.classList.toggle('a11y-'+k, !!state.toggles[k]);
     });
     document.querySelectorAll('.a11y-seg[data-group="text"] button').forEach(function(b){b.classList.toggle('on', +b.dataset.val===state.text);});
     document.querySelectorAll('.a11y-seg[data-group="contrast"] button').forEach(function(b){b.classList.toggle('on', b.dataset.val===state.contrast);});
+    document.querySelectorAll('.a11y-seg[data-group="colorblind"] button').forEach(function(b){b.classList.toggle('on', b.dataset.val===state.colorblind);});
     document.querySelectorAll('.a11y-toggle').forEach(function(b){
       var on=!!state.toggles[b.dataset.toggle];
       b.classList.toggle('on', on);
@@ -661,6 +700,9 @@ function a11yWidgetHtml() {
   document.querySelectorAll('.a11y-seg[data-group="contrast"] button').forEach(function(b){
     b.addEventListener('click', function(){ state.contrast=b.dataset.val; save(state); apply(); });
   });
+  document.querySelectorAll('.a11y-seg[data-group="colorblind"] button').forEach(function(b){
+    b.addEventListener('click', function(){ state.colorblind=b.dataset.val; save(state); apply(); });
+  });
   document.querySelectorAll('.a11y-toggle').forEach(function(b){
     b.addEventListener('click', function(){
       var k=b.dataset.toggle;
@@ -669,7 +711,7 @@ function a11yWidgetHtml() {
     });
   });
   document.getElementById('a11yReset').addEventListener('click', function(){
-    state={text:1, contrast:'default', toggles:{}};
+    state={text:1, contrast:'default', colorblind:'default', toggles:{}};
     save(state); apply();
   });
 })();

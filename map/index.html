@@ -283,6 +283,15 @@
       </div>
     </div>
     <div class="a11y-group">
+      <div class="a11y-label">Для дальтоников</div>
+      <div class="a11y-seg a11y-seg-wrap" data-group="colorblind" role="group">
+        <button data-val="default" class="on">Обычный</button>
+        <button data-val="deuteranopia">Дейтеранопия</button>
+        <button data-val="protanopia">Протанопия</button>
+        <button data-val="tritanopia">Тританопия</button>
+      </div>
+    </div>
+    <div class="a11y-group">
       <div class="a11y-label">Вспомогательные функции</div>
       <button class="a11y-toggle" data-toggle="readable-font"><span>Читаемый шрифт</span><span class="a11y-state">Выкл</span></button>
       <button class="a11y-toggle" data-toggle="highlight-links"><span>Выделить ссылки</span><span class="a11y-state">Выкл</span></button>
@@ -292,6 +301,19 @@
     <button id="a11yReset" type="button">Сбросить всё</button>
   </div>
 </div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="a11y-cb-protanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="0 2.02344 -2.52581 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+    </filter>
+    <filter id="a11y-cb-deuteranopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0.494207 0 1.24827 0 0  0 0 1 0 0  0 0 0 1 0"/>
+    </filter>
+    <filter id="a11y-cb-tritanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  -0.395913 0.801109 0 0 0  0 0 0 1 0"/>
+    </filter>
+  </defs>
+</svg>
 <style>
   /* bottom:82px, а не 20px — на карте в этом же углу лежит круглая/пилюльная
      кнопка "Сообщить о проблеме" (.report-fab), иначе виджет доступности
@@ -312,6 +334,8 @@
   .a11y-seg button{flex:1;background:none;border:0;border-radius:7px;padding:8px 4px;font-family:inherit;font-weight:700;
     color:var(--ink-2);cursor:pointer}
   .a11y-seg button.on{background:var(--panel);color:var(--brand-ink);box-shadow:var(--shadow-sm)}
+  .a11y-seg-wrap{flex-wrap:wrap}
+  .a11y-seg-wrap button{flex:1 1 44%;font-size:11.5px;padding:8px 2px}
   .a11y-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);
     border:0;border-radius:10px;padding:11px 14px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);
     cursor:pointer;margin-top:8px}
@@ -325,6 +349,9 @@
   html.a11y-contrast-high{--ink:#000;--ink-2:#111;--ink-3:#333;--bg:#fff;--panel:#fff;--line:#000;--line-2:#000;
     --brand:#0033cc;--brand-ink:#002499}
   html.a11y-contrast-bw{filter:grayscale(1)}
+  html.a11y-cb-protanopia{filter:url(#a11y-cb-protanopia)}
+  html.a11y-cb-deuteranopia{filter:url(#a11y-cb-deuteranopia)}
+  html.a11y-cb-tritanopia{filter:url(#a11y-cb-tritanopia)}
   html.a11y-readable-font body, html.a11y-readable-font input, html.a11y-readable-font button{font-family:Verdana,Arial,sans-serif!important}
   html.a11y-highlight-links a{text-decoration:underline!important;text-decoration-thickness:2px!important;text-underline-offset:2px}
   html.a11y-big-cursor, html.a11y-big-cursor *{cursor:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22 viewBox=%220 0 24 24%22><path d=%22M4 2l14 8-6 1.5L14 20l-3-1.5L8 12H4z%22 fill=%22black%22 stroke=%22white%22 stroke-width=%221%22/></svg>') 4 4, auto!important}
@@ -340,15 +367,19 @@
   // Масштаб текста (zoom) намеренно не включён на карте — Leaflet/MapLibre
   // считают координаты клика/тайлов в реальных пикселях, CSS zoom на теле
   // страницы сбивает это соответствие и ломает точность попадания по карте.
-  var state=Object.assign({contrast:'default', toggles:{}}, load());
+  var state=Object.assign({contrast:'default', colorblind:'default', toggles:{}}, load());
 
   function apply(){
     root.classList.toggle('a11y-contrast-high', state.contrast==='high');
     root.classList.toggle('a11y-contrast-bw', state.contrast==='bw');
+    root.classList.toggle('a11y-cb-protanopia', state.colorblind==='protanopia');
+    root.classList.toggle('a11y-cb-deuteranopia', state.colorblind==='deuteranopia');
+    root.classList.toggle('a11y-cb-tritanopia', state.colorblind==='tritanopia');
     ['readable-font','highlight-links','big-cursor','reduce-motion'].forEach(function(k){
       root.classList.toggle('a11y-'+k, !!state.toggles[k]);
     });
     document.querySelectorAll('.a11y-seg[data-group="contrast"] button').forEach(function(b){b.classList.toggle('on', b.dataset.val===state.contrast);});
+    document.querySelectorAll('.a11y-seg[data-group="colorblind"] button').forEach(function(b){b.classList.toggle('on', b.dataset.val===state.colorblind);});
     document.querySelectorAll('.a11y-toggle').forEach(function(b){
       var on=!!state.toggles[b.dataset.toggle];
       b.classList.toggle('on', on);
@@ -368,6 +399,9 @@
   document.querySelectorAll('.a11y-seg[data-group="contrast"] button').forEach(function(b){
     b.addEventListener('click', function(){ state.contrast=b.dataset.val; save(state); apply(); });
   });
+  document.querySelectorAll('.a11y-seg[data-group="colorblind"] button').forEach(function(b){
+    b.addEventListener('click', function(){ state.colorblind=b.dataset.val; save(state); apply(); });
+  });
   document.querySelectorAll('.a11y-toggle').forEach(function(b){
     b.addEventListener('click', function(){
       var k=b.dataset.toggle;
@@ -376,7 +410,7 @@
     });
   });
   document.getElementById('a11yReset').addEventListener('click', function(){
-    state={contrast:'default', toggles:{}};
+    state={contrast:'default', colorblind:'default', toggles:{}};
     save(state); apply();
   });
 })();
