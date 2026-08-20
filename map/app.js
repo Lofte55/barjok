@@ -54,7 +54,7 @@ const I18N = {
     adText: 'Жарнама беруші үшін орын', adCta: 'Жарнама орналастыру',
   },
 };
-let LANG = localStorage.getItem('barjoq_lang') || 'ru';
+let LANG = 'ru'; try { LANG = localStorage.getItem('barjoq_lang') || 'ru'; } catch (e) {}
 const t = () => I18N[LANG];
 function systemsWord(n) {
   if (LANG === 'kk') return 'жүйе';
@@ -986,7 +986,7 @@ function applyLang() {
   buildFilters(); applyFilters();
 }
 document.querySelectorAll('[data-lang-btn]').forEach((b) => b.onclick = () => {
-  LANG = b.dataset.langBtn; localStorage.setItem('barjoq_lang', LANG);
+  LANG = b.dataset.langBtn; try { localStorage.setItem('barjoq_lang', LANG); } catch (e) {}
   geoCache.clear();          // подписи геокодера тоже зависят от языка
   setTiles(LANG);            // подложка (при наличии TILE_KEY переключит язык подписей)
   applyLang();

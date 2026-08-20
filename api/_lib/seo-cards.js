@@ -1,4 +1,5 @@
 const { esc } = require('./seo-layout');
+const { dk } = require('./i18n-kk');
 
 const RES_LABEL = { cold_water: 'холодной воды', hot_water: 'горячей воды', electricity: 'света', heating: 'отопления', gas: 'газа' };
 const RES_LABEL_NOM = { cold_water: 'Холодная вода', hot_water: 'Горячая вода', electricity: 'Электричество', heating: 'Отопление', gas: 'Газ' };
@@ -39,13 +40,13 @@ function outageCardsHtml(houses, filterFn, limit = 24) {
     const reason = truncate(o.reason || (o.type === 'emergency' ? 'Аварийные работы' : 'Плановые работы'), 70);
     const source = o.citizen ? 'От жителей BARJOK' : truncate(o.provider || 'Официальный источник', 40);
     return `<article class="outage-card rv">
-    <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[o.resource] || o.resource)}</span>
+    <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span><span${dk(RES_LABEL_NOM[o.resource])}>${esc(RES_LABEL_NOM[o.resource] || o.resource)}</span></span>
     <h3 style="margin:6px 0 8px">${esc(h.address)}</h3>
     <dl>
-      <dt>Начало</dt><dd>${esc(fmtDateShort(o.start))}</dd>
-      <dt>До</dt><dd>${esc(fmtDateShort(o.end))}</dd>
-      <dt>Причина</dt><dd title="${esc(o.reason || '')}">${esc(reason)}</dd>
-      <dt>Источник</dt><dd>${esc(source)}</dd>
+      <dt data-kk="Басталуы">Начало</dt><dd>${esc(fmtDateShort(o.start))}</dd>
+      <dt data-kk="Дейін">До</dt><dd>${esc(fmtDateShort(o.end))}</dd>
+      <dt data-kk="Себебі">Причина</dt><dd title="${esc(o.reason || '')}"${dk(reason)}>${esc(reason)}</dd>
+      <dt data-kk="Дереккөз">Источник</dt><dd${dk(source)}>${esc(source)}</dd>
     </dl>
   </article>`;
   }).join('') + '</div>';
@@ -101,7 +102,7 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
   const presentResources = new Set(groupList.map((g) => g.resource));
   const tabsToShow = RES_TABS.filter(([key]) => key === 'all' || presentResources.has(key));
   const tabsHtml = tabsToShow.length > 2 ? `<div class="res-tabs rv" role="tablist">
-    ${tabsToShow.map(([key, label], i) => `<button class="res-tab${i === 0 ? ' on' : ''}" data-filter="${key}" type="button">${esc(label)}</button>`).join('')}
+    ${tabsToShow.map(([key, label], i) => `<button class="res-tab${i === 0 ? ' on' : ''}" data-filter="${key}" type="button"${dk(label)}>${esc(label)}</button>`).join('')}
   </div>` : '';
 
   // В общем виде ("Все") — не больше 12 плиток: 11 реальных улиц + плитка
@@ -117,10 +118,11 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
   const overflowCount = Math.max(0, groupList.length - MAX_VISIBLE);
   const overflowCountMobile = Math.max(0, groupList.length - MAX_VISIBLE_MOBILE);
   const dateLabel = statusValue === 'current' ? 'с' : 'с';
+  const moreLabelKk = (n) => `тағы ${n} ${n === 1 ? 'көше' : 'көше'} ажыратуымен`;
   const mobileMoreTile = overflowCountMobile > 0 ? `<a class="outage-card outage-more outage-more-mobile rv" data-res="__more__" href="/map/${citySlug}">
     <span class="outage-more-n">+${overflowCountMobile}</span>
-    <span class="outage-more-label">ещё ${overflowCountMobile === 1 ? 'улица' : 'улиц'} с отключениями</span>
-    <span class="outage-more-cta">Смотреть всё на карте<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    <span class="outage-more-label" data-kk="${esc(moreLabelKk(overflowCountMobile))}">ещё ${overflowCountMobile === 1 ? 'улица' : 'улиц'} с отключениями</span>
+    <span class="outage-more-cta"><span data-kk="Картадан барлығын көру">Смотреть всё на карте</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
   </a>` : '';
   const cardsHtml = groupList.map((g, idx) => {
     const color = RES_COLOR[g.resource] || 'var(--accent)';
@@ -131,11 +133,11 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
     const extraAttrs = idx >= MAX_VISIBLE ? ' hidden data-extra="1"' : '';
     const mobileHideClass = idx >= MAX_VISIBLE_MOBILE && idx < MAX_VISIBLE ? ' mobile-hide' : '';
     const card = `<a class="outage-card street-card rv${mobileHideClass}" data-res="${esc(g.resource)}"${extraAttrs} href="${mapHref}">
-      <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span>
+      <span class="res-pill" style="background:color-mix(in srgb, ${color} 14%, white);color:${color}"><span class="dot" style="background:${color}"></span><span${dk(RES_LABEL_NOM[g.resource])}>${esc(RES_LABEL_NOM[g.resource] || 'Ресурс')}</span></span>
       <h3 style="margin:8px 0 2px">${esc(g.street)}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></h3>
-      <span style="font-size:12.5px;color:var(--ink-3);font-weight:600">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
-      <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:8px">Дома: ${esc(preview)}${more}</div>
-      <dl style="margin-top:8px"><dt>Начало</dt><dd>${dateLabel} ${esc(fmtDate(g.minStart))}</dd></dl>
+      <span style="font-size:12.5px;color:var(--ink-3);font-weight:600" data-kk="${esc(houseCount + ' мекенжай')}">${houseCount} ${houseCount === 1 ? 'адрес' : 'адресов'}</span>
+      <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:8px"><span data-kk="Үйлер:">Дома:</span> ${esc(preview)}${more}</div>
+      <dl style="margin-top:8px"><dt data-kk="Басталуы">Начало</dt><dd>${dateLabel} ${esc(fmtDate(g.minStart))}</dd></dl>
     </a>`;
     // Мобильная плитка "+N ещё" встаёт сразу за 6-й карточкой — на мобильном
     // это последнее видимое, на десктопе она display:none и не мешает grid'у.
@@ -143,11 +145,11 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
   }).join('');
   const moreTile = overflowCount > 0 ? `<a class="outage-card outage-more rv" data-res="__more__" href="/map/${citySlug}">
     <span class="outage-more-n">+${overflowCount}</span>
-    <span class="outage-more-label">ещё ${overflowCount === 1 ? 'улица' : 'улиц'} с отключениями</span>
-    <span class="outage-more-cta">Смотреть всё на карте<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    <span class="outage-more-label" data-kk="${esc(moreLabelKk(overflowCount))}">ещё ${overflowCount === 1 ? 'улица' : 'улиц'} с отключениями</span>
+    <span class="outage-more-cta"><span data-kk="Картадан барлығын көру">Смотреть всё на карте</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
   </a>` : '';
 
-  return `<div class="sec rv"><div class="eyebrow">${esc(eyebrow)}</div><h2>${esc(title)}</h2>${intro ? `<p class="intro">${esc(intro)}</p>` : ''}</div>${tabsHtml}<div class="cards tab-all" id="${esc(idPrefix)}Cards">${cardsHtml}${moreTile}</div>`;
+  return `<div class="sec rv"><div class="eyebrow"${dk(eyebrow)}>${esc(eyebrow)}</div><h2${dk(title)}>${esc(title)}</h2>${intro ? `<p class="intro"${dk(intro)}>${esc(intro)}</p>` : ''}</div>${tabsHtml}<div class="cards tab-all" id="${esc(idPrefix)}Cards">${cardsHtml}${moreTile}</div>`;
 }
 
 function countMatching(houses, filterFn) {

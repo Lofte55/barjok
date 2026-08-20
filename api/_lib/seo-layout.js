@@ -8,6 +8,7 @@
 const BRAND = 'BARJOK';
 const ORIGIN = 'https://barjok.kz';
 const { activeCities, allCities } = require('./seo-cities');
+const { dk } = require('./i18n-kk');
 
 const esc = (s) => String(s == null ? '' : s).replace(/[<&>"]/g, (c) => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -17,12 +18,14 @@ function navHtml(currentCitySlug) {
   // город была обычной crawlable-ссылкой для поисковых роботов (SEO discovery §4).
   const cityMenuItems = cities.map((c) => {
     const active = c.status === 'active';
+    const kkName = c.names.kk && c.names.kk.nominative;
     return active
-      ? `<a href="/${c.slug}/" class="${c.slug === currentCitySlug ? 'on' : ''}"><span>${esc(c.names.ru.nominative)}</span></a>`
-      : `<button disabled><span>${esc(c.names.ru.nominative)}</span><span class="soon">скоро</span></button>`;
+      ? `<a href="/${c.slug}/" class="${c.slug === currentCitySlug ? 'on' : ''}"><span${kkName ? ` data-kk="${esc(kkName)}"` : ''}>${esc(c.names.ru.nominative)}</span></a>`
+      : `<button disabled><span${kkName ? ` data-kk="${esc(kkName)}"` : ''}>${esc(c.names.ru.nominative)}</span><span class="soon" data-kk="жақында">скоро</span></button>`;
   }).join('');
   const current = currentCitySlug ? cities.find((c) => c.slug === currentCitySlug) : null;
   const cityLabel = current ? current.names.ru.nominative : 'Города';
+  const cityLabelKk = current ? (current.names.kk && current.names.kk.nominative) || current.names.ru.nominative : 'Қалалар';
 
   return `<header class="nav" id="nav">
   <div class="wrap nav-in">
@@ -30,26 +33,26 @@ function navHtml(currentCitySlug) {
     <div class="nav-links">
       <a href="/pavlodar/">Павлодар</a>
       <a href="/map/">Карта</a>
-      <a href="/#faq">Вопросы</a>
+      <a href="/#faq" data-kk="Сұрақтар">Вопросы</a>
     </div>
     <div class="nav-right">
       <div class="city" id="citySel">
         <button class="city-btn" id="cityBtn" type="button" aria-haspopup="true">
           <svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
-          <span>${esc(cityLabel)}</span>
+          <span data-kk="${esc(cityLabelKk)}">${esc(cityLabel)}</span>
           <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <div class="city-menu">${cityMenuItems}</div>
       </div>
-      <div class="lang"><button class="on" type="button">RU</button><button type="button" title="Казахская версия скоро появится">KZ</button></div>
-      <a class="btn primary nav-cta" href="/map/pavlodar">Открыть карту</a>
+      <div class="lang"><button class="on" type="button" data-lang-btn="ru">RU</button><button type="button" data-lang-btn="kk">KZ</button></div>
+      <a class="btn primary nav-cta" href="/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
       <button class="burger" id="burger" aria-expanded="false" aria-label="Меню"><span></span><span></span><span></span></button>
     </div>
     <div class="mobile-menu" id="mobileMenu">
       <a href="/pavlodar/">Павлодар</a>
       <a href="/map/">Карта</a>
-      <a href="/#faq">Вопросы</a>
-      <a class="btn primary" href="/map/pavlodar">Открыть карту</a>
+      <a href="/#faq" data-kk="Сұрақтар">Вопросы</a>
+      <a class="btn primary" href="/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
     </div>
   </div>
 </header>
@@ -71,15 +74,15 @@ function footerHtml() {
   <div class="wrap">
     <div class="foot-cta rv">
       <div class="foot-cta-text">
-        <b>Остались вопросы или хотите посотрудничать?</b>
-        <span>Ответим в течение рабочего дня — WhatsApp, Telegram или звонок.</span>
+        <b data-kk="Сұрағыңыз бар ма немесе ынтымақтасқыңыз келе ме?">Остались вопросы или хотите посотрудничать?</b>
+        <span data-kk="Жұмыс күні ішінде жауап береміз — WhatsApp, Telegram немесе қоңырау.">Ответим в течение рабочего дня — WhatsApp, Telegram или звонок.</span>
       </div>
-      <button class="btn primary lg contact-open" type="button">Связаться с нами</button>
+      <button class="btn primary lg contact-open" type="button" data-kk="Байланысу">Связаться с нами</button>
     </div>
     <div class="foot-top">
       <div class="foot-brand">
         <a class="logo" href="/"><img class="logo-img" src="/barjok.svg" alt="BARJOK" width="105" height="26"></a>
-        <p>Живая карта отключений воды, света и отопления в городах Казахстана. Данные от официальных поставщиков, обновление каждые несколько часов.</p>
+        <p data-kk="Қазақстан қалаларындағы су, жарық және жылу ажыратуларының тірі картасы. Деректер ресми жеткізушілерден, бірнеше сағат сайын жаңартылады.">Живая карта отключений воды, света и отопления в городах Казахстана. Данные от официальных поставщиков, обновление каждые несколько часов.</p>
         <div class="foot-social">
           <a href="https://instagram.com/barjok.kz" target="_blank" rel="noopener" aria-label="Instagram">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>
@@ -89,23 +92,23 @@ function footerHtml() {
       </div>
       <div class="foot-links">
         <div class="fcol">
-          <h4>Города</h4>
+          <h4 data-kk="Қалалар">Города</h4>
           <a href="/pavlodar/">Павлодар</a>
         </div>
         <div class="fcol">
-          <h4>Сервисы</h4>
-          <a href="/pavlodar/voda/">Вода</a>
-          <a href="/pavlodar/svet/">Свет</a>
-          <a href="/pavlodar/otoplenie/">Отопление</a>
+          <h4 data-kk="Қызметтер">Сервисы</h4>
+          <a href="/pavlodar/voda/" data-kk="Су">Вода</a>
+          <a href="/pavlodar/svet/" data-kk="Жарық">Свет</a>
+          <a href="/pavlodar/otoplenie/" data-kk="Жылыту">Отопление</a>
         </div>
         <div class="fcol">
-          <h4>Проект</h4>
-          <a href="/map/pavlodar">Открыть карту</a>
+          <h4 data-kk="Жоба">Проект</h4>
+          <a href="/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
         </div>
       </div>
     </div>
     <div class="foot-bot">
-      <span>© 2026 ${BRAND} · Казахстан</span>
+      <span data-kk="© 2026 ${BRAND} · Қазақстан">© 2026 ${BRAND} · Казахстан</span>
     </div>
   </div>
 </footer>
@@ -118,9 +121,9 @@ function contactsModalHtml() {
     <button class="modal-x" id="contactsClose" aria-label="Закрыть">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
-    <div class="modal-eyebrow">Контакты</div>
-    <h3 class="modal-title">Свяжитесь с нами</h3>
-    <p class="modal-sub">Выберите удобный способ — ответим в течение рабочего дня.</p>
+    <div class="modal-eyebrow" data-kk="Байланыс">Контакты</div>
+    <h3 class="modal-title" data-kk="Бізбен байланысыңыз">Свяжитесь с нами</h3>
+    <p class="modal-sub" data-kk="Ыңғайлы тәсілді таңдаңыз — жұмыс күні ішінде жауап береміз.">Выберите удобный способ — ответим в течение рабочего дня.</p>
     <div class="modal-list">
       <a class="cbtn" href="https://wa.me/77083445023" target="_blank" rel="noopener">
         <span class="ci" style="background:var(--wa)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.5-4-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5 0-.2-.6-1.6-.9-2.2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-1.1 2.2 0 .3.9 2.2 2.6 4 2.4 2.6 4.3 3.1 5 3.3.8.2 1.5.2 2.1.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg></span>
@@ -134,7 +137,7 @@ function contactsModalHtml() {
       </a>
       <a class="cbtn" href="tel:+77083445023">
         <span class="ci" style="background:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg></span>
-        <span class="ct"><span class="l">Позвонить</span><span class="v">+7 708 344 50 23</span></span>
+        <span class="ct"><span class="l" data-kk="Қоңырау шалу">Позвонить</span><span class="v">+7 708 344 50 23</span></span>
         <svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       </a>
     </div>
@@ -184,8 +187,8 @@ function webPageJsonLd({ url, title, description }) {
  */
 function renderSeoPage(opts) {
   const jsonLdBlocks = (opts.jsonLd || []).map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`).join('\n');
-  const heroBadge = opts.pillAnnText ? `<span class="pill-ann"><span class="dot"></span><span>${esc(opts.pillAnnText)}</span><span class="go">обновлено сегодня</span></span>` : '';
-  const heroSlogan = opts.heroSlogan ? `<p class="hero-slogan">${opts.heroSlogan}</p>` : '';
+  const heroBadge = opts.pillAnnText ? `<span class="pill-ann"><span class="dot"></span><span${dk(opts.pillAnnText)}>${esc(opts.pillAnnText)}</span><span class="go" data-kk="бүгін жаңартылды">обновлено сегодня</span></span>` : '';
+  const heroSlogan = opts.heroSlogan ? `<p class="hero-slogan"${dk(opts.heroSlogan)}>${opts.heroSlogan}</p>` : '';
 
   return `<!DOCTYPE html>
 <html lang="ru-KZ">
@@ -475,7 +478,7 @@ ${navHtml(opts.currentCitySlug)}
 ${breadcrumbsHtml(opts.breadcrumbs)}
 <div class="page-hero">
   ${heroBadge}
-  <h1>${opts.h1}</h1>
+  <h1${opts.h1Kk ? ` data-kk="${esc(opts.h1Kk)}"` : dk(opts.h1)}>${opts.h1}</h1>
   ${heroSlogan}
 </div>
 ${opts.bodyHtml}
@@ -488,6 +491,30 @@ ${a11yWidgetHtml()}
      аналитика не считала визиты на / и /{city}/... вообще. -->
 <script defer src="/cookie-consent.js?v=2"></script>
 <script>
+(function(){
+  // ---------- i18n RU/KZ (тот же паттерн и тот же localStorage-ключ, что и на
+  // /map/ и старом лендинге, — переключение персистентно между страницами) ----------
+  var LANG='ru'; try{LANG=localStorage.getItem('barjoq_lang')||'ru';}catch(e){}
+  function applyLang(l){
+    LANG=l; try{localStorage.setItem('barjoq_lang',l);}catch(e){}
+    document.documentElement.lang = l==='kk'?'kk':'ru';
+    document.querySelectorAll('[data-lang-btn]').forEach(function(b){b.classList.toggle('on',b.dataset.langBtn===l);});
+    document.querySelectorAll('[data-kk]').forEach(function(el){
+      if(!el.dataset.ru) el.dataset.ru=el.textContent;
+      el.textContent = l==='kk'?el.dataset.kk:el.dataset.ru;
+    });
+    document.querySelectorAll('[data-kk-html]').forEach(function(el){
+      if(!el.dataset.ruHtml) el.dataset.ruHtml=el.innerHTML;
+      el.innerHTML = l==='kk'?el.dataset.kkHtml:el.dataset.ruHtml;
+    });
+    document.querySelectorAll('[data-kk-ph]').forEach(function(el){
+      if(!el.dataset.ruPh) el.dataset.ruPh=el.getAttribute('placeholder')||'';
+      el.setAttribute('placeholder', l==='kk'?el.dataset.kkPh:el.dataset.ruPh);
+    });
+  }
+  document.querySelectorAll('[data-lang-btn]').forEach(function(b){b.addEventListener('click',function(){applyLang(b.dataset.langBtn);});});
+  if(LANG==='kk') applyLang('kk');
+})();
 (function(){
   var rvs=[].slice.call(document.querySelectorAll('.rv'));
   var groupIdx=new Map();
@@ -610,11 +637,11 @@ function a11yWidgetHtml() {
   </button>
   <div id="a11yPanel" role="dialog" aria-label="Настройки доступности" hidden>
     <div class="a11y-head">
-      <b>Доступность</b>
-      <p>Настройте отображение сайта под себя. Выбор сохраняется на этом устройстве.</p>
+      <b data-kk="Қолжетімділік">Доступность</b>
+      <p data-kk="Сайттың көрінісін өзіңізге ыңғайлап баптаңыз. Таңдау осы құрылғыда сақталады.">Настройте отображение сайта под себя. Выбор сохраняется на этом устройстве.</p>
     </div>
     <div class="a11y-group">
-      <div class="a11y-label">Размер текста</div>
+      <div class="a11y-label" data-kk="Мәтін өлшемі">Размер текста</div>
       <div class="a11y-seg" data-group="text" role="group">
         <button data-val="1" class="on" style="font-size:12px">A</button>
         <button data-val="2" style="font-size:14px">A</button>
@@ -623,30 +650,30 @@ function a11yWidgetHtml() {
       </div>
     </div>
     <div class="a11y-group">
-      <div class="a11y-label">Контраст</div>
+      <div class="a11y-label" data-kk="Контраст">Контраст</div>
       <div class="a11y-seg" data-group="contrast" role="group">
-        <button data-val="default" class="on">Обычный</button>
-        <button data-val="high">Высокий</button>
+        <button data-val="default" class="on" data-kk="Әдепкі">Обычный</button>
+        <button data-val="high" data-kk="Жоғары">Высокий</button>
         <button data-val="bw">Ч/Б</button>
       </div>
     </div>
     <div class="a11y-group">
-      <div class="a11y-label">Для дальтоников</div>
+      <div class="a11y-label" data-kk="Түсті ажырата алмайтындарға">Для дальтоников</div>
       <div class="a11y-seg a11y-seg-wrap" data-group="colorblind" role="group">
-        <button data-val="default" class="on">Обычный</button>
+        <button data-val="default" class="on" data-kk="Әдепкі">Обычный</button>
         <button data-val="deuteranopia">Дейтеранопия</button>
         <button data-val="protanopia">Протанопия</button>
         <button data-val="tritanopia">Тританопия</button>
       </div>
     </div>
     <div class="a11y-group">
-      <div class="a11y-label">Вспомогательные функции</div>
-      <button class="a11y-toggle" data-toggle="readable-font"><span>Читаемый шрифт</span><span class="a11y-state">Выкл</span></button>
-      <button class="a11y-toggle" data-toggle="highlight-links"><span>Выделить ссылки</span><span class="a11y-state">Выкл</span></button>
-      <button class="a11y-toggle" data-toggle="big-cursor"><span>Крупный курсор</span><span class="a11y-state">Выкл</span></button>
-      <button class="a11y-toggle" data-toggle="reduce-motion"><span>Меньше анимации</span><span class="a11y-state">Выкл</span></button>
+      <div class="a11y-label" data-kk="Қосымша мүмкіндіктер">Вспомогательные функции</div>
+      <button class="a11y-toggle" data-toggle="readable-font"><span data-kk="Оқылатын қаріп">Читаемый шрифт</span><span class="a11y-state">Выкл</span></button>
+      <button class="a11y-toggle" data-toggle="highlight-links"><span data-kk="Сілтемелерді белгілеу">Выделить ссылки</span><span class="a11y-state">Выкл</span></button>
+      <button class="a11y-toggle" data-toggle="big-cursor"><span data-kk="Үлкен курсор">Крупный курсор</span><span class="a11y-state">Выкл</span></button>
+      <button class="a11y-toggle" data-toggle="reduce-motion"><span data-kk="Аз анимация">Меньше анимации</span><span class="a11y-state">Выкл</span></button>
     </div>
-    <button id="a11yReset" type="button">Сбросить всё</button>
+    <button id="a11yReset" type="button" data-kk="Барлығын тастау">Сбросить всё</button>
   </div>
 </div>
 <!-- Коррекция цвета для дальтоников (feColorMatrix daltonize) — сама SVG нигде не
@@ -736,7 +763,8 @@ function a11yWidgetHtml() {
     document.querySelectorAll('.a11y-toggle').forEach(function(b){
       var on=!!state.toggles[b.dataset.toggle];
       b.classList.toggle('on', on);
-      b.querySelector('.a11y-state').textContent = on?'Вкл':'Выкл';
+      var isKk=false; try{isKk=(localStorage.getItem('barjoq_lang')||'ru')==='kk';}catch(e){}
+      b.querySelector('.a11y-state').textContent = on?(isKk?'Қосулы':'Вкл'):(isKk?'Өшірулі':'Выкл');
     });
   }
   apply();

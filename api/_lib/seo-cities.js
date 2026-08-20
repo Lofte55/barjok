@@ -15,7 +15,7 @@ const CITIES = {
     slug: 'pavlodar',
     names: {
       ru: { nominative: 'Павлодар', genitive: 'Павлодара', locative: 'Павлодаре' },
-      kk: { nominative: 'Павлодар' },
+      kk: { nominative: 'Павлодар', locative: 'Павлодарда' },
     },
     timezone: 'Asia/Almaty',
     status: 'active',
@@ -49,14 +49,14 @@ const CITIES = {
 // Доступные service-страницы (§57) — slug/url/resource-фильтр/лейбл.
 // resource: null значит "не фильтруется по одному ресурсу" (planned/emergency/address).
 const SERVICES = [
-  { slug: 'voda', resource: null, waterGroup: true, label: 'воды' },
-  { slug: 'holodnaya-voda', resource: 'cold_water', label: 'холодной воды' },
-  { slug: 'goryachaya-voda', resource: 'hot_water', label: 'горячей воды' },
-  { slug: 'svet', resource: 'electricity', label: 'света' },
-  { slug: 'otoplenie', resource: 'heating', label: 'отопления' },
-  { slug: 'planovye-otklyucheniya', resource: null, typeFilter: 'planned', label: 'плановых отключений' },
-  { slug: 'avariynye-otklyucheniya', resource: null, typeFilter: 'emergency', label: 'аварийных отключений' },
-  { slug: 'po-adresu', resource: null, addressSearch: true, label: 'по адресу' },
+  { slug: 'voda', resource: null, waterGroup: true, label: 'воды', labelKk: 'су' },
+  { slug: 'holodnaya-voda', resource: 'cold_water', label: 'холодной воды', labelKk: 'суық су' },
+  { slug: 'goryachaya-voda', resource: 'hot_water', label: 'горячей воды', labelKk: 'ыстық су' },
+  { slug: 'svet', resource: 'electricity', label: 'света', labelKk: 'жарық' },
+  { slug: 'otoplenie', resource: 'heating', label: 'отопления', labelKk: 'жылыту' },
+  { slug: 'planovye-otklyucheniya', resource: null, typeFilter: 'planned', label: 'плановых отключений', labelKk: 'жоспарлы ажыратулар' },
+  { slug: 'avariynye-otklyucheniya', resource: null, typeFilter: 'emergency', label: 'аварийных отключений', labelKk: 'апаттық ажыратулар' },
+  { slug: 'po-adresu', resource: null, addressSearch: true, label: 'по адресу', labelKk: 'мекенжай бойынша' },
 ];
 
 function getCity(slug) { return CITIES[slug] || null; }

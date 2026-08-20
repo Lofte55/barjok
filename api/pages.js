@@ -10,6 +10,7 @@ const { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc
 const { computeSnapshot } = require('./_lib/city-stats');
 const { groupedOutagesHtml, countMatching } = require('./_lib/seo-cards');
 const { statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml, timelineHtml } = require('./_lib/seo-blocks');
+const { dk } = require('./_lib/i18n-kk');
 
 const SERVICE_CARDS = [
   ['voda', 'Вода'], ['svet', 'Свет'], ['otoplenie', 'Отопление'],
@@ -65,17 +66,19 @@ async function renderHome(req, res) {
   const cityCardsHtml = `<div class="city-cards city-cards-scroll">${cities.map((c) => {
     const active = c.status === 'active';
     const nom = c.names.ru.nominative;
+    const kkNom = c.names.kk && c.names.kk.nominative;
     return active
-      ? `<a class="city-card" href="/${c.slug}/"><b>${esc(nom)}</b><span class="city-card-sub">Отключения воды и света</span></a>`
-      : `<div class="city-card disabled"><b>${esc(nom)}</b><span class="soon">Скоро</span></div>`;
+      ? `<a class="city-card" href="/${c.slug}/"><b${kkNom ? ` data-kk="${esc(kkNom)}"` : ''}>${esc(nom)}</b><span class="city-card-sub" data-kk="Су және жарық ажыратулары">Отключения воды и света</span></a>`
+      : `<div class="city-card disabled"><b${kkNom ? ` data-kk="${esc(kkNom)}"` : ''}>${esc(nom)}</b><span class="soon" data-kk="Жақында">Скоро</span></div>`;
   }).join('')}</div>`;
   const websiteJsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: BRAND, url: `${ORIGIN}/` };
   const miniStats = snap.ok ? buildMiniStats(snap) : '';
+  const leadKk = `${BRAND} Қазақстан қалаларындағы мекенжайлар бойынша су, жарық, ыстық су және жылу ажыратуларын көрсетеді. Қаланы таңдап, үйіңізді тексеріңіз.`;
   const bodyHtml = `
-    <p class="lead rv" style="text-align:center">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
+    <p class="lead rv" style="text-align:center" data-kk="${esc(leadKk)}">${esc(BRAND)} показывает отключения воды, света, горячей воды и отопления по адресам в городах Казахстана. Выберите город и проверьте свой дом.</p>
     ${miniStats}
     ${mapPreviewHtml({ href: '/map/pavlodar' })}
-    <div class="sec rv"><div class="eyebrow">Города</div><h2>Где работает BARJOK</h2></div>
+    <div class="sec rv"><div class="eyebrow" data-kk="Қалалар">Города</div><h2 data-kk="BARJOK қай жерде жұмыс істейді">Где работает BARJOK</h2></div>
     ${cityCardsHtml}
     ${stepsHtml({})}
     ${trustGridHtml()}
@@ -99,11 +102,12 @@ async function renderMapHub(req, res) {
   const cityCardsHtml = `<div class="city-cards city-cards-scroll">${cities.map((c) => {
     const active = c.status === 'active';
     const nom = c.names.ru.nominative;
+    const kkNom = c.names.kk && c.names.kk.nominative;
     return active
-      ? `<a class="city-card" href="/map/${c.slug}"><b>${esc(nom)}</b><span class="city-card-sub">Карта отключений</span></a>`
-      : `<div class="city-card disabled"><b>${esc(nom)}</b><span class="soon">Скоро</span></div>`;
+      ? `<a class="city-card" href="/map/${c.slug}"><b${kkNom ? ` data-kk="${esc(kkNom)}"` : ''}>${esc(nom)}</b><span class="city-card-sub" data-kk="Ажыратулар картасы">Карта отключений</span></a>`
+      : `<div class="city-card disabled"><b${kkNom ? ` data-kk="${esc(kkNom)}"` : ''}>${esc(nom)}</b><span class="soon" data-kk="Жақында">Скоро</span></div>`;
   }).join('')}</div>`;
-  const bodyHtml = `<p style="color:var(--ink-2)">Выберите город, чтобы открыть карту отключений воды, света и отопления.</p>${cityCardsHtml}`;
+  const bodyHtml = `<p style="color:var(--ink-2)" data-kk="Су, жарық және жылу ажыратуларының картасын ашу үшін қаланы таңдаңыз.">Выберите город, чтобы открыть карту отключений воды, света и отопления.</p>${cityCardsHtml}`;
   const html = renderSeoPage({
     title: `Карта отключений — выберите город | ${BRAND}`,
     description: `Карта отключений воды, света и отопления по городам Казахстана. Выберите город: Павлодар и другие.`,
@@ -139,8 +143,11 @@ async function renderCity(req, res) {
 
   const otherCities = activeCities().filter((c) => c.slug !== citySlug);
   const otherCitiesHtml = otherCities.length
-    ? '<div class="sec rv"><div class="eyebrow">Ещё</div><h2>Другие города BARJOK</h2></div><div class="related-links">' +
-      otherCities.map((c) => `<a href="/${c.slug}/">Отключения в ${esc(c.names.ru.locative)}</a>`).join('') + '</div>'
+    ? '<div class="sec rv"><div class="eyebrow" data-kk="Тағы">Ещё</div><h2 data-kk="BARJOK-тың басқа қалалары">Другие города BARJOK</h2></div><div class="related-links">' +
+      otherCities.map((c) => {
+        const kkLoc = (c.names.kk && c.names.kk.nominative) || c.names.ru.locative;
+        return `<a href="/${c.slug}/" data-kk="${esc(kkLoc + ' ажыратулары')}">Отключения в ${esc(c.names.ru.locative)}</a>`;
+      }).join('') + '</div>'
     : '';
 
   const faq = [
@@ -152,20 +159,22 @@ async function renderCity(req, res) {
   ];
 
   const updatedAt = snap.generatedAt ? new Date(snap.generatedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+  const kkLoc = (city.names.kk && city.names.kk.locative) || (city.names.kk && city.names.kk.nominative) || loc;
   const leadText = `Вода, свет, отопление — весь статус по вашему дому в ${esc(loc)} за секунды. Введи свой, чтобы узнать подробности.`;
+  const leadTextKk = `Су, жарық, жылыту — ${esc(kkLoc)} үйіңіз бойынша барлық мәртебе. Толығырақ білу үшін өз мекенжайыңызды енгізіңіз.`;
 
-  const searchBoxHtml = `<p class="lead rv">${leadText}</p>
+  const searchBoxHtml = `<p class="lead rv" data-kk="${leadTextKk}">${leadText}</p>
   <div class="cap-wrap rv" style="margin:26px auto 0">
     <form class="capture" action="/map/${citySlug}" method="get" onsubmit="var v=this.querySelector('input').value.trim();if(v){location.href='/map/${citySlug}?q='+encodeURIComponent(v);return false;}">
       <label class="field">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
-        <input id="capInput" type="text" name="address" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес" autocomplete="off" autocorrect="off" spellcheck="false" data-map-href="/map/${citySlug}">
+        <input id="capInput" type="text" name="address" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес" autocomplete="off" autocorrect="off" spellcheck="false" data-map-href="/map/${citySlug}" data-kk-ph="Көше және үй нөмірі — мыс. Естай 38">
       </label>
-      <button class="btn primary" type="submit">Проверить</button>
+      <button class="btn primary" type="submit" data-kk="Тексеру">Проверить</button>
     </form>
     <div class="lsug" id="lsug" role="listbox"></div>
   </div>
-  ${updatedAt ? `<p class="cap-note rv">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
+  ${updatedAt ? `<p class="cap-note rv" data-kk="${esc('Бүгін жаңартылды: ' + updatedAt)}">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
 
   const miniStats = snap.ok ? buildMiniStats(snap) : '';
   const sampleAddress = (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
@@ -175,7 +184,7 @@ async function renderCity(req, res) {
     </div>
     ${miniStats}
     ${mapPreviewHtml({ href: `/map/${citySlug}` })}
-    <div class="sec rv"><div class="eyebrow">Услуги</div><h2>Что можно проверить в ${esc(loc)}</h2></div>
+    <div class="sec rv"><div class="eyebrow" data-kk="Қызметтер">Услуги</div><h2 data-kk="${esc(kkLoc + ' не тексеруге болады')}">Что можно проверить в ${esc(loc)}</h2></div>
     ${serviceCardsHtml}
     ${cardsHtml}
     ${futureHtml}
@@ -184,11 +193,12 @@ async function renderCity(req, res) {
     ${reportCtaHtml({ href: `/map/${citySlug}?report=1` })}
     ${faqAccordionHtml(faq, 'faq', { contactHref: `/map/${citySlug}?report=1` })}
     ${otherCitiesHtml}
-    ${ctaFinalHtml({ title: `Проверьте свой адрес в ${esc(loc)}`, href: `/map/${citySlug}` })}
+    ${ctaFinalHtml({ title: `Проверьте свой адрес в ${esc(loc)}`, titleKk: `Мекенжайыңызды ${esc(kkLoc)} тексеріңіз`, href: `/map/${citySlug}` })}
   `;
 
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
+    h1Kk: `${esc(kkLoc)} су мен жарық ажыратулары бүгін`,
     pillAnnText: 'Обновляется каждые несколько часов',
     currentCitySlug: citySlug,
     breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: nom }],
@@ -242,29 +252,34 @@ async function renderService(req, res) {
     idPrefix: 'svcFuture',
   }) : '';
 
+  const kkLoc = (city.names.kk && city.names.kk.locative) || (city.names.kk && city.names.kk.nominative) || loc;
+  const kkLabel = service.labelKk || service.label;
   const relatedLinks = [
-    ['Все отключения ' + nom, `/${citySlug}/`], ['Отключение света', `/${citySlug}/svet/`],
-    ['Горячая вода', `/${citySlug}/goryachaya-voda/`], ['Плановые отключения', `/${citySlug}/planovye-otklyucheniya/`],
-    ['Карта ' + nom, `/map/${citySlug}`],
+    ['Все отключения ' + nom, `/${citySlug}/`, 'Барлық ажыратулар ' + esc(nom)], ['Отключение света', `/${citySlug}/svet/`, 'Жарық ажыратуы'],
+    ['Горячая вода', `/${citySlug}/goryachaya-voda/`, 'Ыстық су'], ['Плановые отключения', `/${citySlug}/planovye-otklyucheniya/`, 'Жоспарлы ажыратулар'],
+    ['Карта ' + nom, `/map/${citySlug}`, 'Карта ' + esc(nom)],
   ].filter(([, url]) => !url.endsWith(`/${serviceSlug}/`));
 
   const updatedAt = snap.generatedAt ? new Date(snap.generatedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
   const leadText = matchedCount
     ? `Сейчас в ${esc(loc)} <b>${matchedCount}</b> активных случаев по категории «${esc(service.label)}». Введи свой адрес, чтобы узнать подробности.`
     : `Активных случаев по категории «${esc(service.label)}» в ${esc(loc)} сейчас не найдено. Введи адрес — проверим, нет ли отключения именно по нему.`;
+  const leadTextKk = matchedCount
+    ? `Қазір ${esc(kkLoc)} «${esc(kkLabel)}» санаты бойынша <b>${matchedCount}</b> белсенді жағдай бар. Толығырақ білу үшін мекенжайыңызды енгізіңіз.`
+    : `${esc(kkLoc)} «${esc(kkLabel)}» санаты бойынша қазір белсенді жағдай табылмады. Мекенжайды енгізіңіз — нақты сол бойынша ажырату бар-жоғын тексереміз.`;
 
-  const searchBoxHtml = `<p class="lead rv">${leadText}</p>
+  const searchBoxHtml = `<p class="lead rv" data-kk-html="${esc(leadTextKk)}">${leadText}</p>
   <div class="cap-wrap rv" style="margin:26px auto 0">
     <form class="capture" action="/map/${citySlug}" method="get" onsubmit="var v=this.querySelector('input').value.trim();if(v){location.href='/map/${citySlug}?q='+encodeURIComponent(v);return false;}">
       <label class="field">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
-        <input id="capInput" type="text" name="address" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес" autocomplete="off" autocorrect="off" spellcheck="false" data-map-href="/map/${citySlug}">
+        <input id="capInput" type="text" name="address" placeholder="Улица и номер дома — напр. Естая 38" aria-label="Адрес" autocomplete="off" autocorrect="off" spellcheck="false" data-map-href="/map/${citySlug}" data-kk-ph="Көше және үй нөмірі — мыс. Естай 38">
       </label>
-      <button class="btn primary" type="submit">Проверить</button>
+      <button class="btn primary" type="submit" data-kk="Тексеру">Проверить</button>
     </form>
     <div class="lsug" id="lsug" role="listbox"></div>
   </div>
-  ${updatedAt ? `<p class="cap-note rv">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
+  ${updatedAt ? `<p class="cap-note rv" data-kk="${esc('Бүгін жаңартылды: ' + updatedAt)}">Обновлено сегодня в ${esc(updatedAt)}</p>` : ''}`;
 
   const miniStats = snap.ok ? buildMiniStats(snap) : '';
   const sampleAddress = (scopedHouses[0] && scopedHouses[0].address) || (snap.ok && snap.houses && snap.houses[0] && snap.houses[0].address) || 'Естая, 38';
@@ -280,13 +295,14 @@ async function renderService(req, res) {
     ${stepsHtml({ addressSample: sampleAddress })}
     ${trustGridHtml()}
     ${faqAccordionHtml(FAQ_SERVICE[serviceSlug] || FAQ_HOME, 'faq', { contactHref: `/map/${citySlug}?report=1` })}
-    <div class="sec rv"><div class="eyebrow">Ещё</div><h2>Связанные страницы</h2></div>
-    <div class="related-links">${relatedLinks.map(([name, url]) => `<a href="${url}">${esc(name)}</a>`).join('')}</div>
-    ${ctaFinalHtml({ title: `Проверьте «${esc(service.label)}» по своему адресу`, href: `/map/${citySlug}` })}
+    <div class="sec rv"><div class="eyebrow" data-kk="Тағы">Ещё</div><h2 data-kk="Байланысты беттер">Связанные страницы</h2></div>
+    <div class="related-links">${relatedLinks.map(([name, url, nameKk]) => `<a href="${url}"${nameKk ? ` data-kk="${esc(nameKk)}"` : ''}>${esc(name)}</a>`).join('')}</div>
+    ${ctaFinalHtml({ title: `Проверьте «${esc(service.label)}» по своему адресу`, titleKk: `«${esc(kkLabel)}» дегенді мекенжайыңыз бойынша тексеріңіз`, href: `/map/${citySlug}` })}
   `;
 
   const html = renderSeoPage({
     title: seo.title, description: seo.description, canonical: seo.canonical, h1: seo.h1,
+    h1Kk: `${esc(kkLoc)} — ${esc(kkLabel)} ажыратуы`,
     pillAnnText: 'Обновляется каждые несколько часов',
     currentCitySlug: citySlug,
     breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: nom, url: `${ORIGIN}/${citySlug}/` }, { name: service.label }],
