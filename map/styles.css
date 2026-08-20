@@ -37,6 +37,11 @@ body {
 }
 
 #map { position: absolute; inset: 0; z-index: 1; background: #eef1f4; }
+#connBanner { position: fixed; top: 0; left: 0; right: 0; z-index: 10000; display: flex; align-items: center;
+  justify-content: center; gap: 8px; background: #3a1414; color: #ffb4ab; font-family: var(--sans); font-size: 13px;
+  font-weight: 700; padding: 9px 14px; text-align: center; }
+#connBanner[hidden] { display: none; }
+#connBanner .cb-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff8a80; flex: none; }
 
 /* ---------- Top bar ---------- */
 .topbar {

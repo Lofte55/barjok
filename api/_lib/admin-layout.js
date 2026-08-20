@@ -38,6 +38,7 @@ const STYLE = `
   .b-active { background: #4a1f1f; color: #ff8a80; }
   .b-restored { background: #16321f; color: #7be08a; }
   .b-manual { background: #3a2f10; color: #ffcf6b; }
+  .b-new { background: #1a2f47; color: #6ab6ff; }
   .muted { color: #6b7280; }
   .actions button { margin-right: 6px; margin-bottom: 4px; }
   .empty { color: #6b7280; padding: 20px 0; text-align: center; }

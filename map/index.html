@@ -17,7 +17,7 @@
   <!-- leaflet/maplibre — самохостинг (map/vendor/), без зависимости от unpkg.com под нагрузкой -->
   <link rel="stylesheet" href="/map/vendor/leaflet/leaflet.css?v=1788300000" />
   <link rel="stylesheet" href="/map/vendor/maplibre-gl/maplibre-gl.css?v=1788300000" />
-  <link rel="stylesheet" href="/map/styles.css?v=1788300100" />
+  <link rel="stylesheet" href="/map/styles.css?v=1788300200" />
 
   <!-- Автомасштаб мобильной "обвязки" (шапка/шторка/чипы/карточки/пины) по ширине
        окна — CSS-переменная --fs, растёт от 1 (375px, iPhone SE/13) до ~1.17 (440px,
@@ -83,6 +83,11 @@
   </script>
 </head>
 <body class="ads-off"><!-- ads-off: рекламные слоты скрыты до запуска рекламы. Убрать класс, чтобы вернуть. См. barjok.md §13 -->
+  <!-- Баннер "нет подключения" — без Service Worker, лёгкий online/offline listener
+       (см. такой же на SEO-страницах, api/_lib/seo-layout.js:connectivityBannerHtml) -->
+  <div id="connBanner" role="status" hidden>
+    <span class="cb-dot"></span><span>Нет подключения к интернету — показаны последние загруженные данные</span>
+  </div>
   <div id="map"></div>
 
   <!-- Top bar: поиск по центру, язык в правом углу -->
@@ -357,6 +362,11 @@ document.addEventListener('DOMContentLoaded', function () {
     renderLabel();
   }
   document.querySelectorAll('[data-csel]').forEach(buildCsel);
+
+  // Баннер "нет подключения" (см. такой же на SEO-страницах — connectivityBannerHtml).
+  var connEl = document.getElementById('connBanner');
+  function updConn(){ if (connEl) connEl.hidden = navigator.onLine; }
+  addEventListener('online', updConn); addEventListener('offline', updConn); updConn();
 });
 </script>
 

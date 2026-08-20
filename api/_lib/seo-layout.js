@@ -472,6 +472,7 @@ ${jsonLdBlocks}
 </style>
 </head>
 <body>
+${connectivityBannerHtml()}
 ${navHtml(opts.currentCitySlug)}
 <main>
 <div class="wrap">
@@ -801,4 +802,32 @@ function a11yWidgetHtml() {
 </script>`;
 }
 
-module.exports = { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc, navHtml, footerHtml, a11yWidgetHtml, BRAND, ORIGIN };
+/*
+ * Баннер "нет подключения" — без Service Worker (тот дал бы полноценный офлайн-
+ * режим с кэшем страниц, но это отдельная, более рискованная задача — SW нужно
+ * аккуратно версионировать, иначе можно залипнуть на устаревших данных живой
+ * карты). Здесь — лёгкий и безопасный вариант: слушаем online/offline события,
+ * показываем/прячем полоску сверху. Разметка /offline.html — статическая
+ * страница на случай прямого перехода без сети.
+ */
+function connectivityBannerHtml() {
+  return `<div id="connBanner" role="status" hidden>
+  <span class="cb-dot"></span><span>Нет подключения к интернету — показаны последние загруженные данные</span>
+</div>
+<style>
+  #connBanner{position:fixed;top:0;left:0;right:0;z-index:10000;display:flex;align-items:center;justify-content:center;
+    gap:8px;background:#3a1414;color:#ffb4ab;font-family:var(--sans);font-size:13px;font-weight:700;
+    padding:9px 14px;text-align:center}
+  #connBanner[hidden]{display:none}
+  #connBanner .cb-dot{width:7px;height:7px;border-radius:50%;background:#ff8a80;flex:none}
+</style>
+<script>
+(function(){
+  var el=document.getElementById('connBanner');
+  function upd(){ if(el) el.hidden = navigator.onLine; }
+  addEventListener('online', upd); addEventListener('offline', upd); upd();
+})();
+</script>`;
+}
+
+module.exports = { renderSeoPage, breadcrumbsJsonLd, organizationJsonLd, webPageJsonLd, esc, navHtml, footerHtml, a11yWidgetHtml, connectivityBannerHtml, BRAND, ORIGIN };

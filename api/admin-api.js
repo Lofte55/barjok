@@ -82,9 +82,42 @@ async function importFromSheet(feedUrl) {
   return { createdActive, createdRestored, skipped, total: rows.length };
 }
 
+/*
+ * "Новые" — жалобы жителей (user_reports), которые ЕЩЁ не набрали порог
+ * автоподтверждения Decision Engine (CONFIG.outageThreshold = 3 уникальных
+ * голоса, см. decision-engine.js) и поэтому НИКОГДА не попадали в incidents —
+ * раньше админка их вообще не видела (баг "новые жалобы не показываются":
+ * не баг отображения, а полное отсутствие источника данных в GET-ответе).
+ * Группируем по address+utility_type, считаем уникальных actor_key, и
+ * исключаем те, что уже стали ACTIVE incident (иначе дублировались бы со
+ * строкой ниже).
+ */
+async function loadPendingReports(incidents) {
+  const activeKeys = new Set(
+    (incidents || []).filter((i) => i.status === 'ACTIVE').map((i) => i.address + '|' + i.utility_type),
+  );
+  const since = new Date(Date.now() - 14 * 86400000).toISOString();
+  const reports = await select('user_reports',
+    `status=eq.VALID&reported_state=eq.OUTAGE&reported_at=gte.${since}&order=reported_at.desc&limit=1000`);
+  const groups = new Map();
+  for (const r of reports || []) {
+    const key = r.address + '|' + r.utility_type;
+    if (activeKeys.has(key)) continue;
+    if (!groups.has(key)) groups.set(key, { address: r.address, utility_type: r.utility_type, actors: new Set(), latest: r.reported_at, message: null });
+    const g = groups.get(key);
+    g.actors.add(r.actor_key);
+    if (r.reported_at > g.latest) g.latest = r.reported_at;
+    if (!g.message && r.message) g.message = r.message;
+  }
+  return Array.from(groups.values())
+    .map((g) => ({ address: g.address, utility_type: g.utility_type, votes: g.actors.size, latest_report_at: g.latest, message: g.message }))
+    .sort((a, b) => (a.latest_report_at < b.latest_report_at ? 1 : -1));
+}
+
 async function handleGet(req, res) {
   const incidents = await select('incidents', 'order=updated_at.desc&limit=200');
-  res.status(200).json({ ok: true, incidents });
+  const pending = await loadPendingReports(incidents);
+  res.status(200).json({ ok: true, incidents, pending });
 }
 
 async function handlePost(req, res) {
@@ -144,6 +177,14 @@ async function handlePost(req, res) {
     const id = Number(b.id);
     if (!id) return res.status(400).json({ ok: false, error: 'bad_input' });
     await remove('incidents', `id=eq.${id}`);
+    return res.status(200).json({ ok: true });
+  }
+
+  if (action === 'reject_pending') {
+    const address = String(b.address || '').trim().slice(0, 200);
+    const utility_type = String(b.utility_type || '');
+    if (!address || !UTILITIES.has(utility_type)) return res.status(400).json({ ok: false, error: 'bad_input' });
+    await update('user_reports', `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}&status=eq.VALID`, { status: 'REJECTED' });
     return res.status(200).json({ ok: true });
   }
 
