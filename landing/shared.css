@@ -284,23 +284,30 @@
     .logo{grid-column:1;grid-row:2;justify-self:start}
     .burger{grid-column:2;grid-row:2;justify-self:end;display:flex}
     .nav-links,.nav-cta{display:none}
-    .logo .wm{font-size:18px}
-    .city-btn{padding:9px 13px;font-size:14px}
+    .logo .wm{font-size:calc(18px * var(--fs, 1))}
+    .city-btn{padding:calc(9px * var(--fs, 1)) calc(13px * var(--fs, 1));font-size:calc(14px * var(--fs, 1))}
     .city-btn .cityname{max-width:none}
-    .lang button{padding:8px 12px}
+    .lang button{padding:calc(8px * var(--fs, 1)) calc(12px * var(--fs, 1));font-size:calc(13px * var(--fs, 1))}
 
     /* мобильное меню — выпадает под шапкой (ссылки + Открыть карту) */
     .mobile-menu{display:flex;flex-direction:column;gap:2px;position:absolute;top:100%;left:0;right:0;
       background:var(--canvas);border-top:1px solid var(--line);box-shadow:var(--shadow-lg);
       padding:0 20px;max-height:0;overflow:hidden;transition:max-height .28s ease,padding .28s ease}
     header.nav.menu-open .mobile-menu{max-height:360px;padding-top:12px;padding-bottom:18px}
-    .mobile-menu a{font-size:16px;font-weight:700;color:var(--ink);padding:13px 4px;text-align:center}
+    .mobile-menu a{font-size:calc(16px * var(--fs, 1));font-weight:700;color:var(--ink);padding:13px 4px;text-align:center}
     .mobile-menu a.btn{margin-top:8px;padding:15px 20px;color:#fff}
 
     /* Плашка «Реальные данные Павлодара» — в одну строку (не переносить) */
-    .pill-ann{font-size:12px;gap:7px;padding:6px 7px 6px 12px}
+    .pill-ann{font-size:calc(12px * var(--fs, 1));gap:7px;padding:6px 7px 6px 12px}
     .pill-ann>span{white-space:nowrap}
-    .pill-ann .go{font-size:10.5px;padding:3px 8px}
+    .pill-ann .go{font-size:calc(10.5px * var(--fs, 1));padding:3px 8px}
+
+    /* Кнопки (капча-инпут "Проверить", CTA, футер "Связаться с нами" и т.д.) —
+       тот же автомасштаб, что и у остальной мобильной обвязки */
+    .btn{font-size:calc(14px * var(--fs, 1));padding:calc(11px * var(--fs, 1)) calc(20px * var(--fs, 1))}
+    .btn.lg{padding:calc(14px * var(--fs, 1)) calc(24px * var(--fs, 1));font-size:calc(15px * var(--fs, 1))}
+    .capture input{font-size:calc(15.5px * var(--fs, 1))}
+    .capture{padding:calc(7px * var(--fs, 1)) calc(7px * var(--fs, 1)) calc(7px * var(--fs, 1)) calc(8px * var(--fs, 1))}
 
     /* Отступы между смысловыми блоками — больше воздуха. ВАЖНО: только top/bottom,
        иначе shorthand обнулит горизонтальный padding из .wrap (бока прилипнут). */

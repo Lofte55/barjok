@@ -190,6 +190,24 @@ function renderSeoPage(opts) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Автомасштаб мобильной обвязки по ширине окна — та же техника и те же пороги
+     (375→440px), что на /map/ (см. подробный комментарий в map/index.html).
+     Порог "мобильный/десктоп" здесь 760px — это брейкпоинт shared.css, а не 900
+     как у карты. Обычный CSS calc(), НЕ zoom/transform — на этих страницах нет
+     Leaflet, но техника единая для всего сайта. -->
+<script>
+(function(){
+  var MIN_W=375, MAX_W=440;
+  function apply(){
+    var fs=1;
+    if (innerWidth<=760) { var w=Math.min(Math.max(innerWidth,MIN_W),MAX_W); fs=w/MIN_W; }
+    document.documentElement.style.setProperty('--fs', fs.toFixed(4));
+  }
+  apply();
+  addEventListener('resize', apply);
+  addEventListener('orientationchange', apply);
+})();
+</script>
 <title>${esc(opts.title)}</title>
 <meta name="description" content="${esc(opts.description)}">
 <link rel="canonical" href="${esc(opts.canonical)}">
@@ -415,6 +433,20 @@ ${jsonLdBlocks}
   .pain-item .k{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;
     background:var(--accent-wash);color:var(--accent-ink);font-weight:800;font-size:13px;flex:none}
   .pain-item p{margin-top:8px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:60ch}
+  /* Автомасштаб (--fs) остального видимого контента на мобильных — плитки услуг,
+     карточки городов, related-links, FAQ, футер-CTA. Тот же приём, что у навигации
+     и кнопок в shared.css, вынесен отдельным блоком, чтобы не трогать десктоп. */
+  @media(max-width:760px){
+    .svc-tile b{font-size:calc(16px * var(--fs, 1))}
+    .svc-tile .svc-desc{font-size:calc(13px * var(--fs, 1))}
+    .city-card b{font-size:calc(17px * var(--fs, 1))}
+    .city-card-sub{font-size:calc(13px * var(--fs, 1))}
+    .related-links a{font-size:calc(13.5px * var(--fs, 1));padding:calc(9px * var(--fs, 1)) calc(16px * var(--fs, 1))}
+    .faq-pill summary{font-size:calc(15.5px * var(--fs, 1))}
+    .faq-pill .faq-a{font-size:calc(14.5px * var(--fs, 1))}
+    .foot-cta-text b{font-size:calc(16px * var(--fs, 1))}
+    .foot-cta-text span{font-size:calc(13.5px * var(--fs, 1))}
+  }
 </style>
 </head>
 <body>
