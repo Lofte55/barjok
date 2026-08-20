@@ -41,6 +41,7 @@ function navHtml(currentCitySlug) {
         </button>
         <div class="city-menu">${cityMenuItems}</div>
       </div>
+      <div class="lang"><button class="on" type="button">RU</button><button type="button" title="Казахская версия скоро появится">KZ</button></div>
       <a class="btn primary nav-cta" href="/map/pavlodar">Открыть карту</a>
       <button class="burger" id="burger" aria-expanded="false" aria-label="Меню"><span></span><span></span><span></span></button>
     </div>
