@@ -13,13 +13,15 @@ const BODY = `
   <div class="card">
     <form class="new" id="newForm">
       <input name="address" placeholder="улица Абая, 12" required>
-      <select name="utility_type">
-        <option value="hot_water">Горячая вода</option>
-        <option value="cold_water">Холодная вода</option>
-        <option value="electricity">Электричество</option>
-        <option value="heating">Отопление</option>
-        <option value="gas">Газ</option>
-      </select>
+      <div class="csel" data-csel>
+        <select name="utility_type">
+          <option value="hot_water">Горячая вода</option>
+          <option value="cold_water">Холодная вода</option>
+          <option value="electricity">Электричество</option>
+          <option value="heating">Отопление</option>
+          <option value="gas">Газ</option>
+        </select>
+      </div>
       <input name="reason" placeholder="причина (необязательно)" style="flex:1;min-width:180px">
       <button type="submit">Принудительно отключить</button>
     </form>
@@ -29,33 +31,40 @@ const BODY = `
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <div>
         <label style="margin-right:8px;color:#9aa2b1;font-size:13px">Показать:</label>
-        <select id="statusFilter">
-          <option value="all" selected>Все</option>
-          <option value="NEW">Новые</option>
-          <option value="ACTIVE">Активные</option>
-          <option value="RESTORED">Восстановленные</option>
-        </select>
+        <div class="csel" data-csel>
+          <select id="statusFilter">
+            <option value="all" selected>Все</option>
+            <option value="NEW">Новые</option>
+            <option value="ACTIVE">Активные</option>
+            <option value="RESTORED">Восстановленные</option>
+          </select>
+        </div>
       </div>
       <div>
         <label style="margin-right:8px;color:#9aa2b1;font-size:13px">Ресурс:</label>
-        <select id="resourceFilter">
-          <option value="all">Все</option>
-          <option value="hot_water">Горячая вода</option>
-          <option value="cold_water">Холодная вода</option>
-          <option value="electricity">Электричество</option>
-          <option value="heating">Отопление</option>
-          <option value="gas">Газ</option>
-        </select>
+        <div class="csel" data-csel>
+          <select id="resourceFilter">
+            <option value="all">Все</option>
+            <option value="hot_water">Горячая вода</option>
+            <option value="cold_water">Холодная вода</option>
+            <option value="electricity">Электричество</option>
+            <option value="heating">Отопление</option>
+            <option value="gas">Газ</option>
+          </select>
+        </div>
       </div>
       <div>
         <label style="margin-right:8px;color:#9aa2b1;font-size:13px">Город:</label>
-        <select id="cityFilter">
-          <option value="all">Все города</option>
-          <option value="pavlodar">Павлодар</option>
-          <option value="ekibastuz">Экибастуз</option>
-          <option value="aksu">Аксу</option>
-        </select>
+        <div class="csel" data-csel>
+          <select id="cityFilter">
+            <option value="all">Все города</option>
+            <option value="pavlodar">Павлодар</option>
+            <option value="ekibastuz">Экибастуз</option>
+            <option value="aksu">Аксу</option>
+          </select>
+        </div>
       </div>
+      <button type="button" class="ghost" id="refreshBtn">Обновить</button>
       <button type="button" class="ghost" id="exportCsv" style="margin-left:auto">Скачать CSV</button>
     </div>
     <table>
@@ -195,6 +204,10 @@ document.getElementById('statusFilter').addEventListener('change', render);
 document.getElementById('resourceFilter').addEventListener('change', render);
 document.getElementById('cityFilter').addEventListener('change', render);
 document.getElementById('exportCsv').addEventListener('click', downloadCsv);
+document.getElementById('refreshBtn').addEventListener('click', load);
+// Автообновление раз в 60с — жалобы приходят в реальном времени, страница
+// раньше загружала список один раз при открытии и больше не обновляла его.
+setInterval(load, 60000);
 
 document.getElementById('importForm').addEventListener('submit', async (e) => {
   e.preventDefault();
