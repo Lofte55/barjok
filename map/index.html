@@ -345,7 +345,15 @@
   #a11yReset{width:100%;margin-top:16px;background:none;border:1px solid var(--line);border-radius:10px;padding:11px;
     font-family:inherit;font-weight:700;font-size:13px;color:var(--ink-2);cursor:pointer}
   #a11yReset:hover{border-color:var(--ink-3)}
-  @media(max-width:480px){#a11y-widget{right:14px;bottom:14px}}
+  /* На карте в диапазоне ≤900px справа уже толпятся: .fab (геолокация,
+     bottom:calc(42vh+14px)), .report-fab (bottom:122px) и нижняя шторка со
+     списком — переносим виджет доступности на левый край, чтобы не наезжать
+     ни на что из этого; bottom:122px совпадает с report-fab и гарантированно
+     выше шторки в свёрнутом состоянии. */
+  @media(max-width:900px){
+    #a11y-widget{left:14px;right:auto;bottom:122px}
+    #a11yPanel{left:0;right:auto}
+  }
   html.a11y-contrast-high{--ink:#000;--ink-2:#111;--ink-3:#333;--bg:#fff;--panel:#fff;--line:#000;--line-2:#000;
     --brand:#0033cc;--brand-ink:#002499}
   html.a11y-contrast-bw{filter:grayscale(1)}
