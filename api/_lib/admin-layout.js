@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var sel = wrap.querySelector('select');
     if (!sel || wrap.dataset.cselReady) return;
     wrap.dataset.cselReady = '1';
+    sel.classList.add('csel-native');
     sel.setAttribute('tabindex', '-1');
     sel.setAttribute('aria-hidden', 'true');
     var btn = document.createElement('button');
