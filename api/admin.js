@@ -30,9 +30,9 @@ const BODY = `
       <div>
         <label style="margin-right:8px;color:#9aa2b1;font-size:13px">Показать:</label>
         <select id="statusFilter">
-          <option value="all">Все</option>
+          <option value="all" selected>Все</option>
           <option value="NEW">Новые</option>
-          <option value="ACTIVE" selected>Активные</option>
+          <option value="ACTIVE">Активные</option>
           <option value="RESTORED">Восстановленные</option>
         </select>
       </div>
@@ -98,13 +98,24 @@ function currentFilters() {
     city: document.getElementById('cityFilter').value,
   };
 }
+function rowDate(r) {
+  return r.status === 'NEW' ? r.latest_report_at : (r.status === 'ACTIVE' ? r.confirmed_at : r.restored_at);
+}
 function filteredRows() {
   const f = currentFilters();
-  return allRows.filter((r) =>
-    (f.status === 'all' || r.status === f.status) &&
-    (f.resource === 'all' || r.utility_type === f.resource) &&
-    (f.city === 'all' || (r.city_id || 'pavlodar') === f.city)
-  );
+  return allRows
+    .filter((r) =>
+      (f.status === 'all' || r.status === f.status) &&
+      (f.resource === 'all' || r.utility_type === f.resource) &&
+      (f.city === 'all' || (r.city_id || 'pavlodar') === f.city)
+    )
+    // "Новая" всегда сверху (свежие жалобы требуют внимания раньше остального),
+    // внутри каждой группы (Новая / остальные) — по дате, свежее выше.
+    .sort((a, b) => {
+      const aNew = a.status === 'NEW' ? 0 : 1, bNew = b.status === 'NEW' ? 0 : 1;
+      if (aNew !== bNew) return aNew - bNew;
+      return (rowDate(b) || '') < (rowDate(a) || '') ? -1 : 1;
+    });
 }
 
 function render() {
