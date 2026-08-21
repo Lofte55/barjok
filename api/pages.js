@@ -456,6 +456,7 @@ async function renderNotFound(req, res) {
     <a class="btn primary" href="/map/pavlodar">Открыть карту</a>
     <a class="btn ghost" href="/">На главную</a>
   </div>
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>`;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');

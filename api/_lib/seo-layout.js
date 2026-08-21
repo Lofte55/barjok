@@ -491,6 +491,11 @@ ${a11yWidgetHtml()}
      подключает его так же). Раньше этот блок отсутствовал в SSR-шаблоне SEO-страниц —
      аналитика не считала визиты на / и /{city}/... вообще. -->
 <script defer src="/cookie-consent.js?v=2"></script>
+<!-- Vercel Web Analytics — без npm/сборщика (проект не на фреймворке, голые
+     serverless functions), поэтому не npm-пакет @vercel/analytics, а прямой
+     script-тег: тот же механизм под капотом, Vercel сам раздаёт этот файл
+     когда Web Analytics включена в Project → Analytics в панели Vercel. -->
+<script defer src="/_vercel/insights/script.js"></script>
 <script>
 (function(){
   // ---------- i18n RU/KZ (тот же паттерн и тот же localStorage-ключ, что и на
