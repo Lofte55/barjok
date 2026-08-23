@@ -7,6 +7,8 @@
  */
 const crypto = require('crypto');
 const { submitReport } = require('./_lib/decision-engine');
+const { originOk, ipHash, rateLimit, tooMany } = require('./_lib/security');
+const { select } = require('./_lib/supabase');
 
 const CATS = {
   hot_water: 'Нет горячей воды',
@@ -35,28 +37,42 @@ function getOrSetDeviceId(req, res) {
   res.setHeader('Set-Cookie', `bj_device=${id}; Path=/; Max-Age=63072000; SameSite=Lax; Secure; HttpOnly`);
   return id;
 }
-function ipHash(req) {
-  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
-  if (!ip) return null;
-  return crypto.createHash('sha256').update(ip + (process.env.IP_HASH_SALT || 'barjok')).digest('hex').slice(0, 32);
-}
+/*
+ * Лимиты на приём жалоб. Живой человек с карты шлёт одну-две жалобы за визит;
+ * всё, что выше — автоматизация. Два окна: короткое ловит всплеск, часовое —
+ * «капающий» спам, который в короткое окно не попадает.
+ */
+const REPORT_LIMITS = [
+  { max: 5, windowMs: 10 * 60 * 1000 },
+  { max: 20, windowMs: 60 * 60 * 1000 },
+];
+// Durable-потолок за сутки: память лямбды не переживает холодный старт, а
+// user_reports мы и так пишем — считаем по ним, без отдельной таблицы.
+const DAILY_DB_CAP = 40;
 
-// Разрешённые источники запроса — только наш сайт (защита от чужих форм/спама).
-const ALLOWED = ['https://barjok.kz', 'https://www.barjok.kz', 'https://barjok.vercel.app'];
-function originOk(req) {
-  const o = req.headers.origin || '';
-  if (o) {
-    if (ALLOWED.includes(o)) return true;
-    try { return /\.vercel\.app$/.test(new URL(o).hostname); } catch (e) { return false; }
+async function overDailyCap(hash) {
+  if (!hash || !process.env.SUPABASE_URL) return false;
+  try {
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const rows = await select('user_reports',
+      `ip_hash=eq.${hash}&reported_at=gte.${since}&select=id&limit=${DAILY_DB_CAP + 1}`);
+    return (rows || []).length > DAILY_DB_CAP;
+  } catch (e) {
+    console.error('rate-limit db check failed:', e.message);
+    return false;   // БД недоступна — не запираем живых людей
   }
-  const ref = req.headers.referer || '';
-  return ALLOWED.some((a) => ref.startsWith(a)) || /^https:\/\/[^/]+\.vercel\.app\//.test(ref);
 }
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method' });
-  // отсекаем запросы не с нашего сайта (curl/боты без Origin тоже отсекаются)
+  // Отсекает чужие формы на других сайтах. ⚠️ НЕ защита от ботов — Origin
+  // подделывается любым скриптом; от потока защищает rate-limit ниже.
   if (!originOk(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
+
+  // Лимит ДО любой работы: чтобы флуд не жёг ни Telegram, ни квоту Supabase.
+  const hash = ipHash(req);
+  const rl = rateLimit('report', hash, REPORT_LIMITS);
+  if (!rl.ok) return tooMany(res, rl.retryAfterSec);
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chat = process.env.TELEGRAM_CHAT_ID;
@@ -79,6 +95,9 @@ module.exports = async (req, res) => {
   if (!isSuggest && !category) return res.status(400).json({ ok: false, error: 'no_category' });
   if (isSuggest && !message) return res.status(400).json({ ok: false, error: 'no_message' });
 
+  // Суточный durable-потолок (память лямбды не переживает холодный старт).
+  if (await overDailyCap(hash)) return tooMany(res, 3600);
+
   // Decision Engine (только для жалоб с адресом — «предложение» не про конкретный
   // дом/ресурс). Best-effort: если Supabase не настроен или упал — жалоба всё равно
   // уходит в Telegram/таблицу ниже, пользователь не должен из-за этого получить ошибку.
@@ -89,7 +108,7 @@ module.exports = async (req, res) => {
     // await, но через allSettled — сбой Decision Engine не должен ронять весь запрос
     // (лямбда может быть заморожена сразу после ответа, поэтому не fire-and-forget).
     await Promise.allSettled(utilities.map((utility_type) =>
-      submitReport({ address, utility_type, reported_state: reportedState, actor_key: actorKey, ip_hash: ipHash(req), message })
+      submitReport({ address, utility_type, reported_state: reportedState, actor_key: actorKey, ip_hash: hash, message })
     )).then((results) => results.forEach((r) => { if (r.status === 'rejected') console.error('decision-engine submitReport failed:', r.reason?.message); }));
   }
 

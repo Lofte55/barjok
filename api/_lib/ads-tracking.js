@@ -3,17 +3,9 @@
  * origin-check, простой bot-filter (§48, §50 документа).
  */
 const crypto = require('crypto');
-
-const ALLOWED = ['https://barjok.kz', 'https://www.barjok.kz', 'https://barjok.vercel.app'];
-function originOk(req) {
-  const o = req.headers.origin || '';
-  if (o) {
-    if (ALLOWED.includes(o)) return true;
-    try { return /\.vercel\.app$/.test(new URL(o).hostname); } catch (e) { return false; }
-  }
-  const ref = req.headers.referer || '';
-  return ALLOWED.some((a) => ref.startsWith(a)) || /^https:\/\/[^/]+\.vercel\.app\//.test(ref);
-}
+// originOk живёт в _lib/security.js — раньше он был скопирован сюда и в report.js,
+// и в обеих копиях был один и тот же баг (разрешался любой чужой *.vercel.app).
+const { originOk } = require('./security');
 
 function readCookie(req, name) {
   const cookies = String(req.headers.cookie || '');

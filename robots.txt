@@ -1,4 +1,12 @@
 User-agent: *
 Allow: /
 
+# Служебные разделы — не для индексации.
+# ⚠️ robots.txt носит РЕКОМЕНДАТЕЛЬНЫЙ характер: он не защищает, а только просит
+# добросовестных краулеров не ходить. Настоящая защита — Basic Auth (api/_lib/auth.js)
+# и заголовки noindex/no-store в vercel.json. Не полагаться на этот файл как на замок.
+Disallow: /admin
+Disallow: /api/
+Disallow: /report/
+
 Sitemap: https://barjok.kz/sitemap.xml

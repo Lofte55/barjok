@@ -136,7 +136,13 @@ function render() {
     let statusBadge, confirmCell, overrideCell, dateVal, actions = [];
     if (inc.status === 'NEW') {
       statusBadge = '<span class="badge b-new">Новая</span>';
-      confirmCell = inc.votes + ' ' + (inc.votes === 1 ? 'сообщение' : 'сообщений') + (inc.message ? '<div class="muted">' + esc(inc.message) + '</div>' : '');
+      // votes = сколько зачтёт автоподтверждение; raw_votes = сколько жалоб всего.
+      // Расходятся, когда часть жалоб пришла с одного IP (потолок против накрутки
+      // сменой cookie) — показываем обе цифры, иначе выглядит как ошибка счёта.
+      var capped = inc.raw_votes && inc.raw_votes > inc.votes;
+      confirmCell = inc.votes + ' ' + (inc.votes === 1 ? 'сообщение' : 'сообщений')
+        + (capped ? '<div class="muted">всего ' + inc.raw_votes + ', часть с одного IP — не в счёт</div>' : '')
+        + (inc.message ? '<div class="muted">' + esc(inc.message) + '</div>' : '');
       overrideCell = '<span class="muted">Ждёт подтверждения</span>';
       dateVal = inc.latest_report_at;
       actions.push('<button data-act="confirm_pending" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Подтвердить</button>');

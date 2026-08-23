@@ -9,11 +9,23 @@
 const crypto = require('crypto');
 const { selectAd, buildUtm, appendUtmToUrl } = require('./_lib/ads-engine');
 const { originOk, getOrSetVisitorId, getOrSetSessionId } = require('./_lib/ads-tracking');
+const { ipHash, rateLimit } = require('./_lib/security');
+
+// Единственный из трёх публичных эндпоинтов, который ходит в Supabase БЕЗУСЛОВНО
+// на каждый запрос, — поэтому без лимита его циклом на curl можно было сжечь
+// квоту БД и бюджет вызовов функций. Окно щедрое: слотов на странице немного.
+const SELECT_LIMITS = [
+  { max: 30, windowMs: 60 * 1000 },
+  { max: 300, windowMs: 60 * 60 * 1000 },
+];
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'method' });
   if (!originOk(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
   if (!process.env.SUPABASE_URL) return res.status(200).json({ ok: true, ad: null });
+
+  // Как и у трекинга: превышение не ошибка для UX — просто не показываем рекламу.
+  if (!rateLimit('ads-select', ipHash(req), SELECT_LIMITS).ok) return res.status(200).json({ ok: true, ad: null });
 
   const q = req.query || {};
   const placementId = String(q.placement || '');

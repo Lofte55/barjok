@@ -9,13 +9,26 @@
  */
 const { insert } = require('./_lib/supabase');
 const { originOk, readCookie, looksLikeBot } = require('./_lib/ads-tracking');
+const { ipHash, rateLimit } = require('./_lib/security');
 
 const ALLOWED_EVENTS = new Set(['ad_eligible', 'ad_rendered', 'ad_impression', 'ad_click', 'ad_dismiss']);
+
+// Трекинг по природе частый (рендер+показ+клик на каждую карточку), поэтому окно
+// щедрое — задача не «резать живых», а не дать накрутить показы/клики скриптом:
+// от этих чисел зависят frequency cap, лимиты кампании и отчёт рекламодателю.
+const TRACK_LIMITS = [
+  { max: 60, windowMs: 60 * 1000 },
+  { max: 600, windowMs: 60 * 60 * 1000 },
+];
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method' });
   if (!originOk(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
   if (!process.env.SUPABASE_URL) return res.status(200).json({ ok: true });
+
+  // Превышение НЕ отдаём ошибкой (§75: трекинг не должен ломать UX) — просто
+  // молча не пишем событие, как и при любом другом сбое трекинга.
+  if (!rateLimit('ads-track', ipHash(req), TRACK_LIMITS).ok) return res.status(200).json({ ok: true });
 
   let b = req.body;
   if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }

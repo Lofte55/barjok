@@ -46,20 +46,61 @@ async function getActiveIncident(address, utility_type) {
   return rows && rows[0] ? rows[0] : null;
 }
 
+/*
+ * Сколько РАЗНЫХ actor_key засчитываем с одного ip_hash — ТОЛЬКО для голосов «нет ресурса».
+ *
+ * Зачем: actor_key — это cookie, её очистка делает «нового жителя». Без потолка
+ * один человек добирал outageThreshold(3) в одиночку и вешал на публичную карту
+ * несуществующее отключение.
+ *
+ * ⚠️⚠️ ПОЧЕМУ ПОТОЛОК НЕ ПРИМЕНЯЕТСЯ К ВОССТАНОВЛЕНИЮ.
+ * Первая версия ограничивала обе стороны — и это был отказ в ОПАСНУЮ сторону.
+ * В Павлодаре целый дом обычно сидит за одним CGNAT провайдера: потолок 2 при
+ * restoreThreshold=3 означал, что отключение, once поставленное (вручную админом
+ * или импортом), НИКОГДА не снимется автоматически — сколько бы жильцов ни нажало
+ * «Уже появилось». Карта бессрочно показывала бы «нет воды» там, где вода есть,
+ * и сама себя не чинила.
+ *
+ * Асимметрия сознательная и отражает разную цену ошибки:
+ *   - ложное ОТКЛЮЧЕНИЕ — активная ложь на публичной карте, её и защищаем потолком;
+ *   - ложное ВОССТАНОВЛЕНИЕ самокорректируется: ресурса нет — жильцы пожалуются снова
+ *     и отключение вернётся штатным путём.
+ */
+const MAX_ACTORS_PER_IP_OUTAGE = 2;
+
 /* Последний голос каждого уникального actor_key за окно, начиная с cutoff (если есть). */
 async function currentVotes(address, utility_type, windowMin, cutoffISO) {
   const since = minutesAgoISO(windowMin);
   const rows = await select('user_reports',
     `address=eq.${enc(address)}&utility_type=eq.${utility_type}&status=eq.VALID` +
-    `&reported_at=gte.${since}&order=reported_at.desc&select=actor_key,reported_state,reported_at`);
+    `&reported_at=gte.${since}&order=reported_at.desc&select=actor_key,reported_state,reported_at,ip_hash`);
+  // rows идут от новых к старым, поэтому первое попадание актёра = его актуальный голос.
   const lastByActor = new Map();
   for (const r of rows || []) {
     if (cutoffISO && r.reported_at <= cutoffISO) continue;
-    if (!lastByActor.has(r.actor_key)) lastByActor.set(r.actor_key, r.reported_state);
+    if (!lastByActor.has(r.actor_key)) lastByActor.set(r.actor_key, { state: r.reported_state, ip: r.ip_hash || null });
   }
+
+  // ⚠️ Считаем ПО НАПРАВЛЕНИЯМ отдельно. Если этого не делать, голоса
+  // противоположного направления «съедают» лимит IP и молча режут то направление,
+  // которое сейчас и проверяется (у вызывающего свои пороги на каждое).
   let outage = 0, restore = 0;
-  for (const state of lastByActor.values()) { if (state === 'OUTAGE') outage++; else restore++; }
-  return { outageVotes: outage, restoreVotes: restore, uniqueActors: lastByActor.size };
+  const perIpOutage = new Map();
+  for (const v of lastByActor.values()) {
+    if (v.state === 'OUTAGE') {
+      if (v.ip) {
+        const used = perIpOutage.get(v.ip) || 0;
+        if (used >= MAX_ACTORS_PER_IP_OUTAGE) continue;   // накрутка сменой cookie
+        perIpOutage.set(v.ip, used + 1);
+      }
+      outage++;
+    } else if (v.state === 'RESTORED') {
+      restore++;                                          // см. комментарий выше: без потолка
+    }
+    // Любое иное значение (null/мусор из БД) НЕ считаем: раньше `else restore++`
+    // трактовал его как голос за закрытие инцидента.
+  }
+  return { outageVotes: outage, restoreVotes: restore };
 }
 
 function inCooldown(incident) {
