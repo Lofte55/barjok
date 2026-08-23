@@ -306,7 +306,12 @@
 <!-- Кастомный select (.csel, см. styles.css) — общесайтовый компонент вместо
      системного <select>: оборачиваем select в <div class="csel" data-csel> —
      остальное строится и обслуживается этим скриптом автоматически, ничего
-     руками дублировать не надо. Работает с любым числом селектов на странице. -->
+     руками дублировать не надо. Работает с любым числом селектов на странице.
+
+     ⚠️⚠️ ПАРНЫЙ ФАЙЛ: точно такой же buildCsel лежит в api/_lib/admin-layout.js
+     (CSEL_SCRIPT). Дублирование вынужденное — эта страница статическая и не может
+     сделать require. Копии УЖЕ РАЗЪЕЗЖАЛИСЬ (csel-native / placeholder).
+     ПРАВИЛО: любая правка buildCsel/.csel-* вносится СРАЗУ В ОБА МЕСТА. -->
 <script defer>
 document.addEventListener('DOMContentLoaded', function () {
   function buildCsel(wrap) {
@@ -353,10 +358,56 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function open() { wrap.classList.add('open'); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
-    function close() { wrap.classList.remove('open'); menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+    function close() { wrap.classList.remove('open'); menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); setActive(-1); }
     btn.addEventListener('click', function (e) { e.stopPropagation(); wrap.classList.contains('open') ? close() : open(); });
     document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
-    wrap.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); btn.focus(); } });
+
+    /* Клавиатура: нативный <select> здесь tabindex=-1/aria-hidden, поэтому его
+       стрелки/Home/End воспроизводим руками. Подсветка — .csel-opt.active.
+       ⚠️ ЭТОТ БЛОК ДУБЛИРУЕТСЯ с api/_lib/admin-layout.js (CSEL_SCRIPT) —
+       правки вносить в ОБА места, см. комментарий у buildCsel выше. */
+    var activeIdx = -1;
+    function setActive(i) {
+      activeIdx = i;
+      opts.forEach(function (o, n) { o.el.classList.toggle('active', n === i); });
+      if (i >= 0 && opts[i]) opts[i].el.scrollIntoView({ block: 'nearest' });
+    }
+    function step(dir, from) {
+      if (!opts.length) return;
+      var i = from !== undefined ? from
+        : (activeIdx < 0 ? (sel.selectedIndex >= 0 ? sel.selectedIndex : 0) : activeIdx + dir);
+      for (var n = 0; n < opts.length; n++) {           // перепрыгиваем disabled
+        if (i < 0) i = opts.length - 1;
+        if (i > opts.length - 1) i = 0;
+        if (!opts[i].el.disabled) break;
+        i += dir;
+      }
+      setActive(i);
+    }
+    function commit() {
+      if (activeIdx < 0 || !opts[activeIdx] || opts[activeIdx].el.disabled) return close();
+      sel.value = opts[activeIdx].opt.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      renderLabel(); close(); btn.focus();
+    }
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { close(); btn.focus(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!wrap.classList.contains('open')) open();
+        step(e.key === 'ArrowDown' ? 1 : -1);
+        return;
+      }
+      if (e.key === 'Home' || e.key === 'End') {
+        if (!wrap.classList.contains('open')) return;
+        e.preventDefault();
+        step(e.key === 'Home' ? 1 : -1, e.key === 'Home' ? 0 : opts.length - 1);
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === ' ') && wrap.classList.contains('open')) {
+        e.preventDefault(); commit();
+      }
+    });
     // select.value может меняться и не через клик по кастомному меню (напр. form.reset()) —
     // держим подпись синхронной в любом случае.
     sel.addEventListener('change', renderLabel);

@@ -66,12 +66,18 @@ const STYLE = `
   .csel-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
     background: none; border: 0; font-family: inherit; font-size: 13.5px; font-weight: 500; color: #e7e9ee;
     padding: 8px 9px; border-radius: 7px; cursor: pointer; text-align: left; white-space: nowrap; }
+  .csel-val.placeholder { color: #8a92a3; }
   .csel-opt:hover, .csel-opt.active { background: #1b1f29; }
   .csel-opt.on { color: #9ec1ff; }
   .csel-opt .csel-check { width: 15px; height: 15px; flex: none; color: #2f6bed; visibility: hidden; }
   .csel-opt.on .csel-check { visibility: visible; }
 `;
 
+/* ⚠️⚠️ ПАРНЫЙ ФАЙЛ: точно такой же buildCsel живёт инлайном в map/index.html.
+ * Дублирование вынужденное (карта — статический HTML без шаблонизатора, сюда
+ * не может сделать require). Копии УЖЕ РАЗЪЕЗЖАЛИСЬ: класс csel-native был
+ * добавлен только в одну, обработка placeholder — только в другую.
+ * ПРАВИЛО: любая правка buildCsel/.csel-* вносится СРАЗУ В ОБА МЕСТА. */
 const CSEL_SCRIPT = `
 document.addEventListener('DOMContentLoaded', function () {
   function buildCsel(wrap) {
@@ -92,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderLabel() {
       var opt = sel.options[sel.selectedIndex];
       valEl.textContent = opt ? opt.textContent : '';
+      valEl.classList.toggle('placeholder', !!(opt && !opt.value));
       opts.forEach(function (o) { o.el.classList.toggle('on', o.opt === opt); o.el.setAttribute('aria-selected', o.opt === opt ? 'true' : 'false'); });
     }
     [].slice.call(sel.options).forEach(function (opt) {
@@ -103,10 +110,59 @@ document.addEventListener('DOMContentLoaded', function () {
       menu.appendChild(b); opts.push({ opt: opt, el: b });
     });
     function open() { wrap.classList.add('open'); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
-    function close() { wrap.classList.remove('open'); menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+    function close() { wrap.classList.remove('open'); menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); setActive(-1); }
     btn.addEventListener('click', function (e) { e.stopPropagation(); wrap.classList.contains('open') ? close() : open(); });
     document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
-    wrap.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); btn.focus(); } });
+
+    /* Клавиатура: нативный <select> здесь tabindex=-1/aria-hidden, поэтому его
+       стрелки/Home/End нужно воспроизвести руками — иначе для клавиатурного
+       пользователя это регресс по сравнению с обычным select. Подсветка —
+       класс .csel-opt.active (под него и написано правило в STYLE выше). */
+    var activeIdx = -1;
+    function setActive(i) {
+      activeIdx = i;
+      opts.forEach(function (o, n) { o.el.classList.toggle('active', n === i); });
+      if (i >= 0 && opts[i]) opts[i].el.scrollIntoView({ block: 'nearest' });
+    }
+    // from === undefined: от текущей подсветки (или от выбранного пункта, если её нет).
+    // from задан явно (Home/End): стартуем ровно с него, не оглядываясь на selectedIndex.
+    function step(dir, from) {
+      if (!opts.length) return;
+      var i = from !== undefined ? from
+        : (activeIdx < 0 ? (sel.selectedIndex >= 0 ? sel.selectedIndex : 0) : activeIdx + dir);
+      for (var n = 0; n < opts.length; n++) {           // перепрыгиваем disabled
+        if (i < 0) i = opts.length - 1;
+        if (i > opts.length - 1) i = 0;
+        if (!opts[i].el.disabled) break;
+        i += dir;
+      }
+      setActive(i);
+    }
+    function commit() {
+      if (activeIdx < 0 || !opts[activeIdx] || opts[activeIdx].el.disabled) return close();
+      sel.value = opts[activeIdx].opt.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      renderLabel(); close(); btn.focus();
+    }
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { close(); btn.focus(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!wrap.classList.contains('open')) open();
+        step(e.key === 'ArrowDown' ? 1 : -1);
+        return;
+      }
+      if (e.key === 'Home' || e.key === 'End') {
+        if (!wrap.classList.contains('open')) return;
+        e.preventDefault();
+        // от края внутрь, чтобы попасть на первый/последний НЕ-disabled
+        step(e.key === 'Home' ? 1 : -1, e.key === 'Home' ? 0 : opts.length - 1);
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === ' ') && wrap.classList.contains('open')) {
+        e.preventDefault(); commit();
+      }
+    });
     sel.addEventListener('change', renderLabel);
     wrap.appendChild(btn); wrap.appendChild(menu);
     renderLabel();

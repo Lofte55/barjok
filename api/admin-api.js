@@ -92,25 +92,65 @@ async function importFromSheet(feedUrl) {
  * исключаем те, что уже стали ACTIVE incident (иначе дублировались бы со
  * строкой ниже).
  */
+const PENDING_WINDOW_DAYS = 14;
+const pendingSince = () => new Date(Date.now() - PENDING_WINDOW_DAYS * 86400000).toISOString();
+
+/* Фильтр «одна строка pending-списка» — ОДИН источник правды для чтения (loadPendingReports)
+ * и для отклонения (reject_pending). Держать их синхронными обязательно: если отклонение
+ * бьёт шире, чем показ, админ гасит голоса, которых не видел (в т.ч. RESTORED — а их
+ * считает decision-engine.js:currentVotes, чтобы снять отключение). */
+const pendingFilter = (address, utility_type) =>
+  `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}` +
+  `&status=eq.VALID&reported_state=eq.OUTAGE&reported_at=gte.${pendingSince()}`;
+
+/*
+ * Голоса, которые РЕАЛЬНО зачтёт Decision Engine.
+ * ⚠️ Должно совпадать с MAX_ACTORS_PER_IP_OUTAGE в decision-engine.js: раньше админка
+ * считала сырые actor_key и показывала «3 голоса» там, где движок видел 2 — владелец
+ * ждал автоподтверждения, которое не могло наступить. Рядом отдаём raw_votes, чтобы
+ * расхождение было видно, а не выглядело ошибкой счёта.
+ */
+const MAX_ACTORS_PER_IP_OUTAGE = 2;
+function countableVotes(actors) {
+  const perIp = new Map();
+  let n = 0;
+  for (const ip of actors.values()) {
+    if (ip) {
+      const used = perIp.get(ip) || 0;
+      if (used >= MAX_ACTORS_PER_IP_OUTAGE) continue;
+      perIp.set(ip, used + 1);
+    }
+    n++;
+  }
+  return n;
+}
+
 async function loadPendingReports(incidents) {
   const activeKeys = new Set(
     (incidents || []).filter((i) => i.status === 'ACTIVE').map((i) => i.address + '|' + i.utility_type),
   );
-  const since = new Date(Date.now() - 14 * 86400000).toISOString();
   const reports = await select('user_reports',
-    `status=eq.VALID&reported_state=eq.OUTAGE&reported_at=gte.${since}&order=reported_at.desc&limit=1000`);
+    `status=eq.VALID&reported_state=eq.OUTAGE&reported_at=gte.${pendingSince()}&order=reported_at.desc&limit=1000` +
+    '&select=address,utility_type,actor_key,ip_hash,reported_at,message');
   const groups = new Map();
   for (const r of reports || []) {
     const key = r.address + '|' + r.utility_type;
     if (activeKeys.has(key)) continue;
-    if (!groups.has(key)) groups.set(key, { address: r.address, utility_type: r.utility_type, actors: new Set(), latest: r.reported_at, message: null });
+    if (!groups.has(key)) groups.set(key, { address: r.address, utility_type: r.utility_type, actors: new Map(), latest: r.reported_at, message: null });
     const g = groups.get(key);
-    g.actors.add(r.actor_key);
+    if (!g.actors.has(r.actor_key)) g.actors.set(r.actor_key, r.ip_hash || null);
     if (r.reported_at > g.latest) g.latest = r.reported_at;
     if (!g.message && r.message) g.message = r.message;
   }
   return Array.from(groups.values())
-    .map((g) => ({ address: g.address, utility_type: g.utility_type, votes: g.actors.size, latest_report_at: g.latest, message: g.message }))
+    .map((g) => ({
+      address: g.address,
+      utility_type: g.utility_type,
+      votes: countableVotes(g.actors),
+      raw_votes: g.actors.size,
+      latest_report_at: g.latest,
+      message: g.message,
+    }))
     .sort((a, b) => (a.latest_report_at < b.latest_report_at ? 1 : -1));
 }
 
@@ -184,7 +224,10 @@ async function handlePost(req, res) {
     const address = String(b.address || '').trim().slice(0, 200);
     const utility_type = String(b.utility_type || '');
     if (!address || !UTILITIES.has(utility_type)) return res.status(400).json({ ok: false, error: 'bad_input' });
-    await update('user_reports', `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}&status=eq.VALID`, { status: 'REJECTED' });
+    // ⚠️ Только то, что реально показано в pending-строке (см. pendingFilter):
+    // без reported_state/окна отклонение задело бы и голоса «Уже появилось» (RESTORED),
+    // и жалобы старше окна — админ бы погасил то, чего не видел.
+    await update('user_reports', pendingFilter(address, utility_type), { status: 'REJECTED' });
     return res.status(200).json({ ok: true });
   }
 

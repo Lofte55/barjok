@@ -118,7 +118,10 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
   const overflowCount = Math.max(0, groupList.length - MAX_VISIBLE);
   const overflowCountMobile = Math.max(0, groupList.length - MAX_VISIBLE_MOBILE);
   const dateLabel = statusValue === 'current' ? 'с' : 'с';
-  const moreLabelKk = (n) => `тағы ${n} ${n === 1 ? 'көше' : 'көше'} ажыратуымен`;
+  // KZ: после числительного существительное НЕ принимает множественное число
+  // («тағы 5 көше», не «көшелер») — поэтому здесь, в отличие от русского, форма одна.
+  // Тот же принцип, что у «${houseCount} мекенжай» ниже. Не «чинить» тернарником.
+  const moreLabelKk = (n) => `тағы ${n} көше ажыратуымен`;
   const mobileMoreTile = overflowCountMobile > 0 ? `<a class="outage-card outage-more outage-more-mobile rv" data-res="__more__" href="/map/${citySlug}">
     <span class="outage-more-n">+${overflowCountMobile}</span>
     <span class="outage-more-label" data-kk="${esc(moreLabelKk(overflowCountMobile))}">ещё ${overflowCountMobile === 1 ? 'улица' : 'улиц'} с отключениями</span>
