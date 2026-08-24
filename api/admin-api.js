@@ -125,17 +125,41 @@ function countableVotes(actors) {
   return n;
 }
 
+/*
+ * ⚠️⚠️ БАГ (найден на живом кейсе): «Подтвердить» → «Восстановлено» → тут же
+ * снова всплывает «Новая» заявка по ТОМУ ЖЕ адресу — хотя ничего нового не
+ * происходило. Причина: раньше suppression строился только по ACTIVE-инцидентам
+ * (`activeKeys`), а RESTORED вообще не учитывался — как только incident переходил
+ * в RESTORED, старые жалобы (те же самые, из-за которых incident и подтверждали),
+ * которые всё ещё лежат в user_reports как VALID/OUTAGE в пределах 14-дневного
+ * окна, тут же «воскресали» в списке «Новая», хотя администратор их уже обработал.
+ *
+ * Фикс — та же cutoff-логика, что decision-engine.js:evaluate() уже применяет для
+ * автоподтверждения (§20 документа: «после RESTORED считаются только голоса ПОСЛЕ
+ * restored_at»): для каждого address+utility_type берём САМЫЙ СВЕЖИЙ incident
+ * (любого статуса, не только ACTIVE) и режем по нему —
+ *   ACTIVE   → подавляем ВСЕ жалобы по ключу (уже подтверждено, нечего утверждать);
+ *   RESTORED → подавляем жалобы СТАРШЕ restored_at (уже учтены), но НЕ подавляем
+ *              жалобы, пришедшие ПОСЛЕ восстановления — это законно новая проблема.
+ */
 async function loadPendingReports(incidents) {
-  const activeKeys = new Set(
-    (incidents || []).filter((i) => i.status === 'ACTIVE').map((i) => i.address + '|' + i.utility_type),
-  );
+  const latestByKey = new Map();
+  for (const inc of incidents || []) {
+    const key = inc.address + '|' + inc.utility_type;
+    const cur = latestByKey.get(key);
+    if (!cur || new Date(inc.updated_at) > new Date(cur.updated_at)) latestByKey.set(key, inc);
+  }
   const reports = await select('user_reports',
     `status=eq.VALID&reported_state=eq.OUTAGE&reported_at=gte.${pendingSince()}&order=reported_at.desc&limit=1000` +
     '&select=address,utility_type,actor_key,ip_hash,reported_at,message');
   const groups = new Map();
   for (const r of reports || []) {
     const key = r.address + '|' + r.utility_type;
-    if (activeKeys.has(key)) continue;
+    const inc = latestByKey.get(key);
+    if (inc) {
+      if (inc.status === 'ACTIVE') continue;                                    // уже подтверждено
+      if (inc.status === 'RESTORED' && r.reported_at <= inc.restored_at) continue; // уже учтено при восстановлении
+    }
     if (!groups.has(key)) groups.set(key, { address: r.address, utility_type: r.utility_type, actors: new Map(), latest: r.reported_at, message: null });
     const g = groups.get(key);
     if (!g.actors.has(r.actor_key)) g.actors.set(r.actor_key, r.ip_hash || null);
