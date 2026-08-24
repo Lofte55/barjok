@@ -147,6 +147,8 @@ async function fetchPtsHeat() {
         provider: 'ТОО «Павлодарские тепловые сети»',
         geom: geoms.get(name) || null,      // вся улица подсвечивается
         streetWide: true,
+        // 'area' — объявление про улицу целиком, не про конкретный дом.
+        precision: 'area', sourceTrust: 'official',
       });
     }
 
@@ -165,6 +167,9 @@ async function fetchPtsHeat() {
           provider: 'ТОО «Павлодарские тепловые сети»',
           geom: null,
           streetWide: false,     // уже конкретный дом — index.js не разворачивает
+          // 'area' — координаты дома РЕАЛЬНЫЕ (OSM), но евиденс — членство в
+          // микрорайоне («весь Химгородки»), а не подтверждение именно ЭТОГО дома.
+          precision: 'area', sourceTrust: 'official',
         });
       }
     }
@@ -205,6 +210,9 @@ async function fetchPtsHeat() {
           reason: 'Централизованные гидравлические испытания ГВС — по всему сетевому району (граница района OSM не размечает, окно шире точной зоны)',
           provider: 'ТОО «Павлодарские тепловые сети»',
           geom: null, streetWide: false,
+          // 'area' — самый слабый евиденс-уровень: бланковое предположение по ВСЕМ
+          // известным многоэтажкам ГОРОДА для общегородского объявления.
+          precision: 'area', sourceTrust: 'official',
         });
       }
     }

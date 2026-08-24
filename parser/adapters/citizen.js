@@ -96,6 +96,7 @@ async function fetchCitizen() {
         reason: message || 'Сообщение жителя (подтверждено модератором)',
         provider: 'Житель · подтверждено модератором',
         citizen: true, streetWide: false,
+        precision: 'community', sourceTrust: 'community',
       });
     }
   }

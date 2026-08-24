@@ -114,14 +114,14 @@ async function fetchIncidents() {
 
     // Сначала реестр OSM: он даёт и канонический адрес (иначе дубль дома, см. выше),
     // и точные координаты дома — без похода в Nominatim.
-    let address = inc.address, lat, lng;
+    let address = inc.address, lat, lng, addrPrecision;
     const canon = await canonicalAddress(inc.address);
     if (canon) {
-      address = canon.address; lat = canon.lat; lng = canon.lng;
+      address = canon.address; lat = canon.lat; lng = canon.lng; addrPrecision = 'exact';
     } else {
       const g = await geocode(inc.address);
       if (!g) { dropped.push(`${inc.address} (${inc.utility_type}) — не найден ни в реестре, ни в геокодере`); continue; }
-      lat = g.lat; lng = g.lng;
+      lat = g.lat; lng = g.lng; addrPrecision = 'inferred';
     }
     if (Math.abs(lat - CENTER[0]) > 0.22 || Math.abs(lng - CENTER[1]) > 0.35) {
       dropped.push(`${inc.address} (${inc.utility_type}) — вне границ города`);
@@ -137,6 +137,11 @@ async function fetchIncidents() {
       reason: inc.manual_override_reason || 'Подтверждено через BARJOK',
       provider: PROVIDER[inc.confirmation_type] || 'БарЖок',
       citizen: true, streetWide: false,
+      precision: addrPrecision,
+      // MANUAL (админ вручную), OFFICIAL/COMMUNITY_AND_OFFICIAL — ближе к official-
+      // решению; чистое COMMUNITY — подтверждено только голосами жителей (Decision
+      // Engine, 3+ уникальных actor_key), без ручного участия администратора.
+      sourceTrust: inc.confirmation_type === 'COMMUNITY' ? 'community' : 'official',
       // Ручное решение администратора: защищено от отмены старым Sheet-механизмом
       // (parser/adapters/pavlodar.js применяет resolved.js в конце прогона).
       // Снимается там же, где поставлено — кнопкой «Восстановлено» в админке.

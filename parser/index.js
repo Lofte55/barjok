@@ -59,6 +59,13 @@ function groupHouses(records) {
       start: r.start || null, end: r.end || null, reason: r.reason || '',
       ...(r.provider ? { provider: r.provider } : {}),
       ...(r.citizen ? { citizen: true } : {}),   // сообщение жителя — отдельный слой на карте
+      // precision: 'exact'|'inferred'|'area'|'community' — точность геокодинга (какой дом).
+      // sourceTrust: 'official'|'secondary_media'|'community' — кто автор данных.
+      // Разные оси: pavon.kz даёт exact-адреса через secondary_media (не официальный
+      // канал ПТС). НЕ спред ...r специально — новый adapter, забывший проставить эти
+      // поля, явно даст undefined здесь, а не молча пролезет чем попало.
+      ...(r.precision ? { precision: r.precision } : {}),
+      ...(r.sourceTrust ? { sourceTrust: r.sourceTrust } : {}),
     });
     // геометрия улицы (для подсветки всей улицы, когда в источнике только название)
     if (r.geom && !houses.get(key).geom) houses.get(key).geom = r.geom;

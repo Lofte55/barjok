@@ -30,6 +30,7 @@ async function fetchManualReports() {
       start, end, reason: r.reason,
       provider: 'Житель · подтверждено вручную (Telegram)',
       citizen: true, streetWide: false,
+      precision: 'community', sourceTrust: 'community',
     });
   }
   if (records.length) console.log(`  ручные жалобы (Telegram): ${records.length}`);

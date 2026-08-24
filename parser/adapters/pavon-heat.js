@@ -183,6 +183,15 @@ async function finishPavonHeat(parsed) {
           start: new Date(NOW).toISOString(), end: new Date(end).toISOString(),
           reason, provider: 'ТОО «Павлодарские тепловые сети»',
           geom: null, streetWide: false,
+          // precision:'exact' — координаты ТОЛЬКО из точного совпадения в реестре домов
+          // (см. `if (!hit) continue` выше — фолбэков нет, не выдумываем). НО
+          // sourceTrust:'secondary_media' — контент дословно от ПТС, но публикуется
+          // порталом pavon.kz (независимое СМИ), а не собственным каналом ПТС. Прямого
+          // официального канала (Telegram/сайт с точными списками) у ПТС не нашли —
+          // проверено: их собственная ссылка на Telegram на toopts.kz мёртвая (t.me/
+          // без имени). Это ДВЕ РАЗНЫЕ ОСИ: точность геокодинга здесь наивысшая в
+          // конвейере, а доверие к КАНАЛУ публикации — вторичное.
+          precision: 'exact', sourceTrust: 'secondary_media',
         });
       }
     }

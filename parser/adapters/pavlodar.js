@@ -164,6 +164,10 @@ async function fetchPavlodar() {
         start, end, reason, provider: 'АО «Павлодарэнерго»',
         geom: s.house ? null : (geoms.get(s.name) || null),
         streetWide: !s.house,
+        // 'inferred' — номер дома в тексте .docx может быть точным, но КООРДИНАТЫ здесь
+        // взяты геокодингом УЛИЦЫ (+jitter для визуального разделения пинов на одной
+        // улице), а не реестром конкретного дома — точка не гарантированно у этого дома.
+        precision: 'inferred', sourceTrust: 'official',
       });
     }
   }

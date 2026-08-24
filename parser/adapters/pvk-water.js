@@ -149,15 +149,17 @@ async function fetchPvkWater() {
       if (!s.houses.length) {
         // номеров нет — размечаем улицу целиком (index.js развернёт в дома реестра)
         if (!g || !inBounds(g.lat, g.lng)) continue;
+        // 'area' — номеров домов в объявлении нет вообще, размечена улица целиком
+        // (index.js развернёт в дома реестра, но евиденс — про улицу, не про дом).
         records.push({ ...base, address: `улица ${s.name}`, lat: g.lat, lng: g.lng,
-          geom: geoms.get(s.name) || null, streetWide: true });
+          geom: geoms.get(s.name) || null, streetWide: true, precision: 'area', sourceTrust: 'official' });
         continue;
       }
       const reg = await registry(s.name);       // точные координаты домов улицы
       for (const hn of s.houses) {
         const hit = reg.get(normHouse(hn));
-        let lat, lng;
-        if (hit) { lat = hit.lat; lng = hit.lng; }
+        let lat, lng, precision;
+        if (hit) { lat = hit.lat; lng = hit.lng; precision = 'exact'; }  // реестр — точное совпадение дома
         else {
           // Дома нет в OSM-реестре улицы (Overpass) — ПЕРЕД тем как ставить точку
           // «наугад» у центра улицы, пробуем геокодировать именно этот адрес
@@ -166,12 +168,12 @@ async function fetchPvkWater() {
           // получались маркеры в центре перекрёстка вместо реального дома (баг,
           // найден на примере «Сатпаева, 156», 2026-08-18).
           const gh = await geocode(`${s.name}, ${hn}`);
-          if (gh && inBounds(gh.lat, gh.lng)) { lat = gh.lat; lng = gh.lng; }
-          else if (g) { seq++; const j = (((seq * 2654435761) % 1000) / 1000 - 0.5) * 0.0008; lat = +(g.lat + j).toFixed(5); lng = +(g.lng + j).toFixed(5); }
+          if (gh && inBounds(gh.lat, gh.lng)) { lat = gh.lat; lng = gh.lng; precision = 'inferred'; }
+          else if (g) { seq++; const j = (((seq * 2654435761) % 1000) / 1000 - 0.5) * 0.0008; lat = +(g.lat + j).toFixed(5); lng = +(g.lng + j).toFixed(5); precision = 'inferred'; }
           else continue;                          // ни в реестре, ни в геокоде — пропуск
         }
         if (!inBounds(lat, lng)) continue;
-        records.push({ ...base, address: `улица ${s.name}, ${hn}`, lat, lng, geom: null, streetWide: false });
+        records.push({ ...base, address: `улица ${s.name}, ${hn}`, lat, lng, geom: null, streetWide: false, precision, sourceTrust: 'official' });
       }
     }
   }
