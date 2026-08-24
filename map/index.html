@@ -17,7 +17,7 @@
   <!-- leaflet/maplibre — самохостинг (map/vendor/), без зависимости от unpkg.com под нагрузкой -->
   <link rel="stylesheet" href="/map/vendor/leaflet/leaflet.css?v=1788300000" />
   <link rel="stylesheet" href="/map/vendor/maplibre-gl/maplibre-gl.css?v=1788300000" />
-  <link rel="stylesheet" href="/map/styles.css?v=1788300200" />
+  <link rel="stylesheet" href="/map/styles.css?v=1788300400" />
 
   <!-- Автомасштаб мобильной "обвязки" (шапка/шторка/чипы/карточки/пины) по ширине
        окна — CSS-переменная --fs, растёт от 1 (375px, iPhone SE/13) до ~1.17 (440px,
@@ -479,8 +479,13 @@ document.addEventListener('DOMContentLoaded', function () {
 <style>
   /* bottom:82px, а не 20px — на карте в этом же углу лежит круглая/пилюльная
      кнопка "Сообщить о проблеме" (.report-fab), иначе виджет доступности
-     наезжает на неё */
-  #a11y-widget{position:fixed;right:20px;bottom:82px;z-index:9999;font-family:var(--sans);text-align:left}
+     наезжает на неё.
+     ⚠️ z-index НИЖЕ, чем у .report-modal (1000, styles.css) — НАРОЧНО. Кнопка
+     доступности должна прятаться ЗА модалкой при открытии формы "Сообщить о
+     проблеме", а не плавать поверх её полей (было — кнопка перекрывала textarea,
+     баг с реального скриншота). 900 держит виджет выше всего обычного UI карты
+     (максимум там z-index:20) и ниже модалки. */
+  #a11y-widget{position:fixed;right:20px;bottom:82px;z-index:900;font-family:var(--sans);text-align:left}
   #a11yFab{width:52px;height:52px;border-radius:50%;background:var(--brand);color:#fff;border:0;cursor:pointer;
     display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(31,111,235,.55);transition:transform .18s}
   #a11yFab:hover{transform:scale(1.06)}

@@ -278,12 +278,13 @@ body {
 
 @media (max-width: 900px) {
   .panel { display: none; }
-  .topbar { top: 10px; left: 10px; right: 10px; gap: 8px; flex-wrap: wrap; }
-  .brand { padding: 8px 12px; }
-  .brand .kk { display: none; }
-  .search { order: 3; flex-basis: 100%; max-width: none; }
-  .search input { height: 44px; }
-  .lang { height: 40px; margin-left: auto; }
+  /* ⚠️ Мёртвые правила .topbar/.brand/.search/.lang здесь УДАЛЕНЫ — они давно
+     перекрыты более специфичным блоком ниже (@media 900px, селекторы `.topbar .search`
+     и т.п. побеждают по специфичности независимо от порядка в файле). `.brand` вообще
+     не используется в разметке (переименован в `.mapbrand` при редизайне шапки) —
+     держать здесь мёртвый селектор с тем же именем, что и у активного, было плохой
+     идеей: путает при отладке (см. фикс переноса шапки на 375px, ниже). Актуальная
+     раскладка шапки — в блоке, начинающемся `.topbar { flex-wrap: wrap;... }`. */
 
   /* По умолчанию шторка СВЁРНУТА — акцент на карте. Тянем вверх, чтобы раскрыть. */
   .sheet {
@@ -525,6 +526,25 @@ body.ads-off [data-ad-slot] { display: none !important; }
   .sheet .filters-extra { max-height: 0; }
   .sheet.filters-open .filters-extra { max-height: 220px; }
   .sheet .filters-toggle { display: none; }
+}
+
+/*
+ * Узкие телефоны: бренд-пилюля + город + RU/KZ не помещались в одну строку.
+ * Замер на живой проде (375px, iPhone SE): topbar 351px, а .mapbrand(111) + gap(8) +
+ * .tb-right(233) = 352px — ПЕРЕПОЛНЕНИЕ РОВНО НА 1px. Flex-wrap переносил .tb-right
+ * на новую строку целиком (шапка «съезжала» на 3 строки вместо 2, см. скриншот бага).
+ * На реальных Android-экранах (часто 360px, у некоторых 340px) переполнение уже
+ * 16–36px — там расползалось гарантированно, не «иногда».
+ * Порог 400px — с большим запасом ниже реальных ширин узких телефонов, но выше их
+ * не трогает (там достаточно места, сжимать нечего и незачем портить читаемость).
+ */
+@media (max-width: 400px) {
+  .topbar { left: 10px; right: 10px; }
+  .topbar .tb-right { gap: 6px; }
+  .topbar .mapbrand { padding: 0 10px 0 8px; }
+  .topbar .mapcity-btn { padding: 0 10px; }
+  .topbar .mapcity-btn #mapCityName { max-width: 60px; }
+  .lang button { padding: 0 9px; }
 }
 
 /* SVG-пиктограммы вместо эмодзи */
