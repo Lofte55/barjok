@@ -137,6 +137,10 @@ async function fetchIncidents() {
       reason: inc.manual_override_reason || 'Подтверждено через BARJOK',
       provider: PROVIDER[inc.confirmation_type] || 'БарЖок',
       citizen: true, streetWide: false,
+      // Ручное решение администратора: защищено от отмены старым Sheet-механизмом
+      // (parser/adapters/pavlodar.js применяет resolved.js в конце прогона).
+      // Снимается там же, где поставлено — кнопкой «Восстановлено» в админке.
+      manualLock: inc.manual_override === 'FORCE_OUTAGE' || inc.confirmation_type === 'MANUAL',
     });
   }
   if (records.length) console.log(`  incidents (Supabase): ${records.length} активных`);

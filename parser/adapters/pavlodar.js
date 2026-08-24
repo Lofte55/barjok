@@ -220,15 +220,26 @@ async function fetchWithFallback() {
 
   // «Восстановлено» через таблицу — применяем В САМОМ КОНЦЕ, после ВСЕХ источников
   // (официальных и жителей), чтобы перекрывать вообще любую запись по адресу.
+  //
+  // ⚠️⚠️ ИСКЛЮЧЕНИЕ: записи, подтверждённые ВРУЧНУЮ в админке (manualLock), этот
+  // механизм НЕ трогает. Причина: Google-таблица — старый и более слабый канал
+  // (строка живёт там неограниченно, статус проставляется руками), и одна давняя
+  // одобренная строка молча стирала бы свежее решение администратора — то есть
+  // парсер отменял бы ручной ввод. Снять ручное отключение можно ТАМ ЖЕ, где его
+  // поставили: кнопкой «Восстановлено» в админке (incidentsRestoredSet ниже).
   try {
     const resolvedSet = await resolved.fetchResolvedSet();
     if (resolvedSet.size) {
       const before = records.length;
+      let kept = 0;
       for (let i = records.length - 1; i >= 0; i--) {
-        if (resolved.isResolved(resolvedSet, records[i].address, records[i].resource)) records.splice(i, 1);
+        if (!resolved.isResolved(resolvedSet, records[i].address, records[i].resource)) continue;
+        if (records[i].manualLock) { kept++; continue; }
+        records.splice(i, 1);
       }
       const removed = before - records.length;
       if (removed) console.log(`  восстановлено (убрано с карты): ${removed} записей`);
+      if (kept) console.log(`  ручные подтверждения защищены от отмены таблицей: ${kept}`);
     }
   } catch (e) { console.warn('  не удалось применить восстановленные адреса:', e.message); }
 

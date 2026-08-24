@@ -184,6 +184,99 @@ map.on('click', (e) => {
 const markerLayer = L.layerGroup().addTo(map);
 
 /* ---------- Load data ---------- */
+
+/*
+ * ЖИВОЙ СЛОЙ: то, что подтверждено в админке, поверх статического data.json.
+ *
+ * Зачем: data.json пересобирает парсер раз в час, поэтому подтверждение в админке
+ * раньше появлялось на карте только со следующим прогоном (до ~60 минут + деплой).
+ * Теперь оно видно сразу при загрузке карты, а парсер позже кладёт то же самое
+ * в data.json — слой идемпотентен, дублей не возникает (см. hasSame ниже).
+ *
+ * ⚠️ Ручное подтверждение ИМЕЕТ ПРИОРИТЕТ: если по адресу+ресурсу уже есть наряд из
+ * официального источника, он ЗАМЕЩАЕТСЯ ручным (а не добавляется вторым) — иначе в
+ * карточке дома было бы два противоречащих ряда, и владелец не понимал бы, какой
+ * из них действует.
+ */
+async function applyLiveLayer() {
+  let live;
+  try {
+    const res = await fetch('/api/pages?page=live', { cache: 'no-store' });
+    if (!res.ok) return;
+    live = await res.json();
+  } catch (e) { return; }              // нет сети/БД — карта работает на data.json
+  if (!live || !live.ok) return;
+
+  /* ⚠️ Адрес из админки набирают руками, и запятой часто нет («Сатпаева 21/1»).
+     sameAddress() берёт номер дома регуляркой ПОСЛЕ ЗАПЯТОЙ и без неё возвращает ''
+     — то есть не сматчил бы ничего. Приводим к «улица, дом» через parseQuery,
+     который понимает оба формата. (Та же ловушка была в parser/adapters/incidents.js.) */
+  const forMatch = (addr) => {
+    const pq = parseQuery(addr);
+    return pq.house ? `${pq.street}, ${pq.house}` : String(addr || '');
+  };
+
+  // 1) RESTORED из админки убирает наряды по адресу+ресурсу из ЛЮБОГО источника.
+  (live.restored || []).forEach((r) => {
+    const key = forMatch(r.address);
+    DATA.houses.forEach((h) => {
+      if (!sameAddress(h.address, key)) return;
+      h.outages = h.outages.filter((o) => o.resource !== r.utility_type);
+    });
+  });
+
+  // 2) ACTIVE — добавляем/замещаем.
+  const mkOutage = (a) => ({
+    resource: a.utility_type,
+    type: 'emergency',
+    status: 'current',
+    start: a.start || new Date().toISOString(),
+    end: null,
+    reason: a.reason || 'Подтверждено через BARJOK',
+    provider: a.manual ? 'БарЖок · подтверждено администратором' : 'БарЖок · подтверждено жителями',
+    citizen: true,
+    live: true,                        // пометка: пришло не из data.json
+  });
+  const put = (house, a) => {
+    // Тот же ресурс уже есть — замещаем (ручное важнее официального), см. комментарий выше.
+    const idx = house.outages.findIndex((o) => o.resource === a.utility_type);
+    if (idx >= 0) house.outages[idx] = mkOutage(a); else house.outages.push(mkOutage(a));
+  };
+
+  let added = 0;
+  const unresolved = [];
+  (live.active || []).forEach((a) => {
+    const key = forMatch(a.address);
+    const house = DATA.houses.find((h) => sameAddress(h.address, key));
+    if (house) { put(house, a); added++; } else unresolved.push(a);
+  });
+
+  // Дома нет в data.json (например, отключение только по жалобе, официальных нарядов
+  // по адресу нет) — координаты берём из адресного справочника города. Он лениво
+  // грузится и так (для поиска), но здесь тянем ТОЛЬКО если есть что искать.
+  if (unresolved.length) {
+    const idx = await loadAddresses();
+    unresolved.forEach((a) => {
+      const pq = parseQuery(a.address);
+      if (!pq.street || !pq.house) return;
+      const wantHouse = pq.house.toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е');
+      for (const street of Object.keys(idx || {})) {
+        if (!streetMatches(street, pq.street)) continue;
+        const hit = (idx[street] || []).find(
+          ([house]) => String(house).toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е') === wantHouse,
+        );
+        if (!hit) continue;
+        const house = { address: `${street}, ${hit[0]}`, district: 'БарЖок', lat: hit[1], lng: hit[2], outages: [] };
+        put(house, a);
+        DATA.houses.push(house);
+        added++;
+        return;
+      }
+    });
+  }
+  if (added) console.log('[BARJOK] живой слой: применено записей —', added);
+}
+
 async function load() {
   let d;
   try {
@@ -194,6 +287,10 @@ async function load() {
   } catch (e) { d = FALLBACK; }
   DATA.city = d.city; DATA.center = d.center; DATA.houses = d.houses; DATA.source = d.source;
   DATA.updated = d.updated;
+
+  // Живой слой — ДО построения фильтров/индексов ниже, чтобы подтверждённое из
+  // админки сразу попадало и в счётчики, и в пины, а не только в карточку.
+  await applyLiveLayer();
 
   // индекс улиц (из адресов домов)
   const streetMap = new Map();

@@ -491,10 +491,67 @@ ${urls.map((u) => `  <url>
   res.status(200).send(xml);
 }
 
+/*
+ * ЖИВОЙ СЛОЙ отключений из Supabase — то, что подтверждено в админке, БЕЗ ожидания парсера.
+ *
+ * Зачем: map/data.json пересобирается парсером раз в час, поэтому подтверждение в
+ * админке появлялось на карте только со следующим прогоном (до ~60 минут + деплой).
+ * Владелец справедливо ждал, что ручное действие видно сразу. Карта грузит этот
+ * эндпоинт сразу после data.json и накладывает поверх.
+ *
+ * ⚠️ Координат в таблице incidents НЕТ, и мы их тут НЕ ищем: подавляющее большинство
+ * подтверждаемых домов уже есть в data.json (официальные наряды), поэтому карта
+ * сливает запись по адресу и берёт координаты готового дома. Так эндпоинт остаётся
+ * дешёвым (один SELECT, без геокодера и без реестра домов на 2.7 МБ в лямбде).
+ *
+ * ⚠️ Живёт ВЕТКОЙ pages.js, а не отдельным api/live.js: на Vercel Hobby лимит
+ * 12 функций, занято 11 — свободный слот бережём (см. barjok.md, «Ограничения платформы»).
+ */
+async function renderLive(req, res) {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  if (!process.env.SUPABASE_URL) return res.status(200).json({ ok: true, active: [], restored: [] });
+
+  let rows;
+  try {
+    const { select } = require('./_lib/supabase');
+    rows = await select('incidents', 'order=updated_at.desc&limit=1000');
+  } catch (e) {
+    // Карта обязана работать и без БД — отдаём пустой слой, а не ошибку.
+    console.error('live incidents failed:', e.message);
+    return res.status(200).json({ ok: true, active: [], restored: [] });
+  }
+
+  // На пару адрес+ресурс может быть несколько incident'ов (старый RESTORED и новый
+  // ACTIVE) — берём самый свежий, иначе устаревший RESTORED глушил бы актуальный ACTIVE.
+  const latest = new Map();
+  for (const inc of rows || []) {
+    const key = `${inc.address}|${inc.utility_type}`;
+    const cur = latest.get(key);
+    if (!cur || new Date(inc.updated_at) > new Date(cur.updated_at)) latest.set(key, inc);
+  }
+
+  const active = [], restored = [];
+  for (const inc of latest.values()) {
+    const item = { address: inc.address, utility_type: inc.utility_type };
+    if (inc.status === 'RESTORED') { restored.push(item); continue; }
+    if (inc.status !== 'ACTIVE') continue;
+    active.push({
+      ...item,
+      reason: inc.manual_override_reason || 'Подтверждено через BARJOK',
+      confirmation_type: inc.confirmation_type,
+      manual: inc.manual_override === 'FORCE_OUTAGE' || inc.confirmation_type === 'MANUAL',
+      start: inc.confirmed_at || inc.created_at || null,
+    });
+  }
+  return res.status(200).json({ ok: true, updated: new Date().toISOString(), active, restored });
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).send('Method not allowed');
   const page = String((req.query || {}).page || '');
   try {
+    if (page === 'live') return await renderLive(req, res);
     if (page === 'home') return await renderHome(req, res);
     if (page === 'maphub') return await renderMapHub(req, res);
     if (page === 'city') return await renderCity(req, res);
