@@ -483,10 +483,33 @@ function relStatus(o) {
   return { cls: 'ended', txt: t().ended };
 }
 
+/*
+ * Отступ, на который Leaflet отодвигает карту, чтобы открывшийся popup не залезал
+ * под шапку/поиск сверху и под свёрнутую шторку снизу.
+ *
+ * ⚠️ Раньше было жёстко [24, 90] на все 4 стороны — и на мобильной раскладке шапка+поиск
+ * реально занимают ~114px (не 90), поэтому popup у верхнего края карты открывался ПОД
+ * поиском, а не под ним (баг с реального скриншота). Вместо ещё одной пары магических
+ * чисел, которая расползётся с первой же правкой шапки (ровно то, что уже происходило
+ * с --fs/.csel/pendingFilter в этой сессии) — меряем РЕАЛЬНУЮ высоту прямо в момент
+ * открытия. Работает и с автомасштабом (--fs): чем шире телефон, тем выше шапка,
+ * getBoundingClientRect() это уже учитывает, отдельно ничего пересчитывать не надо.
+ */
+function popupPanPadding() {
+  if (!window.matchMedia('(max-width: 900px)').matches) return { topLeft: [24, 90], bottomRight: [24, 90] };
+  const topbar = document.querySelector('.topbar');
+  const sheet = document.querySelector('.sheet');
+  const topH = topbar ? Math.ceil(topbar.getBoundingClientRect().bottom) : 114;
+  const botH = sheet ? Math.ceil(innerHeight - sheet.getBoundingClientRect().top) : 108;
+  return { topLeft: [16, topH + 14], bottomRight: [16, botH + 14] };
+}
+
 /* ---------- House card (маленькая карточка дома) ---------- */
 function openHouseCard(h, latlng) {
   const html = houseCardHtml(h);
-  const popup = L.popup({ maxWidth: 320, minWidth: 288, className: 'house-popup', autoPanPadding: [24, 90] })
+  const pad = popupPanPadding();
+  const popup = L.popup({ maxWidth: 320, minWidth: 288, className: 'house-popup',
+    autoPanPaddingTopLeft: pad.topLeft, autoPanPaddingBottomRight: pad.bottomRight })
     .setLatLng(latlng).setContent(html).openOn(map);
   wireCard(popup, h);
   if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
@@ -951,7 +974,9 @@ function openAddressCard(pt, nearHouses) {
     <div class="hc-list">${inner}</div>
     <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(pt.address)}">Сообщить о проблеме</button>
   </div>`;
-  L.popup({ maxWidth: 330, minWidth: 290, className: 'house-popup', autoPanPadding: [24, 90] })
+  const pad = popupPanPadding();
+  L.popup({ maxWidth: 330, minWidth: 290, className: 'house-popup',
+    autoPanPaddingTopLeft: pad.topLeft, autoPanPaddingBottomRight: pad.bottomRight })
     .setLatLng([pt.lat, pt.lng]).setContent(html).openOn(map);
   if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
 }
