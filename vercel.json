@@ -11,6 +11,8 @@
     { "source": "/map/pavlodar/", "destination": "/map/index.html" },
     { "source": "/about", "destination": "/api/pages?page=about" },
     { "source": "/about/", "destination": "/api/pages?page=about" },
+    { "source": "/partners", "destination": "/api/pages?page=partners" },
+    { "source": "/partners/", "destination": "/api/pages?page=partners" },
     { "source": "/admin", "destination": "/api/admin" },
     { "source": "/admin/", "destination": "/api/admin" },
     { "source": "/admin/settings", "destination": "/api/admin-settings" },

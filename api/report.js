@@ -85,14 +85,28 @@ module.exports = async (req, res) => {
   // жёсткий лимит размера полей — защита от гигантских payload'ов
   if (JSON.stringify(b).length > 8000) return res.status(413).json({ ok: false, error: 'too_large' });
 
+  const isPartner = b.kind === 'partner';
   const isSuggest = b.kind === 'suggestion';
-  const kind = isSuggest ? 'Предложение' : 'Жалоба';
+  const kind = isPartner ? 'Заявка партнёра' : (isSuggest ? 'Предложение' : 'Жалоба');
   const message = String(b.message || '').trim().slice(0, 1500);
   const address = String(b.address || '').trim().slice(0, 200);
-  const category = isSuggest ? '' : (CATS[b.category] || '');
+  const category = (isSuggest || isPartner) ? '' : (CATS[b.category] || '');
+
+  // Заявка с /partners/ — свои поля и своя валидация (см. api/_lib/partners-page.js),
+  // без Decision Engine/адресной привязки: это B2B-заявка на подключение, а не
+  // жалоба по конкретному дому.
+  const partnerOrg = isPartner ? String(b.org || '').trim().slice(0, 200) : '';
+  const partnerCity = isPartner ? String(b.city || '').trim().slice(0, 100) : '';
+  const partnerName = isPartner ? String(b.name || '').trim().slice(0, 150) : '';
+  const partnerPosition = isPartner ? String(b.position || '').trim().slice(0, 150) : '';
+  const partnerPhone = isPartner ? String(b.phone || '').trim().slice(0, 60) : '';
+  const partnerContact = isPartner ? String(b.contact || '').trim().slice(0, 150) : '';
+  if (isPartner && (!partnerOrg || !partnerCity || !partnerName || !partnerPhone)) {
+    return res.status(400).json({ ok: false, error: 'missing_fields' });
+  }
 
   // минимальная валидация: жалоба требует категорию, предложение — текст
-  if (!isSuggest && !category) return res.status(400).json({ ok: false, error: 'no_category' });
+  if (!isSuggest && !isPartner && !category) return res.status(400).json({ ok: false, error: 'no_category' });
   if (isSuggest && !message) return res.status(400).json({ ok: false, error: 'no_message' });
 
   // Суточный durable-потолок (память лямбды не переживает холодный старт).
@@ -112,7 +126,15 @@ module.exports = async (req, res) => {
     )).then((results) => results.forEach((r) => { if (r.status === 'rejected') console.error('decision-engine submitReport failed:', r.reason?.message); }));
   }
 
-  const lines = [
+  const lines = isPartner ? [
+    `<b>${kind}</b> · Бар Жоқ`,
+    `Организация: <b>${esc(partnerOrg)}</b>`,
+    `Город: ${esc(partnerCity)}`,
+    `Контакт: ${esc(partnerName)}${partnerPosition ? ` (${esc(partnerPosition)})` : ''}`,
+    `Телефон: ${esc(partnerPhone)}`,
+    partnerContact ? `Email/WhatsApp: ${esc(partnerContact)}` : '',
+    message ? `\n${esc(message)}` : '',
+  ].filter(Boolean) : [
     `<b>${kind}</b> · Бар Жоқ`,
     category ? `Проблема: <b>${esc(category)}</b>` : '',
     address ? `Адрес: ${esc(address)}` : '',
@@ -123,7 +145,9 @@ module.exports = async (req, res) => {
   // Не критично для пользователя: если упало, жалоба всё равно уйдёт в Telegram —
   // но ошибку ЛОГИРУЕМ (видно в Vercel → Deployments → Functions → Logs), иначе
   // проблема невидима месяцами (именно так таблица не наполнялась).
-  const sheetUrl = process.env.SHEET_WEBHOOK_URL;
+  // Партнёрские заявки не пишем в таблицу модерации жалоб — это B2B-лид, а не
+  // жалоба/предложение по дому, структура таблицы для него не подходит.
+  const sheetUrl = isPartner ? null : process.env.SHEET_WEBHOOK_URL;
   if (sheetUrl) {
     const row = {
       ts: new Date().toISOString(),

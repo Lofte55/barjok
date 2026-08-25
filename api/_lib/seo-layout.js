@@ -133,6 +133,7 @@ function footerHtml(lang) {
         <div class="fcol">
           <h4 data-kk="Жоба">Проект</h4>
           <a href="${p}/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
+          <a href="/partners/">Партнёрам</a>
         </div>
       </div>
     </div>
@@ -513,6 +514,97 @@ ${jsonLdBlocks}
     .cards.tab-all .outage-card.mobile-hide{display:none}
     .cards .outage-more:not(.outage-more-mobile){display:none}
     .outage-more-mobile{display:flex}
+  }
+
+  /* ---------- /partners/ — B2B/B2G-оффер (ТЗ на страницу Partners) ---------- */
+  .pt-hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+  .pt-chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:28px}
+  .pt-chip{display:inline-flex;align-items:center;font-size:13.5px;font-weight:700;color:var(--ink-2);
+    background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:9px 16px}
+  .pt-quote{border:1px solid var(--line);background:var(--canvas);border-radius:var(--radius);padding:22px 24px;
+    font-size:15px;color:var(--ink-2);line-height:1.6;margin-top:28px;position:relative}
+  .pt-quote::before{content:"\\201C";position:absolute;top:-6px;left:14px;font-size:52px;font-weight:800;color:var(--line);font-family:Georgia,serif;line-height:1}
+  .pt-quote p{position:relative;padding-left:6px}
+  .pt-flowline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:22px;font-size:13.5px;font-weight:700;color:var(--ink-2)}
+  .pt-flowline .step{background:var(--line-2);border-radius:999px;padding:8px 14px}
+  .pt-flowline svg{color:var(--ink-3);flex:none}
+  .pt-outcome{margin-top:18px;display:inline-flex;align-items:center;gap:10px;background:color-mix(in srgb, var(--emerg) 10%, white);
+    color:var(--emerg);border-radius:12px;padding:12px 16px;font-weight:700;font-size:14px}
+  .pt-transform{display:grid;grid-template-columns:1fr auto 1fr;gap:22px;align-items:center;margin-top:36px}
+  .pt-t-was{border:1px dashed var(--line);border-radius:var(--radius);padding:22px;color:var(--ink-3);font-size:14px;line-height:1.6;background:var(--bg)}
+  .pt-t-was b{display:block;font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
+  .pt-t-arrow{display:flex;align-items:center;justify-content:center;color:var(--ink-3);width:36px;height:36px;border-radius:50%;
+    background:var(--canvas);border:1px solid var(--line);flex:none}
+  .pt-t-now .ocard{box-shadow:var(--shadow-lg)}
+  .pt-src-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--accent-ink);
+    background:var(--accent-wash);border-radius:999px;padding:8px 14px 8px 10px;margin-top:14px;text-decoration:none;transition:background .15s}
+  .pt-src-badge:hover{background:color-mix(in srgb, var(--accent-wash) 60%, var(--accent))}
+  @media(max-width:760px){.pt-transform{grid-template-columns:1fr}.pt-t-arrow{transform:rotate(90deg);margin:0 auto}}
+  .pt-flow{display:flex;flex-direction:column;gap:0;margin-top:36px}
+  .pt-fstep{display:flex;gap:20px;padding:26px 0;border-top:1px solid var(--line)}
+  .pt-fstep:first-child{border-top:0;padding-top:0}
+  .pt-fstep .k{flex:none;width:38px;height:38px;border-radius:11px;background:var(--accent-wash);color:var(--accent-ink);
+    display:grid;place-items:center;font-weight:800;font-size:15px}
+  .pt-fstep h3{font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .pt-fstep p{margin-top:6px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:64ch}
+  .pt-channels{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .pt-channel{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink-2);
+    background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:7px 13px}
+  .pt-note{margin-top:12px;font-size:13px;color:var(--ink-3);line-height:1.55}
+  .pt-signal{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--ink);color:#fff;
+    padding:18px 20px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;line-height:1.7;margin-top:24px;white-space:pre-wrap}
+  .pt-fanout{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:22px}
+  .pt-fb-chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+  .pt-fb-chip{font-size:13px;font-weight:600;color:var(--ink-2);background:var(--canvas);border:1px solid var(--line);
+    border-radius:999px;padding:8px 14px}
+  .pt-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin-top:26px}
+  .pt-check{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+  .pt-check svg{flex:none;color:var(--ok);margin-top:2px}
+  @media(max-width:640px){.pt-check-grid{grid-template-columns:1fr}}
+  .pt-share-list{margin-top:24px;display:flex;flex-direction:column;gap:0}
+  .pt-share-item{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line-2);font-size:14.5px;color:var(--ink-2)}
+  .pt-share-item:first-child{border-top:0}
+  .pt-share-item svg{flex:none;color:var(--accent);margin-top:2px}
+  .pt-msg{background:var(--accent-wash);border-radius:var(--radius);padding:20px 22px;margin-top:16px;
+    font-size:14.5px;color:var(--accent-ink);line-height:1.6;font-weight:600}
+  .pt-msg + .pt-msg{margin-top:10px}
+  .pt-badge-demo{display:inline-flex;align-items:center;gap:9px;background:var(--canvas);border:1px solid var(--line);
+    border-radius:999px;padding:10px 18px 10px 14px;margin-top:26px;box-shadow:var(--shadow-sm)}
+  .pt-badge-demo svg{color:var(--ok)}
+  .pt-badge-demo b{font-size:14px;font-weight:800;color:var(--ink)}
+  .pt-stats-mock{border:1.5px dashed var(--line);border-radius:var(--radius);padding:28px 26px;margin-top:26px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:22px;background:var(--canvas)}
+  .pt-stats-mock .n{font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.02em;color:var(--accent-ink);font-variant-numeric:tabular-nums}
+  .pt-stats-mock .l{font-size:12.5px;color:var(--ink-3);font-weight:600;margin-top:6px}
+  .pt-stats-caption{text-align:center;font-size:12.5px;color:var(--ink-3);margin-top:14px;font-style:italic}
+  .pt-chain{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:30px;flex-wrap:wrap}
+  .pt-chain-step{flex:1 1 150px;text-align:center;background:var(--canvas);border:1px solid var(--line);border-radius:14px;padding:16px 12px;font-size:13px;font-weight:700;color:var(--ink)}
+  .pt-chain-arrow{flex:none;color:var(--ink-3)}
+  @media(max-width:820px){.pt-chain{flex-direction:column}.pt-chain-arrow{transform:rotate(90deg)}.pt-chain-step{width:100%}}
+  .pt-fi{width:46px;height:46px;border-radius:13px;flex:none;display:grid;place-items:center;background:var(--accent-wash);color:var(--accent-ink)}
+  .pt-fi svg{width:22px;height:22px}
+  .pt-form-wrap{margin-top:36px;background:var(--canvas);border:1px solid var(--line);border-radius:26px;padding:36px}
+  .pt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px;margin-top:22px}
+  .pt-field{display:flex;flex-direction:column;gap:6px}
+  .pt-field.full{grid-column:1/-1}
+  .pt-field label{font-size:13px;font-weight:700;color:var(--ink)}
+  .pt-field label .req{color:var(--emerg)}
+  .pt-field input,.pt-field textarea{font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--bg);
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;outline:0;transition:border-color .15s;width:100%}
+  .pt-field input:focus,.pt-field textarea:focus{border-color:var(--accent)}
+  .pt-field textarea{resize:vertical;min-height:88px;font-family:inherit}
+  .pt-form-err{display:none;color:var(--emerg);font-size:13.5px;font-weight:600;margin-top:14px}
+  .pt-form-err.show{display:block}
+  .pt-form-ok{display:none;text-align:center;padding:30px 10px}
+  .pt-form-ok.show{display:block}
+  .pt-form-ok svg{color:var(--ok);width:44px;height:44px}
+  .pt-form-ok h3{margin-top:14px;font-size:19px;font-weight:800}
+  .pt-form-ok p{margin-top:6px;color:var(--ink-2);font-size:14px}
+  .pt-form-submit{width:100%;margin-top:22px;font-size:15.5px;padding:15px}
+  @media(max-width:640px){.pt-form-grid{grid-template-columns:1fr}.pt-form-wrap{padding:24px 20px;border-radius:20px}}
+  @media(max-width:760px){
+    .pt-transform,.pt-check-grid,.pt-form-grid{gap:14px}
+    .pt-fstep h3,.pt-fstep p,.pt-note{text-align:left}
   }
 </style>
 </head>

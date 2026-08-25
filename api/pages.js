@@ -12,6 +12,7 @@ const { groupedOutagesHtml, countMatching } = require('./_lib/seo-cards');
 const { statRowHtml, minimalStatsHtml, mapPreviewHtml, stepsHtml, serviceTilesHtml, trustGridHtml, reportCtaHtml, faqAccordionHtml, ctaFinalHtml, sectionHeadHtml, timelineHtml } = require('./_lib/seo-blocks');
 const { dk } = require('./_lib/i18n-kk');
 const { bakeKk } = require('./_lib/bake-kk');
+const { renderPartnersBody } = require('./_lib/partners-page');
 
 // lang из req.query — 'kk' только по точному совпадению, любое другое
 // значение (или отсутствие) — русская страница как раньше.
@@ -420,6 +421,33 @@ async function renderAbout(req, res) {
 }
 
 /*
+ * /partners/ — B2B/B2G-оффер для коммунальных служб и городских организаций
+ * (см. ТЗ на страницу Partners). Статическая страница, без live-данных и без
+ * казахской версии на первом этапе — контент собран в partners-page.js.
+ */
+async function renderPartners(req, res) {
+  const title = 'Партнёрам — быстрее сообщайте жителям об отключениях | BARJOK';
+  const description = 'BARJOK помогает коммунальным службам и городским организациям быстрее доносить информацию об отключениях до жителей затронутых домов и снижает нагрузку на диспетчерские.';
+  const canonical = `${ORIGIN}/partners/`;
+
+  const html = renderSeoPage({
+    title, description, canonical,
+    h1: 'Сообщайте жителям об отключениях быстрее',
+    noindex: false,
+    breadcrumbs: [{ name: BRAND, url: `${ORIGIN}/` }, { name: 'Партнёрам' }],
+    bodyHtml: renderPartnersBody(),
+    jsonLd: [
+      organizationJsonLd(),
+      webPageJsonLd({ url: canonical, title, description }),
+      breadcrumbsJsonLd([{ name: BRAND, url: `${ORIGIN}/` }, { name: 'Партнёрам', url: canonical }]),
+    ],
+  });
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1800');
+  res.status(200).send(html);
+}
+
+/*
  * Catch-all 404 — ЕДИНСТВЕННЫЙ обработчик 404 на проекте. Статического
  * /404.html нет намеренно (был — удалён как недостижимый): Vercel не
  * подхватывает его автоматически, когда в vercel.json есть rewrites — проверено
@@ -489,6 +517,7 @@ async function renderSitemap(req, res) {
     { loc: `${ORIGIN}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${ORIGIN}/map/`, changefreq: 'daily', priority: '0.5' },
     { loc: `${ORIGIN}/kz/`, changefreq: 'daily', priority: '1.0' },
+    { loc: `${ORIGIN}/partners/`, changefreq: 'monthly', priority: '0.6' },
   ];
   for (const city of activeCities()) {
     urls.push({ loc: `${ORIGIN}/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
@@ -547,6 +576,7 @@ module.exports = async (req, res) => {
     if (page === 'city') return await renderCity(req, res);
     if (page === 'service') return await renderService(req, res);
     if (page === 'about') return await renderAbout(req, res);
+    if (page === 'partners') return await renderPartners(req, res);
     if (page === 'sitemap') return await renderSitemap(req, res);
     if (page === 'notfound') return await renderNotFound(req, res);
     return await renderNotFound(req, res);
