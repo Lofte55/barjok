@@ -52,8 +52,16 @@ if [ -z "$CHROME" ]; then
 fi
 
 echo "Снимаю: $URL → $RAW (окно ${WIN_W}x${WIN_H}, Chrome: $CHROME)"
-"$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \
-  --window-size="${WIN_W},${WIN_H}" --virtual-time-budget=6000 \
+# ⚠️⚠️ БЫЛО --disable-gpu — И ЭТО ЛОМАЛО КАРТИНКУ: карта рисует подложку через
+# MapLibre GL (WebGL), а --disable-gpu убивает WebGL целиком. Получался снимок
+# с пинами-кружками на ПУСТОМ сером/голубом фоне — ни улиц, ни реки, ни подписей
+# города (нашли на первом же реальном превью: "не видно самой карты"). Плюс
+# при --disable-gpu вообще не хватало времени на подгрузку — файл выходил втрое
+# легче (272КБ вместо 941КБ на том же URL). Замена: программный (без реального
+# GPU) WebGL через ANGLE/SwiftShader — работает в headless без видеокарты.
+"$CHROME" --headless=new --hide-scrollbars --force-device-scale-factor=1 \
+  --use-gl=angle --use-angle=swiftshader --enable-webgl --ignore-gpu-blocklist \
+  --window-size="${WIN_W},${WIN_H}" --virtual-time-budget=8000 \
   --screenshot="$RAW" "$URL"
 
 if [ ! -s "$RAW" ]; then

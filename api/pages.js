@@ -510,40 +510,8 @@ ${urls.map((u) => `  <url>
 async function renderLive(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
-  if (!process.env.SUPABASE_URL) return res.status(200).json({ ok: true, active: [], restored: [] });
-
-  let rows;
-  try {
-    const { select } = require('./_lib/supabase');
-    rows = await select('incidents', 'order=updated_at.desc&limit=1000');
-  } catch (e) {
-    // Карта обязана работать и без БД — отдаём пустой слой, а не ошибку.
-    console.error('live incidents failed:', e.message);
-    return res.status(200).json({ ok: true, active: [], restored: [] });
-  }
-
-  // На пару адрес+ресурс может быть несколько incident'ов (старый RESTORED и новый
-  // ACTIVE) — берём самый свежий, иначе устаревший RESTORED глушил бы актуальный ACTIVE.
-  const latest = new Map();
-  for (const inc of rows || []) {
-    const key = `${inc.address}|${inc.utility_type}`;
-    const cur = latest.get(key);
-    if (!cur || new Date(inc.updated_at) > new Date(cur.updated_at)) latest.set(key, inc);
-  }
-
-  const active = [], restored = [];
-  for (const inc of latest.values()) {
-    const item = { address: inc.address, utility_type: inc.utility_type };
-    if (inc.status === 'RESTORED') { restored.push(item); continue; }
-    if (inc.status !== 'ACTIVE') continue;
-    active.push({
-      ...item,
-      reason: inc.manual_override_reason || 'Подтверждено через BARJOK',
-      confirmation_type: inc.confirmation_type,
-      manual: inc.manual_override === 'FORCE_OUTAGE' || inc.confirmation_type === 'MANUAL',
-      start: inc.confirmed_at || inc.created_at || null,
-    });
-  }
+  const { fetchLiveIncidents } = require('./_lib/live-incidents');
+  const { active, restored } = await fetchLiveIncidents();
   return res.status(200).json({ ok: true, updated: new Date().toISOString(), active, restored });
 }
 
