@@ -595,15 +595,21 @@ body.ads-off [data-ad-slot] { display: none !important; }
 .report-fab:active { transform: translateY(1px); }
 .report-fab svg { width: 18px; height: 18px; }
 
-/* Кнопка внутри карточки дома — отделена от контента, с отступами со всех сторон,
-   чтобы читалась как самостоятельная целевая кнопка, а не футер-полоса. */
+/* Кнопки внутри карточки дома — отделены от контента, с отступами со всех сторон,
+   чтобы читались как самостоятельные целевые кнопки, а не футер-полоса.
+   «Отправить соседям» — вторичная (ghost), «Сообщить о проблеме» — основная (brand),
+   рядом в одну строку; на узкой карточке (<300px) складываются в столбик. */
+.hc-actions { display: flex; gap: 8px; margin: 12px 14px 14px; }
+.hc-report, .hc-share {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  flex: 1; min-width: 0; height: 44px;
+  border-radius: 12px; cursor: pointer;
+  font-family: var(--sans); font-weight: 700; font-size: 13.5px;
+  transition: background .2s, transform .1s, box-shadow .2s, border-color .2s;
+}
 .hc-report {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  margin: 12px 14px 14px; width: calc(100% - 28px); height: 44px;
-  border: 0; border-radius: 12px; cursor: pointer;
-  background: var(--brand); color: #fff; font-family: var(--sans); font-weight: 700; font-size: 14px;
+  border: 0; background: var(--brand); color: #fff;
   box-shadow: 0 6px 16px -6px rgba(31,111,235,.6);
-  transition: background .2s, transform .1s, box-shadow .2s;
 }
 .hc-report::before {
   content: ''; width: 17px; height: 17px; flex: none;
@@ -612,7 +618,18 @@ body.ads-off [data-ad-slot] { display: none !important; }
 }
 .hc-report:hover { background: var(--brand-ink); }
 .hc-report:active { transform: translateY(1px); box-shadow: 0 3px 10px -4px rgba(31,111,235,.6); }
-/* разделитель над кнопкой — визуально отделяет от списка отключений */
+.hc-share {
+  border: 1px solid var(--line); background: #fff; color: var(--ink);
+}
+.hc-share::before {
+  content: ''; width: 16px; height: 16px; flex: none;
+  background: currentColor;
+  -webkit-mask: var(--share-ico) center/contain no-repeat; mask: var(--share-ico) center/contain no-repeat;
+}
+.hc-share:hover { border-color: var(--ink-3, #8a93a6); }
+.hc-share:active { transform: translateY(1px); }
+@media (max-width: 300px) { .hc-actions { flex-direction: column; } }
+/* разделитель над кнопками — визуально отделяет от списка отключений */
 .hc-list { border-bottom: 1px solid var(--line-2); margin-bottom: 2px; }
 
 /* ADS: нативный контекстный компонент (§21 документа) — НЕ баннер: та же карточка,
@@ -634,6 +651,7 @@ body.ads-off [data-ad-slot] { display: none !important; }
 .ad-card .ad-cta { display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 8px; background: var(--brand); color: #fff; font-size: 12.5px; font-weight: 700; }
 .ad-card:hover .ad-cta { background: var(--brand-ink); }
 :root { --report-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'/%3E%3C/svg%3E"); }
+:root { --share-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cline x1='8.59' y1='13.51' x2='15.42' y2='17.49'/%3E%3Cline x1='15.41' y1='6.51' x2='8.59' y2='10.49'/%3E%3C/svg%3E"); }
 
 /* Модалка */
 .report-modal { position: fixed; inset: 0; z-index: 1000; display: none; }

@@ -32,6 +32,8 @@ const I18N = {
     nearbyOnly: 'Рядом на этой улице', notListed: 'По этому адресу отключение не заявлено',
     source: 'Источник', demo: 'демо на открытых данных', adLabel: 'Реклама',
     adText: 'Место для рекламодателя', adCta: 'Разместить рекламу',
+    share: 'Отправить соседям', shareCta: 'Проверить свой адрес и другие отключения — BARJOK',
+    shareCopied: 'Ссылка и текст скопированы', shareFailed: 'Не удалось поделиться',
   },
   kk: {
     title: (c) => `Ажыратулар · ${c}`,
@@ -52,6 +54,8 @@ const I18N = {
     nearbyOnly: 'Осы көшеде жақын жерде', notListed: 'Бұл мекенжай бойынша ажырату жарияланбаған',
     source: 'Дереккөз', demo: 'ашық деректердегі демо', adLabel: 'Жарнама',
     adText: 'Жарнама беруші үшін орын', adCta: 'Жарнама орналастыру',
+    share: 'Көршілерге жіберу', shareCta: 'Мекенжайыңызды және басқа ажыратуларды тексеріңіз — BARJOK',
+    shareCopied: 'Сілтеме мен мәтін көшірілді', shareFailed: 'Бөлісу сәтсіз аяқталды',
   },
 };
 let LANG = 'ru'; try { LANG = localStorage.getItem('barjoq_lang') || (location.pathname.indexOf('/kz/') === 0 ? 'kk' : 'ru'); } catch (e) {}
@@ -512,6 +516,7 @@ function openHouseCard(h, latlng) {
     autoPanPaddingTopLeft: pad.topLeft, autoPanPaddingBottomRight: pad.bottomRight })
     .setLatLng(latlng).setContent(html).openOn(map);
   wireCard(popup, h);
+  wireShareButton(h.address, collapseByResource(cardOutages(h)));
   if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
 }
 function houseCardHtml(h) {
@@ -537,11 +542,50 @@ function houseCardHtml(h) {
     <div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>
     <div class="hc-list">${rows}</div>
     <div id="adSlotHouse"></div>
-    <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(h.address)}">Сообщить о проблеме</button>
+    <div class="hc-actions">
+      <button class="hc-share" type="button">${t().share}</button>
+      <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(h.address)}">Сообщить о проблеме</button>
+    </div>
   </div>`;
   // Кнопка «Подписаться» временно скрыта — подписки будут позже.
 }
 function wireCard(popup, h) { loadAdIntoSlot('adSlotHouse', h, cardOutages(h)); }
+
+/* ---------- «Отправить соседям» (Web Share API + буфер обмена) ----------
+   outs — уже collapsed (один ряд на ресурс), самый релевантный (current раньше
+   future) первым — см. collapseByResource/houseCardHtml. Ссылка ведёт на карту
+   с адресом в ?q=, при открытии сразу ищет и показывает карточку (см. load()
+   выше). Текст БЕЗ ссылки внутри — она передаётся отдельным полем url в
+   navigator.share (многие приложения дописывают её сами); для буфера обмена
+   (нет системного шэринга — десктоп) дописываем ссылку вручную. */
+function buildShareText(address, outs) {
+  const primary = outs[0];
+  const statusWord = primary.citizen ? '' : (primary.type === 'emergency' ? t().emergency : t().planned);
+  const extra = outs.length > 1 ? ` +${outs.length - 1}` : '';
+  const header = `${rName(primary.resource)}${statusWord ? ' — ' + statusWord : ''}${extra}`;
+  const period = `${fmtDate(primary.start)} – ${fmtDate(primary.end)}`;
+  return `${header}\n📍 ${address}\n🕘 ${period}\n\n${t().shareCta}`;
+}
+async function shareOutages(address, outs) {
+  if (!outs || !outs.length) return;
+  const path = LANG === 'kk' ? '/kz/map/pavlodar' : '/map/pavlodar';
+  const url = `https://barjok.kz${path}?q=${encodeURIComponent(address)}`;
+  const body = buildShareText(address, outs);
+  if (navigator.share) {
+    try { await navigator.share({ text: body, url }); } catch (e) { /* пользователь отменил — не ошибка */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(`${body}\n${url}`);
+    showToast(t().shareCopied, 2200);
+  } catch (e) {
+    showToast(t().shareFailed, 2200);
+  }
+}
+function wireShareButton(address, outs) {
+  const btn = document.querySelector('.house-popup .hc-share');
+  if (btn) btn.onclick = () => shareOutages(address, outs);
+}
 
 /* ---------- ADS: outage_detail_context (§19, §21, §97 документа) ----------
    Реклама вторична и никогда не блокирует основной UX (§75): любая ошибка/задержка
@@ -972,12 +1016,16 @@ function openAddressCard(pt, nearHouses) {
       : `<span class="hc-off nearby">${t().nearbyOnly}: ${outs.length} ${systemsWord(outs.length)}</span>
          <span class="hc-note">${t().notListed}</span>`}</div>` : ''}
     <div class="hc-list">${inner}</div>
-    <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(pt.address)}">Сообщить о проблеме</button>
+    <div class="hc-actions">
+      ${outs.length ? `<button class="hc-share" type="button">${t().share}</button>` : ''}
+      <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(pt.address)}">Сообщить о проблеме</button>
+    </div>
   </div>`;
   const pad = popupPanPadding();
   L.popup({ maxWidth: 330, minWidth: 290, className: 'house-popup',
     autoPanPaddingTopLeft: pad.topLeft, autoPanPaddingBottomRight: pad.bottomRight })
     .setLatLng([pt.lat, pt.lng]).setContent(html).openOn(map);
+  if (outs.length) wireShareButton(pt.address, outs.map((x) => x.o));
   if (window.matchMedia('(max-width: 900px)').matches) collapseSheet();
 }
 /* Мини-тост */
