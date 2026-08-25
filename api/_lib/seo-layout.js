@@ -547,9 +547,17 @@ ${jsonLdBlocks}
     font-size:15px;color:var(--ink-2);line-height:1.6;margin-top:22px;position:relative}
   .pt-quote::before{content:"\\201C";position:absolute;top:-6px;left:14px;font-size:52px;font-weight:800;color:var(--line);font-family:Georgia,serif;line-height:1}
   .pt-quote p{position:relative;padding-left:6px}
-  .pt-flowline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:22px;font-size:13.5px;font-weight:700;color:var(--ink-2)}
-  .pt-flowline .step{background:var(--canvas);border-radius:999px;padding:8px 14px}
-  .pt-flowline svg{color:var(--ink-3);flex:none}
+  /* Раньше pill-чипы на flex-wrap ломались в рваные строки (3+2, разная ширина
+     плашек) — заменено на CSS Grid с равными колонками (Grid over Flex-Math):
+     ряд всегда ровный на любой ширине, номер вместо стрелок передаёт
+     последовательность однозначно. */
+  .pt-steps5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:24px}
+  .pt-steps5-item{background:var(--canvas);border-radius:14px;padding:18px 12px;font-size:13px;font-weight:700;
+    color:var(--ink-2);text-align:center;line-height:1.35}
+  .pt-steps5-n{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+    background:var(--accent-wash);color:var(--accent-ink);font-size:12px;font-weight:800;margin:0 auto 10px}
+  @media(max-width:900px){.pt-steps5{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:560px){.pt-steps5{grid-template-columns:repeat(2,1fr)}}
   .pt-outcome{margin-top:18px;display:inline-flex;align-items:center;gap:10px;background:color-mix(in srgb, var(--emerg) 12%, white);
     color:var(--emerg);border-radius:12px;padding:12px 16px;font-weight:700;font-size:14px}
   .pt-transform{display:grid;grid-template-columns:1fr auto 1fr;gap:22px;align-items:center;margin-top:30px}
