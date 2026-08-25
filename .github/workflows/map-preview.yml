@@ -1,0 +1,55 @@
+name: Обновление превью карты (лендинг)
+
+# Пересъёмка декоративного /map-preview.jpg (превью карты в "рамке браузера" на
+# лендинге, api/_lib/seo-blocks.js:mapPreviewHtml) — картинка НЕ источник правды,
+# просто иллюстрация. Без пересъёмки она годами расходится с живыми цифрами рядом
+# (city-stats.js, обновляются каждую минуту) — нашли на живом кейсе: цифра
+# "0 горячей воды" была верна, а на замороженной картинке ГВС-пины ещё виднелись.
+#
+# Раз в неделю достаточно — картинка декоративная, часовая свежесть не нужна
+# (в отличие от parser.yml с данными самих отключений).
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'   # понедельник, 03:00 UTC
+  workflow_dispatch: {}   # ручной запуск из вкладки Actions
+
+permissions:
+  contents: write
+
+concurrency:
+  group: map-preview
+  cancel-in-progress: false
+
+jobs:
+  update-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ubuntu-latest обычно уже несёт google-chrome-stable — apt install
+      # только подстраховка, если образ рантайма изменится.
+      - name: Ensure Chrome + ImageMagick
+        run: |
+          command -v google-chrome-stable >/dev/null 2>&1 && exit 0
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable imagemagick
+
+      - name: Screenshot
+        env:
+          CHROME_BIN: google-chrome-stable
+        run: bash parser/screenshot-preview.sh https://barjok.kz/map/pavlodar
+
+      - name: Commit updated preview
+        run: |
+          git config user.name "barjoq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add map-preview.jpg
+          if git diff --staged --quiet; then
+            echo "Картинка не изменилась — коммит не нужен."
+          else
+            git commit -m "chore(preview): пересъёмка превью карты для лендинга"
+            git push
+          fi
