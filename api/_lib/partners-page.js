@@ -116,37 +116,46 @@ function benefitsHtml() {
   </div>`;
 }
 
+// Раньше 4 визуально одинаковых пункта подряд (первый явно "тяжелее" по
+// контенту — с чипами каналов и примечанием — но выглядел как остальные).
+// Теперь асимметрично: шаг 1 — крупная карточка-хедлайнер (это единственное
+// реальное действие партнёра), шаги 2–4 — компактный ряд из 3 карточек ниже
+// (то, что делает уже сам BARJOK) — форма отражает смысл, а не одинаковость.
 function howHtml() {
   return `<div id="how">${sectionHeadHtml('Как это работает', 'Вам не нужно менять привычную работу',
     'BARJOK должен подстраиваться под партнёра, а не наоборот.')}</div>
-  <div class="pt-flow rv">
-    <div class="pt-fstep">
-      <span class="k">1</span>
-      <div>
-        <h3>Партнёр передаёт информацию</h3>
-        <p>Любым удобным способом — не нужно ничего внедрять заранее.</p>
-        <div class="pt-channels">
-          <span class="pt-channel">WhatsApp</span>
-          <span class="pt-channel">Telegram</span>
-          <span class="pt-channel">Форма BARJOK</span>
-          <span class="pt-channel">Email</span>
-          <span class="pt-channel">Готовая таблица</span>
-          <span class="pt-channel">Автоматическая передача</span>
-        </div>
-        <p class="pt-note">Для крупных организаций можем настроить автоматическую передачу данных без дополнительной работы сотрудников.</p>
-      </div>
+  <div class="pt-how-hero rv">
+    <div class="pt-how-hero-head">
+      <span class="pt-how-n">1</span>
+      <h3>Партнёр передаёт информацию</h3>
     </div>
-    <div class="pt-fstep">
-      <span class="k">2</span>
-      <div><h3>BARJOK обрабатывает информацию</h3><p>Система определяет тип отключения, адреса, время, причину и конкретные затронутые дома.</p></div>
+    <p class="pt-how-hero-p">Любым удобным способом — не нужно ничего внедрять заранее.</p>
+    <div class="pt-channels">
+      <span class="pt-channel">WhatsApp</span>
+      <span class="pt-channel">Telegram</span>
+      <span class="pt-channel">Форма BARJOK</span>
+      <span class="pt-channel">Email</span>
+      <span class="pt-channel">Готовая таблица</span>
+      <span class="pt-channel">Автоматическая передача</span>
     </div>
-    <div class="pt-fstep">
-      <span class="k">3</span>
-      <div><h3>Информация появляется на карте</h3><p>Жители находят свой адрес и получают понятный статус — без звонка диспетчеру.</p></div>
+    <p class="pt-note">Для крупных организаций можем настроить автоматическую передачу данных без дополнительной работы сотрудников.</p>
+  </div>
+  <div class="pt-how-arrow rv">${ARROW_SVG}</div>
+  <div class="pt-how-grid rv">
+    <div class="pt-how-card">
+      <span class="pt-how-n sm">2</span>
+      <h4>BARJOK обрабатывает информацию</h4>
+      <p>Система определяет тип отключения, адреса, время, причину и конкретные затронутые дома.</p>
     </div>
-    <div class="pt-fstep">
-      <span class="k">4</span>
-      <div><h3>Партнёр передаёт изменения</h3><p>Например: «Восстановление перенесено с 17:00 на 19:00» — BARJOK обновляет информацию для всех затронутых домов.</p></div>
+    <div class="pt-how-card">
+      <span class="pt-how-n sm">3</span>
+      <h4>Информация появляется на карте</h4>
+      <p>Жители находят свой адрес и получают понятный статус — без звонка диспетчеру.</p>
+    </div>
+    <div class="pt-how-card">
+      <span class="pt-how-n sm">4</span>
+      <h4>Партнёр передаёт изменения</h4>
+      <p>Например: «Восстановление перенесено с 17:00 на 19:00» — BARJOK обновляет информацию для всех затронутых домов.</p>
     </div>
   </div>`;
 }

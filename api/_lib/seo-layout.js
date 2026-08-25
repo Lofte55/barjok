@@ -571,13 +571,27 @@ ${jsonLdBlocks}
   .pt-src-badge:hover{border-color:var(--accent)}
   @media(max-width:760px){.pt-transform{grid-template-columns:1fr}.pt-t-arrow{transform:rotate(90deg);margin:0 auto}}
 
-  .pt-flow{display:flex;flex-direction:column;gap:0;margin-top:36px}
-  .pt-fstep{display:flex;gap:20px;padding:26px 0;border-top:1px solid var(--line)}
-  .pt-fstep:first-child{border-top:0;padding-top:0}
-  .pt-fstep .k{flex:none;width:38px;height:38px;border-radius:11px;background:var(--accent-wash);color:var(--accent-ink);
-    display:grid;place-items:center;font-weight:800;font-size:15px}
-  .pt-fstep h3{font-size:17px;font-weight:800;letter-spacing:-.01em}
-  .pt-fstep p{margin-top:6px;color:var(--ink-2);font-size:14.5px;line-height:1.6;max-width:64ch}
+  /* "Как это работает" — было 4 визуально одинаковых пункта в столбик (хотя
+     шаг 1 явно тяжелее по контенту, чем 2-4). Асимметрично: шаг 1 — крупная
+     карточка-хедлайнер, 2-4 — компактный ряд из 3 карточек ниже, соединённые
+     стрелкой вниз — форма читается как "одно ваше действие → дальше система". */
+  .pt-how-hero{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius);padding:30px 32px;margin-top:32px}
+  .pt-how-hero-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .pt-how-hero-head h3{font-size:20px;font-weight:800;letter-spacing:-.015em}
+  .pt-how-hero-p{margin-top:12px;color:var(--ink-2);font-size:15px;max-width:60ch}
+  .pt-how-n{flex:none;width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;
+    display:grid;place-items:center;font-weight:800;font-size:17px;box-shadow:0 6px 16px -6px rgba(47,107,237,.55)}
+  .pt-how-n.sm{width:32px;height:32px;font-size:14px;background:var(--accent-wash);color:var(--accent-ink);
+    box-shadow:none;margin-bottom:14px}
+  .pt-how-arrow{display:flex;justify-content:center;margin:14px 0;color:var(--ink-3)}
+  .pt-how-arrow svg{transform:rotate(90deg)}
+  .pt-how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .pt-how-card{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);padding:22px;
+    transition:border-color .16s,transform .16s}
+  .pt-how-card:hover{border-color:var(--ink-3);transform:translateY(-2px)}
+  .pt-how-card h4{font-size:15.5px;font-weight:800;letter-spacing:-.01em}
+  .pt-how-card p{margin-top:8px;color:var(--ink-2);font-size:13.5px;line-height:1.55}
+  @media(max-width:900px){.pt-how-grid{grid-template-columns:1fr}}
   .pt-channels{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
   .pt-channel{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink-2);
     background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:7px 13px}
@@ -657,7 +671,7 @@ ${jsonLdBlocks}
   @media(max-width:640px){.pt-form-grid{grid-template-columns:1fr}.pt-form-wrap{padding:24px 20px;border-radius:20px}}
   @media(max-width:760px){
     .pt-transform,.pt-check-grid,.pt-form-grid{gap:14px}
-    .pt-fstep h3,.pt-fstep p,.pt-note{text-align:left}
+    .pt-how-hero-head h3,.pt-how-hero-p,.pt-how-card h4,.pt-how-card p,.pt-note{text-align:left}
     .pt-audience{flex-direction:column;gap:12px}
   }
 </style>
