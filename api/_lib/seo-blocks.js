@@ -206,10 +206,12 @@ const SERVICE_TILE_META = {
   'po-adresu': { color: 'var(--ink)', icon: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/>', desc: 'Введите улицу и дом — покажем всё, что отключено именно у вас.', descKk: 'Көше мен үйді енгізіңіз — сізде нақты не ажыратылғанын көрсетеміз.' },
 };
 
-function serviceTilesHtml(citySlug, items) {
+// lang — ТОЛЬКО префикс для href (текст плиток по-прежнему data-kk + bakeKk()).
+function serviceTilesHtml(citySlug, items, lang) {
+  const p = lang === 'kk' ? '/kz' : '';
   return `<div class="svc-grid">${items.map(([slug, label]) => {
     const meta = SERVICE_TILE_META[slug] || SERVICE_TILE_META['po-adresu'];
-    return `<a class="svc-tile rv" href="/${citySlug}/${slug}/" style="--svc-c:${meta.color}">
+    return `<a class="svc-tile rv" href="${p}/${citySlug}/${slug}/" style="--svc-c:${meta.color}">
       <span class="svc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${meta.icon}</svg></span>
       <b${dk(label)}>${esc(label)}<svg class="svc-arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></b>
       <span class="svc-desc"${meta.descKk ? ` data-kk="${esc(meta.descKk)}"` : ''}>${esc(meta.desc)}</span>

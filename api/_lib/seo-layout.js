@@ -12,7 +12,28 @@ const { dk } = require('./i18n-kk');
 
 const esc = (s) => String(s == null ? '' : s).replace(/[<&>"]/g, (c) => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;', '"': '&quot;' }[c]));
 
-function navHtml(currentCitySlug) {
+/*
+ * currentCitySlug — как раньше. opts (новое): { lang: 'ru'|'kk', altHref } —
+ * altHref = URL ЭТОЙ ЖЕ страницы на другом языке (считает вызывающая сторона
+ * в pages.js, где уже известны city/service/lang — navHtml не обязана знать
+ * структуру SERVICES). Без opts — как раньше (RU, кнопка KZ ведёт на /kz/).
+ *
+ * ⚠️ ТЕКСТ здесь НЕ переводим руками — как и раньше, RU-текст + data-kk.
+ * Для /kz/-страниц весь HTML (включая эту шапку) целиком проходит через
+ * bakeKk() в конце (api/pages.js) — один и тот же механизм перевода везде,
+ * без второй параллельной реализации, которая рано или поздно разъедется
+ * с основной (уже наступали на эти грабли с --fs/.csel в этой же сессии).
+ * lang здесь нужен ТОЛЬКО для href — bake текст не трогает атрибуты ссылок.
+ *
+ * ⚠️ Кнопки RU/KZ раньше были ЧИСТО JS-тогглом (текст менялся на месте,
+ * URL не менялся — поисковик никогда не видел казахскую версию отдельно).
+ * Теперь это НАСТОЯЩИЕ <a href> на /kz/... — сам смысл этой задачи: дать
+ * поисковику отдельный проиндексированный URL, а не текст, подменённый JS.
+ */
+function navHtml(currentCitySlug, opts = {}) {
+  const lang = opts.lang === 'kk' ? 'kk' : 'ru';
+  const p = lang === 'kk' ? '/kz' : '';
+  const altHref = opts.altHref || (lang === 'kk' ? '/' : '/kz/');
   const cities = allCities();
   // Реальный <a href>, а не <button onclick=location.href=...> — чтобы ссылка на
   // город была обычной crawlable-ссылкой для поисковых роботов (SEO discovery §4).
@@ -20,20 +41,25 @@ function navHtml(currentCitySlug) {
     const active = c.status === 'active';
     const kkName = c.names.kk && c.names.kk.nominative;
     return active
-      ? `<a href="/${c.slug}/" class="${c.slug === currentCitySlug ? 'on' : ''}"><span${kkName ? ` data-kk="${esc(kkName)}"` : ''}>${esc(c.names.ru.nominative)}</span></a>`
+      ? `<a href="${p}/${c.slug}/" class="${c.slug === currentCitySlug ? 'on' : ''}"><span${kkName ? ` data-kk="${esc(kkName)}"` : ''}>${esc(c.names.ru.nominative)}</span></a>`
       : `<button disabled><span${kkName ? ` data-kk="${esc(kkName)}"` : ''}>${esc(c.names.ru.nominative)}</span><span class="soon" data-kk="жақында">скоро</span></button>`;
   }).join('');
   const current = currentCitySlug ? cities.find((c) => c.slug === currentCitySlug) : null;
   const cityLabel = current ? current.names.ru.nominative : 'Города';
   const cityLabelKk = current ? (current.names.kk && current.names.kk.nominative) || current.names.ru.nominative : 'Қалалар';
 
+  const langSwitch = `<div class="lang">
+        <a class="${lang === 'ru' ? 'on' : ''}" href="${lang === 'ru' ? '#' : esc(altHref)}">RU</a>
+        <a class="${lang === 'kk' ? 'on' : ''}" href="${lang === 'kk' ? '#' : esc(altHref)}">KZ</a>
+      </div>`;
+
   return `<header class="nav" id="nav">
   <div class="wrap nav-in">
-    <a class="logo" href="/"><img class="logo-img" src="/barjok.svg" alt="BARJOK" width="105" height="26"></a>
+    <a class="logo" href="${p}/"><img class="logo-img" src="/barjok.svg" alt="BARJOK" width="105" height="26"></a>
     <div class="nav-links">
-      <a href="/pavlodar/">Павлодар</a>
-      <a href="/map/">Карта</a>
-      <a href="/#faq" data-kk="Сұрақтар">Вопросы</a>
+      <a href="${p}/pavlodar/">Павлодар</a>
+      <a href="${p}/map/">Карта</a>
+      <a href="${p}/#faq" data-kk="Сұрақтар">Вопросы</a>
     </div>
     <div class="nav-right">
       <div class="city" id="citySel">
@@ -44,15 +70,15 @@ function navHtml(currentCitySlug) {
         </button>
         <div class="city-menu">${cityMenuItems}</div>
       </div>
-      <div class="lang"><button class="on" type="button" data-lang-btn="ru">RU</button><button type="button" data-lang-btn="kk">KZ</button></div>
-      <a class="btn primary nav-cta" href="/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
+      ${langSwitch}
+      <a class="btn primary nav-cta" href="${p}/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
       <button class="burger" id="burger" aria-expanded="false" aria-label="Меню"><span></span><span></span><span></span></button>
     </div>
     <div class="mobile-menu" id="mobileMenu">
-      <a href="/pavlodar/">Павлодар</a>
-      <a href="/map/">Карта</a>
-      <a href="/#faq" data-kk="Сұрақтар">Вопросы</a>
-      <a class="btn primary" href="/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
+      <a href="${p}/pavlodar/">Павлодар</a>
+      <a href="${p}/map/">Карта</a>
+      <a href="${p}/#faq" data-kk="Сұрақтар">Вопросы</a>
+      <a class="btn primary" href="${p}/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
     </div>
   </div>
 </header>
@@ -69,7 +95,10 @@ function navHtml(currentCitySlug) {
 </script>`;
 }
 
-function footerHtml() {
+// lang — только для href (те же соображения, что у navHtml выше: текст не
+// трогаем, для /kz/ он переводится вместе со всей страницей через bakeKk()).
+function footerHtml(lang) {
+  const p = lang === 'kk' ? '/kz' : '';
   return `<footer>
   <div class="wrap">
     <div class="foot-cta rv">
@@ -81,7 +110,7 @@ function footerHtml() {
     </div>
     <div class="foot-top">
       <div class="foot-brand">
-        <a class="logo" href="/"><img class="logo-img" src="/barjok.svg" alt="BARJOK" width="105" height="26"></a>
+        <a class="logo" href="${p}/"><img class="logo-img" src="/barjok.svg" alt="BARJOK" width="105" height="26"></a>
         <p data-kk="Қазақстан қалаларындағы су, жарық және жылу ажыратуларының тірі картасы. Деректер ресми жеткізушілерден, бірнеше сағат сайын жаңартылады.">Живая карта отключений воды, света и отопления в городах Казахстана. Данные от официальных поставщиков, обновление каждые несколько часов.</p>
         <div class="foot-social">
           <a href="https://instagram.com/barjok.kz" target="_blank" rel="noopener" aria-label="Instagram">
@@ -93,17 +122,17 @@ function footerHtml() {
       <div class="foot-links">
         <div class="fcol">
           <h4 data-kk="Қалалар">Города</h4>
-          <a href="/pavlodar/">Павлодар</a>
+          <a href="${p}/pavlodar/">Павлодар</a>
         </div>
         <div class="fcol">
           <h4 data-kk="Қызметтер">Сервисы</h4>
-          <a href="/pavlodar/voda/" data-kk="Су">Вода</a>
-          <a href="/pavlodar/svet/" data-kk="Жарық">Свет</a>
-          <a href="/pavlodar/otoplenie/" data-kk="Жылыту">Отопление</a>
+          <a href="${p}/pavlodar/voda/" data-kk="Су">Вода</a>
+          <a href="${p}/pavlodar/svet/" data-kk="Жарық">Свет</a>
+          <a href="${p}/pavlodar/otoplenie/" data-kk="Жылыту">Отопление</a>
         </div>
         <div class="fcol">
           <h4 data-kk="Жоба">Проект</h4>
-          <a href="/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
+          <a href="${p}/map/pavlodar" data-kk="Картаны ашу">Открыть карту</a>
         </div>
       </div>
     </div>
@@ -186,12 +215,27 @@ function webPageJsonLd({ url, title, description }) {
  *         pillAnnText }
  */
 function renderSeoPage(opts) {
+  const lang = opts.lang === 'kk' ? 'kk' : 'ru';
   const jsonLdBlocks = (opts.jsonLd || []).map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`).join('\n');
   const heroBadge = opts.pillAnnText ? `<span class="pill-ann"><span class="dot"></span><span${dk(opts.pillAnnText)}>${esc(opts.pillAnnText)}</span><span class="go" data-kk="бүгін жаңартылды">обновлено сегодня</span></span>` : '';
   const heroSlogan = opts.heroSlogan ? `<p class="hero-slogan"${dk(opts.heroSlogan)}>${opts.heroSlogan}</p>` : '';
 
+  /*
+   * hreflang — раньше не было НИГДЕ в проекте (grep подтвердил). Обязательно
+   * ВЗАИМНО на обеих версиях: и RU-страница должна знать про свою KZ-версию,
+   * и наоборот — иначе Google не свяжет их как альтернативные языковые версии
+   * одного контента. opts.hrefRu/opts.hrefKk — абсолютные URL, считает
+   * вызывающая сторона (pages.js), т.к. только она знает city/service/lang.
+   * x-default — на русскую версию (текущий язык сайта по умолчанию).
+   */
+  const hreflangTags = (opts.hrefRu && opts.hrefKk)
+    ? `<link rel="alternate" hreflang="ru" href="${esc(opts.hrefRu)}">
+<link rel="alternate" hreflang="kk" href="${esc(opts.hrefKk)}">
+<link rel="alternate" hreflang="x-default" href="${esc(opts.hrefRu)}">`
+    : '';
+
   return `<!DOCTYPE html>
-<html lang="ru-KZ">
+<html lang="${lang === 'kk' ? 'kk' : 'ru-KZ'}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -216,6 +260,7 @@ function renderSeoPage(opts) {
 <title>${esc(opts.title)}</title>
 <meta name="description" content="${esc(opts.description)}">
 <link rel="canonical" href="${esc(opts.canonical)}">
+${hreflangTags}
 ${opts.noindex ? '<meta name="robots" content="noindex">' : ''}
 <meta name="theme-color" content="#2f6bed">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -473,7 +518,7 @@ ${jsonLdBlocks}
 </head>
 <body>
 ${connectivityBannerHtml()}
-${navHtml(opts.currentCitySlug)}
+${navHtml(opts.currentCitySlug, { lang, altHref: opts.altHref })}
 <main>
 <div class="wrap">
 ${breadcrumbsHtml(opts.breadcrumbs)}
@@ -485,7 +530,7 @@ ${breadcrumbsHtml(opts.breadcrumbs)}
 ${opts.bodyHtml}
 </div>
 </main>
-${footerHtml()}
+${footerHtml(lang)}
 ${a11yWidgetHtml()}
 <!-- Яндекс.Метрика + cookie-баннер — единый скрипт на все страницы (map/index.html
      подключает его так же). Раньше этот блок отсутствовал в SSR-шаблоне SEO-страниц —

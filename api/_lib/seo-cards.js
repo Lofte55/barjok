@@ -68,7 +68,10 @@ const splitAddress = (address) => {
  * фильтра по ресурсу, плитка "+N ещё" вместо тихого обрезания списка, клик по
  * улице ведёт на карту. statusValue: 'current' | 'future'.
  */
-function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, intro, idPrefix = 'g' } = {}) {
+// lang — ТОЛЬКО префикс для href на /map/... (сам текст карточек по-прежнему
+// data-kk + bakeKk() на /kz/-страницах, эту функцию для перевода не трогаем).
+function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, intro, idPrefix = 'g', lang } = {}) {
+  const mapP = lang === 'kk' ? '/kz' : '';
   const groups = new Map();
   for (const h of houses || []) {
     for (const o of h.outages || []) {
@@ -122,7 +125,7 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
   // («тағы 5 көше», не «көшелер») — поэтому здесь, в отличие от русского, форма одна.
   // Тот же принцип, что у «${houseCount} мекенжай» ниже. Не «чинить» тернарником.
   const moreLabelKk = (n) => `тағы ${n} көше ажыратуымен`;
-  const mobileMoreTile = overflowCountMobile > 0 ? `<a class="outage-card outage-more outage-more-mobile rv" data-res="__more__" href="/map/${citySlug}">
+  const mobileMoreTile = overflowCountMobile > 0 ? `<a class="outage-card outage-more outage-more-mobile rv" data-res="__more__" href="${mapP}/map/${citySlug}">
     <span class="outage-more-n">+${overflowCountMobile}</span>
     <span class="outage-more-label" data-kk="${esc(moreLabelKk(overflowCountMobile))}">ещё ${overflowCountMobile === 1 ? 'улица' : 'улиц'} с отключениями</span>
     <span class="outage-more-cta"><span data-kk="Картадан барлығын көру">Смотреть всё на карте</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
@@ -132,7 +135,7 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
     const houseCount = g.houses.length || 1;
     const preview = g.houses.slice(0, 6).join(', ');
     const more = houseCount > 6 ? ` <span class="more-chip">+${houseCount - 6}</span>` : '';
-    const mapHref = `/map/${citySlug}?q=${encodeURIComponent(g.street)}`;
+    const mapHref = `${mapP}/map/${citySlug}?q=${encodeURIComponent(g.street)}`;
     const extraAttrs = idx >= MAX_VISIBLE ? ' hidden data-extra="1"' : '';
     const mobileHideClass = idx >= MAX_VISIBLE_MOBILE && idx < MAX_VISIBLE ? ' mobile-hide' : '';
     const card = `<a class="outage-card street-card rv${mobileHideClass}" data-res="${esc(g.resource)}"${extraAttrs} href="${mapHref}">
@@ -146,7 +149,7 @@ function groupedOutagesHtml(houses, statusValue, citySlug, { eyebrow, title, int
     // это последнее видимое, на десктопе она display:none и не мешает grid'у.
     return idx === MAX_VISIBLE_MOBILE - 1 ? card + mobileMoreTile : card;
   }).join('');
-  const moreTile = overflowCount > 0 ? `<a class="outage-card outage-more rv" data-res="__more__" href="/map/${citySlug}">
+  const moreTile = overflowCount > 0 ? `<a class="outage-card outage-more rv" data-res="__more__" href="${mapP}/map/${citySlug}">
     <span class="outage-more-n">+${overflowCount}</span>
     <span class="outage-more-label" data-kk="${esc(moreLabelKk(overflowCount))}">ещё ${overflowCount === 1 ? 'улица' : 'улиц'} с отключениями</span>
     <span class="outage-more-cta"><span data-kk="Картадан барлығын көру">Смотреть всё на карте</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>

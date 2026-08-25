@@ -54,7 +54,7 @@ const I18N = {
     adText: 'Жарнама беруші үшін орын', adCta: 'Жарнама орналастыру',
   },
 };
-let LANG = 'ru'; try { LANG = localStorage.getItem('barjoq_lang') || 'ru'; } catch (e) {}
+let LANG = 'ru'; try { LANG = localStorage.getItem('barjoq_lang') || (location.pathname.indexOf('/kz/') === 0 ? 'kk' : 'ru'); } catch (e) {}
 const t = () => I18N[LANG];
 function systemsWord(n) {
   if (LANG === 'kk') return 'жүйе';
