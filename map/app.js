@@ -555,43 +555,47 @@ function wireCard(popup, h) { loadAdIntoSlot('adSlotHouse', h, cardOutages(h)); 
    outs — уже collapsed (один ряд на ресурс), самый релевантный (current раньше
    future) первым — см. collapseByResource/houseCardHtml. Ссылка ведёт на карту
    с адресом в ?q=, при открытии сразу ищет и показывает карточку (см. load()
-   выше). Текст БЕЗ ссылки внутри — она передаётся отдельным полем url в
-   navigator.share (многие приложения дописывают её сами); для буфера обмена
-   (нет системного шэринга — десктоп) дописываем ссылку вручную.
-   Адрес — ПЕРВОЙ строкой: получатель сразу видит, что сообщение про его дом,
-   а не общий анонс по улице/району. */
-function buildShareText(address, outs) {
+   выше). Адрес — ПЕРВОЙ строкой: получатель сразу видит, что сообщение про
+   его дом, а не общий анонс по улице/району.
+
+   ⚠️ Ссылка ВСЕГДА встроена ПРЯМО В ТЕКСТ, отдельного поля url в
+   navigator.share() НЕТ (было — убрано). Причина: navigator.share({url})
+   резолвит переданную строку через собственный класс URL ДО передачи в
+   систему — и percent-encode'ит кириллицу независимо от того, что ей дали
+   на входе (проверено на реальном устройстве: получатель в WhatsApp видел
+   https://.../?q=%D0%91%D0%BE%D1%82%D0%BA%D0%B8%D0%BD%D0%B0...). Строка
+   внутри text — простой текст, её никто не резолвит и не перекодирует;
+   WhatsApp/Telegram сами линкуют её по регулярке при показе и корректно
+   percent-encode'ят уже НА СТОРОНЕ получателя, когда он реально открывает
+   ссылку — сам текст остаётся читаемым. */
+function buildShareText(address, outs, url) {
   const primary = outs[0];
   const statusWord = primary.citizen ? '' : (primary.type === 'emergency' ? t().emergency : t().planned);
   const extra = outs.length > 1 ? ` +${outs.length - 1}` : '';
   const detail = `${rName(primary.resource)}${statusWord ? ', ' + statusWord.toLowerCase() : ''}${extra}`;
   const period = `${fmtDate(primary.start)} – ${fmtDate(primary.end)}`;
-  return `📍 ${address}\n${detail} · 🕘 ${period}\n\n${t().shareCta}`;
+  return `📍 ${address}\n${detail} · 🕘 ${period}\n\n${t().shareCta}\n${url}`;
 }
 /* Лёгкое кодирование — экранируем только то, что реально ломает URL (пробел,
    %, ?, #, &), кириллицу оставляем как есть. Обычный encodeURIComponent даёт
-   нечитаемую простыню %D0%9A%D0%B0%D1%82..., которую страшно отправлять —
-   а «сырой» Unicode в URL валиден (IRI) и корректно открывается в любом
-   браузере/мессенджере: тот же приём, что у сайтов с кириллическими доменами.
-   ⚠️ Используется ТОЛЬКО для ссылки в буфере обмена (копия десктопа) — то,
-   что реально видно как текст. Для navigator.share({url}) браузер всё равно
-   валидирует и перекодирует url через встроенный класс URL, так что там
-   читаемость не сохранить в принципе — используем обычный encodeURIComponent.*/
+   нечитаемую простыню %D0%91%D0%BE%D1%82%D0%BA%D0%B8%D0%BD%D0%B0..., которую
+   страшно отправлять — а «сырой» Unicode в URL валиден (IRI) и корректно
+   открывается в любом браузере/мессенджере: тот же приём, что у сайтов
+   с кириллическими доменами. */
 function shareEncode(s) {
   return String(s).replace(/[%?#&]/g, (c) => ({ '%': '%25', '?': '%3F', '#': '%23', '&': '%26' }[c])).replace(/ /g, '%20');
 }
 async function shareOutages(address, outs) {
   if (!outs || !outs.length) return;
   const path = LANG === 'kk' ? '/kz/map/pavlodar' : '/map/pavlodar';
-  const body = buildShareText(address, outs);
+  const url = `https://barjok.kz${path}?q=${shareEncode(address)}`;
+  const body = buildShareText(address, outs, url);
   if (navigator.share) {
-    const url = `https://barjok.kz${path}?q=${encodeURIComponent(address)}`;
-    try { await navigator.share({ text: body, url }); } catch (e) { /* пользователь отменил — не ошибка */ }
+    try { await navigator.share({ text: body }); } catch (e) { /* пользователь отменил — не ошибка */ }
     return;
   }
-  const readableUrl = `https://barjok.kz${path}?q=${shareEncode(address)}`;
   try {
-    await navigator.clipboard.writeText(`${body}\n${readableUrl}`);
+    await navigator.clipboard.writeText(body);
     showToast(t().shareCopied, 2200);
   } catch (e) {
     showToast(t().shareFailed, 2200);
