@@ -74,10 +74,14 @@
     background:var(--line-2);border-radius:999px;padding:2px 8px}
   .city-menu button.on .soon{color:#fff;background:var(--accent)}
 
-  /* lang */
+  /* lang — .lang button (карта, JS-тоггл) и .lang a (SEO-страницы, настоящие
+     ссылки на /kz/) должны выглядеть одинаково: раньше стиль был только на
+     button, на SEO-страницах RU/KZ рендерились голым текстом без пилюли и
+     разделения — выглядело как нечитаемое "RUKZ" и нерабочая кнопка. */
   .lang{display:flex;font-size:13px;font-weight:800;background:var(--canvas);border:1px solid var(--line);border-radius:999px;overflow:hidden}
-  .lang button{padding:9px 13px;color:var(--ink-3);background:none;border:0;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer}
-  .lang button.on{background:var(--ink);color:#fff}
+  .lang button,.lang a{padding:9px 13px;color:var(--ink-3);background:none;border:0;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;text-decoration:none;line-height:1}
+  .lang button.on,.lang a.on{background:var(--ink);color:#fff}
+  .lang a:not(.on):hover{color:var(--ink)}
 
   /* hero */
   .hero{text-align:center;padding:74px 0 34px;position:relative}
@@ -287,7 +291,7 @@
     .logo .wm{font-size:calc(18px * var(--fs, 1))}
     .city-btn{padding:calc(9px * var(--fs, 1)) calc(13px * var(--fs, 1));font-size:calc(14px * var(--fs, 1))}
     .city-btn .cityname{max-width:none}
-    .lang button{padding:calc(8px * var(--fs, 1)) calc(12px * var(--fs, 1));font-size:calc(13px * var(--fs, 1))}
+    .lang button,.lang a{padding:calc(8px * var(--fs, 1)) calc(12px * var(--fs, 1));font-size:calc(13px * var(--fs, 1))}
 
     /* мобильное меню — выпадает под шапкой (ссылки + Открыть карту) */
     .mobile-menu{display:flex;flex-direction:column;gap:2px;position:absolute;top:100%;left:0;right:0;
