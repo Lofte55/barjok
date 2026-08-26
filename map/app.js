@@ -718,6 +718,7 @@ function listCardHtml(h) {
 const SEARCHES = [
   { input: document.getElementById('search'), box: document.getElementById('suggest'), clear: document.getElementById('clearSearch') },
   { input: document.getElementById('searchMini'), box: document.getElementById('suggestMini'), clear: document.getElementById('clearSearchMini') },
+  { input: document.getElementById('searchSheet'), box: document.getElementById('suggestSheet'), clear: document.getElementById('clearSearchSheet') },
 ].filter((s) => s.input);
 
 function setSearchValue(v) { SEARCHES.forEach((s) => { s.input.value = v; if (s.clear) s.clear.classList.toggle('show', !!v); }); }

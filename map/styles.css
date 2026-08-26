@@ -519,7 +519,13 @@ body.ads-off [data-ad-slot] { display: none !important; }
   .topbar .search .ico { left: 17px; }
   .topbar .search input::placeholder { color: var(--ink-3); opacity: 1; }
   .lang button { padding: 0 13px; font-size: calc(13px * var(--fs, 1)); }
-  .mini-search { display: none; }
+  /* Раньше прятали ЛЮБОЙ .mini-search на мобильном (десктопная копия внутри
+     .panel, которая и так недостижима — .panel{display:none} на этой ширине).
+     Теперь своя копия поиска есть и внутри .sheet (жалоба: раньше искать
+     можно было только через топбар) — её скрывать не нужно, поэтому правило
+     сузили до .panel .mini-search. */
+  .panel .mini-search { display: none; }
+  .sheet .mini-search { margin: 8px 14px 4px; }
   .shead .mark { width: 28px; height: 28px; text-decoration: none; display: grid; place-items: center; }
   .shead .map-title { font-size: calc(14px * var(--fs, 1)); }
   .filterbar { border-bottom: 0; }

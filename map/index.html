@@ -17,7 +17,7 @@
   <!-- leaflet/maplibre — самохостинг (map/vendor/), без зависимости от unpkg.com под нагрузкой -->
   <link rel="stylesheet" href="/map/vendor/leaflet/leaflet.css?v=1788300000" />
   <link rel="stylesheet" href="/map/vendor/maplibre-gl/maplibre-gl.css?v=1788300000" />
-  <link rel="stylesheet" href="/map/styles.css?v=1788300900" />
+  <link rel="stylesheet" href="/map/styles.css?v=1788301000" />
 
   <!-- Автомасштаб мобильной "обвязки" (шапка/шторка/чипы/карточки/пины) по ширине
        окна — CSS-переменная --fs, растёт от 1 (375px, iPhone SE/13) до ~1.17 (440px,
@@ -217,6 +217,15 @@
         </div>
       </div>
     </div>
+    <!-- Поиск внутри шторки — раньше был только наверху топбара; в развёрнутой
+         шторке (.sheet.expanded) топбар часто не виден/неудобно тянуться —
+         дублируем поиск сюда же (тот же SEARCHES[], значение синхронизируется). -->
+    <div class="mini-search search" id="searchSheetWrap">
+      <span class="ico"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg></span>
+      <input id="searchSheet" type="text" autocomplete="off" placeholder="Поиск по адресу…" />
+      <button class="clear" id="clearSearchSheet" aria-label="Очистить"><svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <div class="suggest" id="suggestSheet"></div>
+    </div>
     <a class="ad ad-mobile" href="#" data-ad-slot>
       <span class="ad-tag" data-ad-label>Реклама</span>
       <span class="ad-text" data-ad-text>Место для рекламодателя</span>
@@ -297,7 +306,7 @@
   <script defer src="/map/vendor/maplibre-gl/maplibre-gl.js?v=1788300000"></script>
   <script defer src="/map/vendor/maplibre-gl-leaflet/leaflet-maplibre-gl.js?v=1788300000"></script>
   <script defer src="/map/data.js?v=1788300000"></script>
-  <script defer src="/map/app.js?v=1788300800"></script>
+  <script defer src="/map/app.js?v=1788301000"></script>
 <!-- Яндекс.Метрика + информационный баннер о cookie — в /cookie-consent.js (единое место на все страницы) -->
 <script defer src="/cookie-consent.js?v=2"></script>
 <!-- Vercel Web Analytics — script-тег, не npm-пакет (проект без сборщика) -->
@@ -486,6 +495,14 @@ document.addEventListener('DOMContentLoaded', function () {
      баг с реального скриншота). 900 держит виджет выше всего обычного UI карты
      (максимум там z-index:20) и ниже модалки. */
   #a11y-widget{position:fixed;right:20px;bottom:82px;z-index:900;font-family:var(--sans);text-align:left}
+  /* На мобильных, когда нижняя шторка (.sheet) раскрыта почти на весь экран
+     (.expanded — карточки списка занимают низ экрана), кнопка доступности
+     (z-index:900) плавала ПОВЕРХ текста карточек — жалоба с реального
+     скриншота. .sheet сама по себе z-index:18 (map/styles.css), ниже
+     виджета, поэтому не перекрывает её — прятать нужно явно. */
+  @media (max-width: 900px) {
+    body:has(.sheet.expanded) #a11y-widget { opacity: 0; pointer-events: none; transition: opacity .15s; }
+  }
   #a11yFab{width:52px;height:52px;border-radius:50%;background:var(--brand);color:#fff;border:0;cursor:pointer;
     display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(31,111,235,.55);transition:transform .18s}
   #a11yFab:hover{transform:scale(1.06)}
