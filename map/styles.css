@@ -539,12 +539,18 @@ body.ads-off [data-ad-slot] { display: none !important; }
  * не трогает (там достаточно места, сжимать нечего и незачем портить читаемость).
  */
 @media (max-width: 400px) {
-  .topbar { left: 10px; right: 10px; }
+  .topbar { left: 10px; right: 10px; gap: 8px 6px; }
   .topbar .tb-right { gap: 6px; }
-  .topbar .mapbrand { padding: 0 10px 0 8px; }
+  .topbar .mapbrand { padding: 0 8px 0 7px; }
   .topbar .mapcity-btn { padding: 0 10px; }
-  .topbar .mapcity-btn #mapCityName { max-width: 60px; }
-  .lang button { padding: 0 9px; }
+  /* «Павлодар» = 66px natural width — 60px обрезал его до «Павло…» (жалоба
+     пользователя). 72px даёт +6px запаса под разные рендереры шрифта, а
+     недостающие ~12px забраны экономией на paddings выше (gap/brand/lang) —
+     замерено на живом проде на 340px: раньше не помещалось на ~1px, теперь
+     запас ~12px. На 320px (редкий/устаревший размер) шапка переносилась на
+     2 строки уже ДО этой правки — не стало хуже, но и не стало идеально. */
+  .topbar .mapcity-btn #mapCityName { max-width: 72px; }
+  .lang button { padding: 0 7px; }
 }
 
 /* SVG-пиктограммы вместо эмодзи */
