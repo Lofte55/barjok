@@ -942,8 +942,12 @@ async function reverseGeocode(lat, lng) {
     const street = ad.road || ad.pedestrian || ad.residential || '';
     const house = ad.house_number || '';
     const district = ad.suburb || ad.city_district || ad.neighbourhood || '';
-    if (!street) return null;
-    return { address: house ? `${street}, ${house}` : street, district };
+    if (!street || !house) return null;
+    // mlat/mlng — координаты РЕАЛЬНОГО найденного дома (не клика): Nominatim всегда
+    // возвращает ближайший объект, даже если кликнули в пустой двор в 100+ м от любого
+    // дома — без сверки с этими координатами клик по пустому месту показывал бы
+    // уверенную карточку "отключений нет" для случайного соседнего дома.
+    return { address: `${street}, ${house}`, district, mlat: +a.lat, mlng: +a.lon };
   } catch (e) { return null; }
 }
 // Ближайшие известные отключения к точке (в пределах ~250 м)
@@ -991,9 +995,15 @@ async function checkPoint(lat, lng) {
   showToast(t().searching);
   const info = await reverseGeocode(lat, lng);
   hideToast();
-  if (!info) { showToast(t().addrNotFound, 2200); return; }
-  const near = outagesNear(lat, lng, info.address);
-  openAddressCard({ address: info.address, district: info.district, lat, lng }, near);
+  // ⚠️ Клик по пустому месту (двор, пустырь, дорога в стороне от домов) — Nominatim
+  // всё равно вернёт ближайший найденный дом, даже если он в 100+ м от клика. Без
+  // сверки с РЕАЛЬНЫМИ координатами этого дома (info.mlat/mlng, не самого клика)
+  // любая точка карты открывала уверенную карточку «отключений нет» для случайного
+  // соседа — выглядело так, будто на пустое место тоже можно «нажать, как на дом».
+  const distM = info ? Math.hypot((info.mlat - lat) * 111000, (info.mlng - lng) * 68000) : Infinity;
+  if (!info || distM > 40) { showToast(t().addrNotFound, 2200); return; }
+  const near = outagesNear(info.mlat, info.mlng, info.address);
+  openAddressCard({ address: info.address, district: info.district, lat: info.mlat, lng: info.mlng }, near);
 }
 /* Карточка произвольного адреса: либо найденные отключения, либо «отключений нет» */
 function openAddressCard(pt, nearHouses) {
