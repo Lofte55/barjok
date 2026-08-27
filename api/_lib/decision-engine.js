@@ -160,4 +160,45 @@ async function submitReport({ address, utility_type, reported_state, actor_key, 
   return { report: row[0], incident };
 }
 
-module.exports = { submitReport, evaluate, CONFIG };
+/*
+ * Автовосстановление по сроку, заданному админом ("Подтвердить" → 1 день / 5
+ * дней вместо "без даты", см. api/admin-api.js:force_outage). Использует
+ * ГОТОВУЮ колонку manual_override_until (была в схеме, но раньше только
+ * очищалась при "Снять ручное управление" — никогда не заполнялась).
+ *
+ * НЕ periodic-крон (§47 документа сознательно не реализован, см. шапку файла) —
+ * событийный sweep, вызывается на каждый живой запрос к incidents (карта,
+ * лендинг-статистика, админка), т.е. срабатывает практически сразу после
+ * истечения срока, без отдельной cron-инфраструктуры (лимит 12 функций Vercel
+ * Hobby). Возвращает control автоматике (manual_override → NONE), а не просто
+ * "гасит на экране" — иначе Decision Engine навсегда игнорировал бы адрес
+ * (§31: override абсолютен, пока не снят явно).
+ */
+async function sweepExpiredOverrides() {
+  const now = new Date().toISOString();
+  let expired;
+  try {
+    expired = await select('incidents',
+      `status=eq.ACTIVE&manual_override=eq.FORCE_OUTAGE&manual_override_until=not.is.null&manual_override_until=lte.${now}&limit=200`);
+  } catch (e) {
+    console.error('sweepExpiredOverrides select failed:', e.message);
+    return [];
+  }
+  const restored = [];
+  for (const inc of expired || []) {
+    try {
+      const [updated] = await update('incidents', `id=eq.${inc.id}`, {
+        status: 'RESTORED', restored_at: inc.manual_override_until, updated_at: now,
+        manual_override: 'NONE', manual_override_reason: null,
+        manual_override_created_at: null, manual_override_until: null,
+      });
+      await log(inc.id, 'AUTO_RESTORE_DURATION', { was_until: inc.manual_override_until });
+      restored.push(updated);
+    } catch (e) {
+      console.error('sweepExpiredOverrides update failed for', inc.id, ':', e.message);
+    }
+  }
+  return restored;
+}
+
+module.exports = { submitReport, evaluate, sweepExpiredOverrides, CONFIG };

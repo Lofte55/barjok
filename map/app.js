@@ -1301,6 +1301,7 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
   const addrHint = modal.querySelector('[data-rm-addrhint]');
   const suggestBox = document.getElementById('rmSuggest');
   const msgEl = document.getElementById('rmMessage');
+  const msgLbl = modal.querySelector('[data-rm-msglbl]');
   const hp = document.getElementById('rmHp');
   const errBox = document.getElementById('rmErr');
   const submit = document.getElementById('rmSubmit');
@@ -1314,6 +1315,12 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
     stateWrap.style.display = k === 'complaint' ? '' : 'none';
     addrReq.style.display = k === 'complaint' ? '' : 'none';   // адрес обязателен только для жалобы
     addrHint.textContent = k === 'complaint' ? 'Начните вводить — подскажем улицу и дом' : 'Адрес по желанию';
+    // Жалоба: то же поле — необязательный «Комментарий» к уже выбранной проблеме.
+    // Предложение: единственное поле — «Сообщение», в нём вся суть предложения.
+    if (msgLbl) msgLbl.textContent = k === 'complaint' ? 'Комментарий' : 'Сообщение';
+    msgEl.placeholder = k === 'complaint'
+      ? 'Опишите ситуацию: когда началось, что именно отключено…'
+      : 'Опишите ваше предложение…';
   }
   function setState(s) {
     reportState = s;

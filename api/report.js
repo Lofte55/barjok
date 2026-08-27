@@ -13,16 +13,18 @@ const { select } = require('./_lib/supabase');
 const CATS = {
   hot_water: 'Нет горячей воды',
   cold_water: 'Нет холодной воды',
+  water: 'Нет воды',
   electricity: 'Нет электричества',
   water_light: 'Нет воды и света',
   heating: 'Нет тепла',
   gas: 'Нет газа',
 };
-// water_light одной жалобой закрывает сразу два ресурса — для Decision Engine это
-// два отдельных user_report (по одному на каждый utility_type).
+// water_light/water одной жалобой закрывают сразу несколько ресурсов — для
+// Decision Engine это отдельный user_report на каждый utility_type.
 const CAT_UTILITIES = {
   hot_water: ['hot_water'], cold_water: ['cold_water'], electricity: ['electricity'],
   heating: ['heating'], gas: ['gas'], water_light: ['cold_water', 'electricity'],
+  water: ['cold_water', 'hot_water'],
 };
 const esc = (s) => String(s).replace(/[<&>]/g, (c) => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;' }[c]));
 

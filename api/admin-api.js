@@ -4,7 +4,7 @@
  */
 const { requireAdmin } = require('./_lib/auth');
 const { select, insert, update, remove } = require('./_lib/supabase');
-const { evaluate } = require('./_lib/decision-engine');
+const { evaluate, sweepExpiredOverrides } = require('./_lib/decision-engine');
 
 const UTILITIES = new Set(['hot_water', 'cold_water', 'electricity', 'heating', 'gas']);
 
@@ -17,9 +17,10 @@ async function log(incidentId, eventType, detail) {
 const CAT_UTILITIES = {
   hot_water: ['hot_water'], cold_water: ['cold_water'], electricity: ['electricity'],
   heating: ['heating'], gas: ['gas'], water_light: ['cold_water', 'electricity'],
+  water: ['cold_water', 'hot_water'],
   'нет горячей воды': ['hot_water'], 'нет холодной воды': ['cold_water'],
   'нет электричества': ['electricity'], 'нет тепла': ['heating'], 'нет газа': ['gas'],
-  'нет воды и света': ['cold_water', 'electricity'],
+  'нет воды и света': ['cold_water', 'electricity'], 'нет воды': ['cold_water', 'hot_water'],
 };
 const KEYWORDS = [
   [/гор[яа]ч/i, 'hot_water'], [/холод/i, 'cold_water'],
@@ -179,6 +180,10 @@ async function loadPendingReports(incidents) {
 }
 
 async function handleGet(req, res) {
+  // Автовосстановление по сроку — админка тоже должна видеть свежий статус
+  // (не только карта/лендинг через live-incidents.js), иначе строка висела бы
+  // "Отключено" ещё до минуты на следующий автообновляемый load().
+  try { await sweepExpiredOverrides(); } catch (e) { console.error('sweepExpiredOverrides failed:', e.message); }
   const incidents = await select('incidents', 'order=updated_at.desc&limit=200');
   const pending = await loadPendingReports(incidents);
   res.status(200).json({ ok: true, incidents, pending });
@@ -195,23 +200,32 @@ async function handlePost(req, res) {
     const utility_type = String(b.utility_type || '');
     const reason = String(b.reason || '').trim().slice(0, 300) || null;
     if (!address || !UTILITIES.has(utility_type)) return res.status(400).json({ ok: false, error: 'bad_input' });
+    // Срок автовосстановления: "без даты" (0/отсутствует) — висит, пока админ не
+    // снимет вручную (старое поведение); 1 или 5 — через столько дней sweepExpiredOverrides()
+    // (decision-engine.js, вызывается на каждый живой запрос) сам переведёт в RESTORED
+    // и вернёт адрес под автоматику. ⚠️ Разрешаем ТОЛЬКО эти два значения — произвольное
+    // число дней с клиента не валидируем осмысленно, а эти два соответствуют кнопкам в UI.
+    const durationDays = [1, 5].includes(Number(b.duration_days)) ? Number(b.duration_days) : 0;
+    const now = new Date().toISOString();
+    const manualOverrideUntil = durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null;
 
     const existing = await select('incidents',
       `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}&status=eq.ACTIVE&limit=1`);
-    const now = new Date().toISOString();
     let incident;
     if (existing && existing.length) {
       [incident] = await update('incidents', `id=eq.${existing[0].id}`, {
-        manual_override: 'FORCE_OUTAGE', manual_override_reason: reason, manual_override_created_at: now, updated_at: now,
+        manual_override: 'FORCE_OUTAGE', manual_override_reason: reason, manual_override_created_at: now,
+        manual_override_until: manualOverrideUntil, updated_at: now,
       });
     } else {
       [incident] = await insert('incidents', {
         address, utility_type, status: 'ACTIVE', confirmation_type: 'MANUAL',
         manual_override: 'FORCE_OUTAGE', manual_override_reason: reason, manual_override_created_at: now,
+        manual_override_until: manualOverrideUntil,
         first_reported_at: now, confirmed_at: now,
       });
     }
-    await log(incident.id, 'MANUAL_FORCE_OUTAGE', { reason });
+    await log(incident.id, 'MANUAL_FORCE_OUTAGE', { reason, duration_days: durationDays || null });
     return res.status(200).json({ ok: true, incident });
   }
 

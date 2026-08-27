@@ -245,12 +245,22 @@
     <div class="rm-back" data-rm-close></div>
     <div class="rm-card" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
       <button class="rm-x" type="button" aria-label="Закрыть" data-rm-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-      <h2 id="rmTitle" class="rm-title">Сообщить о проблеме</h2>
+      <h2 id="rmTitle" class="rm-title">Уведомление BARJOK</h2>
       <p class="rm-sub">Расскажите, что не так с водой, светом или другими услугами. Сообщение уйдёт команде «BARJOK».</p>
 
       <div class="rm-seg" data-rm-kind>
         <button type="button" data-kind="complaint" class="on">Жалоба</button>
         <button type="button" data-kind="suggestion">Предложение</button>
+      </div>
+
+      <!-- Ситуация — ПЕРЕД "Что случилось": сначала выбирают направление
+           (есть проблема / уже восстановилось), потом уточняют, что именно. -->
+      <div class="rm-field" data-rm-statewrap>
+        <label class="rm-lbl">Ситуация</label>
+        <div class="rm-seg" data-rm-state>
+          <button type="button" data-state="outage" class="on">Есть проблема</button>
+          <button type="button" data-state="restored">Восстановилось</button>
+        </div>
       </div>
 
       <div class="rm-field" data-rm-catwrap>
@@ -264,19 +274,12 @@
             <option value="">Выберите проблему…</option>
             <option value="hot_water">Нет горячей воды</option>
             <option value="cold_water">Нет холодной воды</option>
+            <option value="water">Нет воды</option>
             <option value="electricity">Нет электричества</option>
             <option value="water_light">Нет воды и света</option>
             <option value="heating">Нет тепла</option>
             <option value="gas">Нет газа</option>
           </select>
-        </div>
-      </div>
-
-      <div class="rm-field" data-rm-statewrap>
-        <label class="rm-lbl">Ситуация</label>
-        <div class="rm-seg" data-rm-state>
-          <button type="button" data-state="outage" class="on">Всё ещё нет</button>
-          <button type="button" data-state="restored">Уже появилось</button>
         </div>
       </div>
 
@@ -290,7 +293,7 @@
       </div>
 
       <div class="rm-field">
-        <label class="rm-lbl">Сообщение</label>
+        <label class="rm-lbl" data-rm-msglbl>Комментарий</label>
         <textarea id="rmMessage" rows="3" placeholder="Опишите ситуацию: когда началось, что именно отключено…"></textarea>
       </div>
 
@@ -306,7 +309,7 @@
   <script defer src="/map/vendor/maplibre-gl/maplibre-gl.js?v=1788300000"></script>
   <script defer src="/map/vendor/maplibre-gl-leaflet/leaflet-maplibre-gl.js?v=1788300000"></script>
   <script defer src="/map/data.js?v=1788300000"></script>
-  <script defer src="/map/app.js?v=1788301000"></script>
+  <script defer src="/map/app.js?v=1788301200"></script>
 <!-- Яндекс.Метрика + информационный баннер о cookie — в /cookie-consent.js (единое место на все страницы) -->
 <script defer src="/cookie-consent.js?v=2"></script>
 <!-- Vercel Web Analytics — script-тег, не npm-пакет (проект без сборщика) -->

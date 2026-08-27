@@ -23,6 +23,13 @@ const BODY = `
         </select>
       </div>
       <input name="reason" placeholder="причина (необязательно)" style="flex:1;min-width:180px">
+      <div class="csel" data-csel>
+        <select name="duration_days" title="Срок автовосстановления">
+          <option value="0">Без даты (вручную)</option>
+          <option value="1">Восстановится через 1 день</option>
+          <option value="5">Восстановится через 5 дней</option>
+        </select>
+      </div>
       <button type="submit">Принудительно отключить</button>
     </form>
   </div>
@@ -100,6 +107,20 @@ async function api(path, opts) {
 function esc(s) { return String(s).replace(/[<&>]/g, (c) => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;' }[c])); }
 function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 
+// Срок автовосстановления рядом с "Подтвердить"/"Снова отключить" — читается
+// кликом по кнопке (её предыдущий sibling в той же ячейке .actions), см.
+// обработчик клика ниже. Обычный <select> (не .csel) — строки рендерятся
+// динамически ПОСЛЕ инициализации .csel при загрузке страницы, .csel не
+// подхватит их без повторного вызова инициализатора; для одной служебной
+// строки не стоит усложнять.
+function durationSelectHtml() {
+  return '<select class="dur-sel" data-duration title="Срок автовосстановления">' +
+    '<option value="0">Без даты</option>' +
+    '<option value="1">1 день</option>' +
+    '<option value="5">5 дней</option>' +
+    '</select>';
+}
+
 function currentFilters() {
   return {
     status: document.getElementById('statusFilter').value,
@@ -145,17 +166,23 @@ function render() {
         + (inc.message ? '<div class="muted">' + esc(inc.message) + '</div>' : '');
       overrideCell = '<span class="muted">Ждёт подтверждения</span>';
       dateVal = inc.latest_report_at;
+      actions.push(durationSelectHtml());
       actions.push('<button data-act="confirm_pending" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Подтвердить</button>');
       actions.push('<button class="ghost" data-act="reject_pending" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Отклонить</button>');
     } else {
       statusBadge = inc.status === 'ACTIVE' ? '<span class="badge b-active">Отключено</span>' : '<span class="badge b-restored">Восстановлено</span>';
       confirmCell = CT[inc.confirmation_type] || inc.confirmation_type;
+      // manual_override_until — срок автовосстановления (см. api/admin-api.js:force_outage,
+      // api/_lib/decision-engine.js:sweepExpiredOverrides). Показываем рядом с бейджем,
+      // иначе после "Подтвердить → 5 дней" не видно, что вообще что-то запланировано.
       overrideCell = inc.manual_override !== 'NONE'
-        ? '<span class="badge b-manual">' + (OV[inc.manual_override] || inc.manual_override) + '</span>' + (inc.manual_override_reason ? '<div class="muted">' + esc(inc.manual_override_reason) + '</div>' : '')
+        ? '<span class="badge b-manual">' + (OV[inc.manual_override] || inc.manual_override) + '</span>'
+          + (inc.manual_override_until ? '<div class="muted">Восстановится ' + fmt(inc.manual_override_until) + '</div>' : '')
+          + (inc.manual_override_reason ? '<div class="muted">' + esc(inc.manual_override_reason) + '</div>' : '')
         : '<span class="muted">Автоматический режим</span>';
       dateVal = inc.status === 'ACTIVE' ? inc.confirmed_at : inc.restored_at;
       if (inc.status === 'ACTIVE') actions.push('<button data-act="force_restored" data-id="' + inc.id + '">Восстановлено</button>');
-      else actions.push('<button data-act="force_outage_again" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Снова отключить</button>');
+      else { actions.push(durationSelectHtml()); actions.push('<button data-act="force_outage_again" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Снова отключить</button>'); }
       if (inc.manual_override !== 'NONE') actions.push('<button class="ghost" data-act="clear_override" data-id="' + inc.id + '">Снять ручное управление</button>');
       actions.push('<button class="ghost" data-act="delete" data-id="' + inc.id + '" title="Удалить запись совсем">Удалить</button>');
     }
@@ -241,7 +268,7 @@ document.getElementById('newForm').addEventListener('submit', async (e) => {
   try {
     await api('/api/admin-api', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action: 'force_outage', address: f.get('address'), utility_type: f.get('utility_type'), reason: f.get('reason') }),
+      body: JSON.stringify({ action: 'force_outage', address: f.get('address'), utility_type: f.get('utility_type'), reason: f.get('reason'), duration_days: f.get('duration_days') }),
     });
     e.target.reset();
     await load();
@@ -263,9 +290,11 @@ document.getElementById('rows').addEventListener('click', async (e) => {
         body: JSON.stringify({ action: 'delete', id: Number(btn.dataset.id) }),
       });
     } else if (act === 'force_outage_again' || act === 'confirm_pending') {
+      // Селект срока — сосед кнопки в той же ячейке .actions (см. durationSelectHtml()).
+      const durSel = btn.parentElement.querySelector('[data-duration]');
       await api('/api/admin-api', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'force_outage', address: btn.dataset.address, utility_type: btn.dataset.utility }),
+        body: JSON.stringify({ action: 'force_outage', address: btn.dataset.address, utility_type: btn.dataset.utility, duration_days: durSel ? durSel.value : '0' }),
       });
     } else if (act === 'reject_pending') {
       await api('/api/admin-api', {

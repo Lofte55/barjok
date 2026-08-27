@@ -15,9 +15,15 @@
  * зовут ЭТУ функцию — расхождению просто неоткуда взяться.
  */
 const { select } = require('./supabase');
+const { sweepExpiredOverrides } = require('./decision-engine');
 
 async function fetchLiveIncidents() {
   if (!process.env.SUPABASE_URL) return { active: [], restored: [] };
+
+  // Автовосстановление по сроку (админ поставил "1 день"/"5 дней" вместо
+  // "без даты") — событийный sweep на каждый живой запрос, см. decision-engine.js.
+  // Best-effort: карта не должна падать из-за сбоя этого шага.
+  try { await sweepExpiredOverrides(); } catch (e) { console.error('sweepExpiredOverrides failed:', e.message); }
 
   let rows;
   try {
