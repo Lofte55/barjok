@@ -1322,9 +1322,49 @@ addEventListener('load', fixSize); addEventListener('resize', fixSize);
       ? 'Опишите ситуацию: когда началось, что именно отключено…'
       : 'Опишите ваше предложение…';
   }
+  // Подписи категории зависят от Ситуации — «Нет воды» звучит нелепо рядом
+  // с «Восстановилось» (правильно «Появилась вода»). value у <option> не
+  // меняется, меняется только видимый текст.
+  const CAT_LABELS = {
+    outage: {
+      '': 'Выберите проблему…', hot_water: 'Нет горячей воды', cold_water: 'Нет холодной воды',
+      water: 'Нет воды', electricity: 'Нет электричества', water_light: 'Нет воды и света',
+      heating: 'Нет тепла', gas: 'Нет газа',
+    },
+    restored: {
+      '': 'Что восстановилось…', hot_water: 'Появилась горячая вода', cold_water: 'Появилась холодная вода',
+      water: 'Появилась вода', electricity: 'Появился свет', water_light: 'Появились вода и свет',
+      heating: 'Появилось тепло', gas: 'Появился газ',
+    },
+  };
+  // <select> обёрнут в кастомный .csel (см. <script> в конце index.html) — тот
+  // строит СВОЮ копию списка (.csel-menu > .csel-opt) один раз при инициализации
+  // и не следит за textContent исходных <option> дальше. Меняем оба места: сам
+  // <option> (на случай fallback/доступности) и зеркальный <span> в .csel-opt —
+  // порядок гарантированно совпадает, оба строятся из одного sel.options.
+  // ⚠️ .csel-menu запрашиваем ЗАНОВО при каждом вызове, а не один раз при
+  // инициализации модуля: map/app.js выполняется (defer) РАНЬШЕ инлайнового
+  // buildCsel-скрипта в конце index.html (порядок defer-тегов на странице) —
+  // на момент старта reportModule() .csel-menu ещё не существует в DOM.
+  function applyCatLabels(s) {
+    const labels = CAT_LABELS[s] || CAT_LABELS.outage;
+    const cselRoot = catSel.closest('.csel');
+    const cselMenu = cselRoot && cselRoot.querySelector('.csel-menu');
+    const cselVal = cselRoot && cselRoot.querySelector('.csel-val');
+    const opts = [...catSel.options];
+    const optBtns = cselMenu ? [...cselMenu.querySelectorAll('.csel-opt')] : [];
+    opts.forEach((opt, i) => {
+      const text = labels[opt.value] != null ? labels[opt.value] : opt.textContent;
+      opt.textContent = text;
+      const span = optBtns[i] && optBtns[i].querySelector('span');
+      if (span) span.textContent = text;
+    });
+    if (cselVal) cselVal.textContent = opts[catSel.selectedIndex] ? opts[catSel.selectedIndex].textContent : '';
+  }
   function setState(s) {
     reportState = s;
     stateSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.state === s));
+    applyCatLabels(s);
   }
   stateSeg.querySelectorAll('button').forEach((b) => (b.onclick = () => setState(b.dataset.state)));
   function showErr(m) { errBox.textContent = m; errBox.classList.add('show'); }
