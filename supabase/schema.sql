@@ -66,9 +66,24 @@ create table if not exists incident_log (
 
 create index if not exists idx_log_incident on incident_log (incident_id);
 
+-- Предложения жителей (форма "Уведомление BARJOK" → вкладка "Предложение").
+-- Раньше уходили ТОЛЬКО в Telegram — админка их вообще не видела. address
+-- необязателен (предложение не обязано быть про конкретный дом).
+create table if not exists suggestions (
+  id bigint generated always as identity primary key,
+  address text,
+  message text not null,
+  status text not null default 'NEW' check (status in ('NEW','DONE')),
+  ip_hash text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_suggestions_status on suggestions (status);
+
 -- RLS включаем и НЕ добавляем policy — значит publishable(anon)-ключ не увидит
 -- ничего вообще, а secret(service_role)-ключ (используется только в серверных
 -- функциях, никогда не уходит в браузер) обходит RLS как обычно.
 alter table incidents enable row level security;
 alter table user_reports enable row level security;
 alter table incident_log enable row level security;
+alter table suggestions enable row level security;

@@ -8,7 +8,7 @@
 const crypto = require('crypto');
 const { submitReport } = require('./_lib/decision-engine');
 const { originOk, ipHash, rateLimit, tooMany } = require('./_lib/security');
-const { select } = require('./_lib/supabase');
+const { select, insert } = require('./_lib/supabase');
 
 const CATS = {
   hot_water: 'Нет горячей воды',
@@ -126,6 +126,15 @@ module.exports = async (req, res) => {
     await Promise.allSettled(utilities.map((utility_type) =>
       submitReport({ address, utility_type, reported_state: reportedState, actor_key: actorKey, ip_hash: hash, message })
     )).then((results) => results.forEach((r) => { if (r.status === 'rejected') console.error('decision-engine submitReport failed:', r.reason?.message); }));
+  }
+
+  // Предложения раньше уходили ТОЛЬКО в Telegram — админка их не видела вообще.
+  // Best-effort: сбой записи не должен ронять отправку (Telegram ниже — источник
+  // правды для владельца, Supabase — только для видимости в /admin).
+  if (isSuggest && process.env.SUPABASE_URL) {
+    try {
+      await insert('suggestions', { address: address || null, message, ip_hash: hash });
+    } catch (e) { console.error('suggestion insert failed:', e.message); }
   }
 
   const lines = isPartner ? [

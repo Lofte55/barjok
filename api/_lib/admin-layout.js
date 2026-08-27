@@ -3,7 +3,7 @@
  * только свой контент и id пункта меню, который подсветить.
  */
 const NAV = [
-  { id: 'incidents', href: '/admin', label: 'Отключения', icon: '💧' },
+  { id: 'incidents', href: '/admin', label: 'События', icon: '💧' },
   { id: 'settings', href: '/admin/settings', label: 'Настройки', icon: '⚙️' },
   { id: 'ads', href: '/admin/ads', label: 'ADS', icon: '📣' },
   { id: 'analytics', href: '/admin/analytics', label: 'Аналитика', icon: '📊' },

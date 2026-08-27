@@ -41,9 +41,10 @@ const BODY = `
         <div class="csel" data-csel>
           <select id="statusFilter">
             <option value="all" selected>Все</option>
-            <option value="NEW">Новые</option>
+            <option value="NEW">Новые жалобы</option>
             <option value="ACTIVE">Активные</option>
             <option value="RESTORED">Восстановленные</option>
+            <option value="SUGGESTION">Предложения</option>
           </select>
         </div>
       </div>
@@ -129,8 +130,13 @@ function currentFilters() {
   };
 }
 function rowDate(r) {
-  return r.status === 'NEW' ? r.latest_report_at : (r.status === 'ACTIVE' ? r.confirmed_at : r.restored_at);
+  if (r.status === 'NEW') return r.latest_report_at;
+  if (r.status === 'SUGGESTION') return r.created_at;
+  return r.status === 'ACTIVE' ? r.confirmed_at : r.restored_at;
 }
+// Новые жалобы И необработанные предложения — оба "требуют внимания",
+// оба сверху списка (см. сортировку ниже).
+function needsAttention(r) { return r.status === 'NEW' || (r.status === 'SUGGESTION' && !r.done); }
 function filteredRows() {
   const f = currentFilters();
   return allRows
@@ -139,10 +145,10 @@ function filteredRows() {
       (f.resource === 'all' || r.utility_type === f.resource) &&
       (f.city === 'all' || (r.city_id || 'pavlodar') === f.city)
     )
-    // "Новая" всегда сверху (свежие жалобы требуют внимания раньше остального),
-    // внутри каждой группы (Новая / остальные) — по дате, свежее выше.
+    // "Новая"/необработанное предложение всегда сверху, внутри каждой
+    // группы — по дате, свежее выше.
     .sort((a, b) => {
-      const aNew = a.status === 'NEW' ? 0 : 1, bNew = b.status === 'NEW' ? 0 : 1;
+      const aNew = needsAttention(a) ? 0 : 1, bNew = needsAttention(b) ? 0 : 1;
       if (aNew !== bNew) return aNew - bNew;
       return (rowDate(b) || '') < (rowDate(a) || '') ? -1 : 1;
     });
@@ -155,7 +161,16 @@ function render() {
   rows.innerHTML = list.map((inc) => {
     const cityLabel = CITY[inc.city_id || 'pavlodar'] || (inc.city_id || 'Павлодар');
     let statusBadge, confirmCell, overrideCell, dateVal, actions = [];
-    if (inc.status === 'NEW') {
+    if (inc.status === 'SUGGESTION') {
+      // Предложение (kind=suggestion в форме "Уведомление BARJOK") — не привязано
+      // к конкретному ресурсу/инциденту, адрес необязателен. status в БД: NEW/DONE.
+      statusBadge = inc.done ? '<span class="badge b-restored">Обработано</span>' : '<span class="badge b-new">Предложение</span>';
+      confirmCell = '<div class="muted">' + esc(inc.message || '') + '</div>';
+      overrideCell = '<span class="muted">—</span>';
+      dateVal = inc.created_at;
+      if (!inc.done) actions.push('<button data-act="done_suggestion" data-id="' + inc.id + '">Обработано</button>');
+      actions.push('<button class="ghost" data-act="delete_suggestion" data-id="' + inc.id + '" title="Удалить запись совсем">Удалить</button>');
+    } else if (inc.status === 'NEW') {
       statusBadge = '<span class="badge b-new">Новая</span>';
       // votes = сколько зачтёт автоподтверждение; raw_votes = сколько жалоб всего.
       // Расходятся, когда часть жалоб пришла с одного IP (потолок против накрутки
@@ -186,10 +201,14 @@ function render() {
       if (inc.manual_override !== 'NONE') actions.push('<button class="ghost" data-act="clear_override" data-id="' + inc.id + '">Снять ручное управление</button>');
       actions.push('<button class="ghost" data-act="delete" data-id="' + inc.id + '" title="Удалить запись совсем">Удалить</button>');
     }
+    const addrLabel = inc.status === 'SUGGESTION'
+      ? (inc.address ? esc(inc.address) : '<span class="muted">без адреса</span>')
+      : esc(inc.address);
+    const resLabel = inc.status === 'SUGGESTION' ? '<span class="muted">—</span>' : (UT[inc.utility_type] || inc.utility_type);
     return '<tr>' +
       '<td>' + esc(cityLabel) + '</td>' +
-      '<td>' + esc(inc.address) + '</td>' +
-      '<td>' + (UT[inc.utility_type] || inc.utility_type) + '</td>' +
+      '<td>' + addrLabel + '</td>' +
+      '<td>' + resLabel + '</td>' +
       '<td>' + statusBadge + '</td>' +
       '<td>' + confirmCell + '</td>' +
       '<td>' + overrideCell + '</td>' +
@@ -206,13 +225,16 @@ function csvEscape(s) {
 function downloadCsv() {
   const list = filteredRows();
   const head = ['Город', 'Адрес', 'Ресурс', 'Статус', 'Подтверждение', 'Дата'];
-  const statusRu = { NEW: 'Новая', ACTIVE: 'Отключено', RESTORED: 'Восстановлено' };
+  const statusRu = { NEW: 'Новая', ACTIVE: 'Отключено', RESTORED: 'Восстановлено', SUGGESTION: 'Предложение' };
   const lines = [head.map(csvEscape).join(',')];
   list.forEach((inc) => {
     const cityLabel = CITY[inc.city_id || 'pavlodar'] || (inc.city_id || 'Павлодар');
-    const confirmTxt = inc.status === 'NEW' ? inc.votes + ' сообщений' : (CT[inc.confirmation_type] || inc.confirmation_type || '');
-    const dateVal = inc.status === 'NEW' ? inc.latest_report_at : (inc.status === 'ACTIVE' ? inc.confirmed_at : inc.restored_at);
-    lines.push([cityLabel, inc.address, UT[inc.utility_type] || inc.utility_type, statusRu[inc.status] || inc.status, confirmTxt, fmt(dateVal)].map(csvEscape).join(','));
+    const confirmTxt = inc.status === 'NEW' ? inc.votes + ' сообщений'
+      : inc.status === 'SUGGESTION' ? (inc.done ? 'Обработано: ' : '') + (inc.message || '')
+      : (CT[inc.confirmation_type] || inc.confirmation_type || '');
+    const dateVal = rowDate(inc);
+    const resVal = inc.status === 'SUGGESTION' ? '' : (UT[inc.utility_type] || inc.utility_type);
+    lines.push([cityLabel, inc.address || '', resVal, statusRu[inc.status] || inc.status, confirmTxt, fmt(dateVal)].map(csvEscape).join(','));
   });
   const blob = new Blob(['\\uFEFF' + lines.join('\\r\\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -225,9 +247,10 @@ function downloadCsv() {
 async function load() {
   const rows = document.getElementById('rows');
   try {
-    const { incidents, pending } = await api('/api/admin-api');
+    const { incidents, pending, suggestions } = await api('/api/admin-api');
     const pendingRows = (pending || []).map((p) => Object.assign({ status: 'NEW' }, p));
-    allRows = incidents.concat(pendingRows);
+    const suggestionRows = (suggestions || []).map((s) => Object.assign({}, s, { status: 'SUGGESTION', done: s.status === 'DONE' }));
+    allRows = incidents.concat(pendingRows, suggestionRows);
     render();
   } catch (e) {
     rows.innerHTML = '<tr><td colspan="8" class="empty">Ошибка загрузки: ' + esc(e.message) + '</td></tr>';
@@ -280,6 +303,7 @@ document.getElementById('rows').addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-act]');
   if (!btn) return;
   if (btn.dataset.act === 'delete' && !confirm('Удалить эту запись совсем? Действие необратимо.')) return;
+  if (btn.dataset.act === 'delete_suggestion' && !confirm('Удалить это предложение совсем? Действие необратимо.')) return;
   if (btn.dataset.act === 'reject_pending' && !confirm('Отклонить эту жалобу? Голоса жителей будут списаны.')) return;
   btn.disabled = true;
   try {
@@ -318,8 +342,8 @@ load();
 module.exports = async (req, res) => {
   if (!requireAdmin(req, res)) return;
   const html = renderAdminPage({
-    active: 'incidents', title: 'Отключения',
-    sub: 'Ручное управление + автоматические (community/official) incidents. Источник правды для карты.',
+    active: 'incidents', title: 'События',
+    sub: 'Отключения (ручные + автоматические) и предложения жителей. Источник правды для карты.',
     body: BODY, script: SCRIPT,
   });
   res.setHeader('Content-Type', 'text/html; charset=utf-8');

@@ -234,10 +234,11 @@
     <div class="list"></div>
   </section>
 
-  <!-- Акцентная кнопка «Сообщить о проблеме» (жалоба/предложение → Telegram) -->
+  <!-- Акцентная кнопка «Уведомить BARJOK» (жалоба/предложение → Telegram) —
+       открывает модалку "Уведомление BARJOK" (rmTitle) -->
   <button class="report-fab" id="reportBtn" type="button">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-    <span>Сообщить о проблеме</span>
+    <span>Уведомить BARJOK</span>
   </button>
 
   <!-- Модалка жалобы/предложения -->
@@ -490,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </svg>
 <style>
   /* bottom:82px, а не 20px — на карте в этом же углу лежит круглая/пилюльная
-     кнопка "Сообщить о проблеме" (.report-fab), иначе виджет доступности
+     кнопка "Уведомить BARJOK" (.report-fab), иначе виджет доступности
      наезжает на неё.
      ⚠️ z-index НИЖЕ, чем у .report-modal (1000, styles.css) — НАРОЧНО. Кнопка
      доступности должна прятаться ЗА модалкой при открытии формы "Сообщить о

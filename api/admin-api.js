@@ -186,7 +186,14 @@ async function handleGet(req, res) {
   try { await sweepExpiredOverrides(); } catch (e) { console.error('sweepExpiredOverrides failed:', e.message); }
   const incidents = await select('incidents', 'order=updated_at.desc&limit=200');
   const pending = await loadPendingReports(incidents);
-  res.status(200).json({ ok: true, incidents, pending });
+  // Предложения (вкладка "Предложение" формы "Уведомление BARJOK") — раньше
+  // уходили только в Telegram, теперь видны и здесь. NEW+DONE вместе (DONE —
+  // для истории, как ACTIVE/RESTORED у incidents), таблицы suggestions может
+  // не быть на старых деплоях без миграции — best-effort, не роняем страницу.
+  let suggestions = [];
+  try { suggestions = await select('suggestions', 'order=created_at.desc&limit=200'); }
+  catch (e) { console.error('suggestions select failed:', e.message); }
+  res.status(200).json({ ok: true, incidents, pending, suggestions });
 }
 
 async function handlePost(req, res) {
@@ -255,6 +262,20 @@ async function handlePost(req, res) {
     const id = Number(b.id);
     if (!id) return res.status(400).json({ ok: false, error: 'bad_input' });
     await remove('incidents', `id=eq.${id}`);
+    return res.status(200).json({ ok: true });
+  }
+
+  if (action === 'done_suggestion') {
+    const id = Number(b.id);
+    if (!id) return res.status(400).json({ ok: false, error: 'bad_input' });
+    await update('suggestions', `id=eq.${id}`, { status: 'DONE' });
+    return res.status(200).json({ ok: true });
+  }
+
+  if (action === 'delete_suggestion') {
+    const id = Number(b.id);
+    if (!id) return res.status(400).json({ ok: false, error: 'bad_input' });
+    await remove('suggestions', `id=eq.${id}`);
     return res.status(200).json({ ok: true });
   }
 
