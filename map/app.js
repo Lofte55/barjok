@@ -992,6 +992,19 @@ async function checkAddress(q) {
 }
 // Клик по любому месту карты → определяем дом и показываем карточку
 async function checkPoint(lat, lng) {
+  // ⚠️ Если рядом уже есть дом с известными данными (в т.ч. синтетический — из
+  // живого слоя по жалобе жителя), открываем ИМЕННО его, не гадаем через
+  // reverse-geocode. У соседних участков нередко своя отдельная адресация
+  // («Муткенова, 54» и «улица Салтыкова-Щедрина, 54» — один и тот же угол
+  // квартала, два источника, два разных адреса с одинаковым номером дома) —
+  // промах на пару пикселей мимо иконки маркера раньше подменял точный,
+  // уже известный адрес дома на первый попавшийся сосед той же нумерации.
+  let nearest = null, nearestD = Infinity;
+  DATA.houses.forEach((h) => {
+    const d = Math.hypot((h.lat - lat) * 111000, (h.lng - lng) * 68000);
+    if (d < nearestD) { nearestD = d; nearest = h; }
+  });
+  if (nearest && nearestD <= 25) { openHouseCard(nearest, [nearest.lat, nearest.lng]); return; }
   showToast(t().searching);
   const info = await reverseGeocode(lat, lng);
   hideToast();
