@@ -273,7 +273,11 @@ async function applyLiveLayer() {
           ([house]) => String(house).toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е') === wantHouse,
         );
         if (!hit) continue;
-        const house = { address: `${street}, ${hit[0]}`, district: 'БарЖок', lat: hit[1], lng: hit[2], outages: [] };
+        // ⚠️ Без id клик по подсказке поиска падал: DATA.houses.find(x => x.id ===
+        // el.dataset.id) сравнивал undefined со строкой "undefined" и не находил дом,
+        // ensureVisible(undefined) кидал исключение ДО setSearchValue/map.setView —
+        // выглядело как «нажимаю на подсказку и ничего не происходит».
+        const house = { id: `live-${DATA.houses.length}`, address: `${street}, ${hit[0]}`, district: 'БарЖок', lat: hit[1], lng: hit[2], outages: [] };
         put(house, a);
         DATA.houses.push(house);
         added++;
