@@ -992,20 +992,46 @@ async function checkAddress(q) {
 }
 // Клик по любому месту карты → определяем дом и показываем карточку
 async function checkPoint(lat, lng) {
-  // ⚠️ Если рядом уже есть дом с известными данными (в т.ч. синтетический — из
+  const near0m = (aLat, aLng) => Math.hypot((aLat - lat) * 111000, (aLng - lng) * 68000);
+
+  // 1) Если рядом уже есть дом с известными данными (в т.ч. синтетический — из
   // живого слоя по жалобе жителя), открываем ИМЕННО его, не гадаем через
-  // reverse-geocode. У соседних участков нередко своя отдельная адресация
-  // («Муткенова, 54» и «улица Салтыкова-Щедрина, 54» — один и тот же угол
-  // квартала, два источника, два разных адреса с одинаковым номером дома) —
-  // промах на пару пикселей мимо иконки маркера раньше подменял точный,
-  // уже известный адрес дома на первый попавшийся сосед той же нумерации.
+  // reverse-geocode. У соседних участков нередко своя отдельная адресация —
+  // промах мимо иконки маркера раньше подменял точный, уже известный адрес
+  // дома на первый попавшийся сосед той же нумерации.
   let nearest = null, nearestD = Infinity;
   DATA.houses.forEach((h) => {
-    const d = Math.hypot((h.lat - lat) * 111000, (h.lng - lng) * 68000);
+    const d = near0m(h.lat, h.lng);
     if (d < nearestD) { nearestD = d; nearest = h; }
   });
-  if (nearest && nearestD <= 25) { openHouseCard(nearest, [nearest.lat, nearest.lng]); return; }
+  if (nearest && nearestD <= 60) { openHouseCard(nearest, [nearest.lat, nearest.lng]); return; }
+
   showToast(t().searching);
+
+  // 2) Полный адресный справочник города (addresses.json) — наш собственный,
+  // проверенный источник. Nominatim реально «придумывает» несуществующий номер
+  // дома, интерполируя его вдоль улицы (см. случай «улица Салтыкова-Щедрина, 54» —
+  // такого дома нет ни на одной из наших карт, реальный адрес того же места —
+  // «Муткенова, 54»), поэтому сверяемся со своим реестром РАНЬШЕ, чем с Nominatim.
+  const idx = await loadAddresses();
+  let bestAddr = null, bestAddrD = Infinity;
+  for (const street of Object.keys(idx || {})) {
+    for (const entry of idx[street] || []) {
+      const [house, hlat, hlng] = entry;
+      const d = near0m(hlat, hlng);
+      if (d < bestAddrD) { bestAddrD = d; bestAddr = { street, house, lat: hlat, lng: hlng }; }
+    }
+  }
+  if (bestAddr && bestAddrD <= 60) {
+    hideToast();
+    const address = `${bestAddr.street}, ${bestAddr.house}`;
+    const near = outagesNear(bestAddr.lat, bestAddr.lng, address);
+    openAddressCard({ address, district: '', lat: bestAddr.lat, lng: bestAddr.lng }, near);
+    return;
+  }
+
+  // 3) Последний вариант — Nominatim (для мест, которых нет ни в data.json, ни в
+  // addresses.json, например совсем новая застройка).
   const info = await reverseGeocode(lat, lng);
   hideToast();
   // ⚠️ Клик по пустому месту (двор, пустырь, дорога в стороне от домов) — Nominatim
@@ -1013,7 +1039,7 @@ async function checkPoint(lat, lng) {
   // сверки с РЕАЛЬНЫМИ координатами этого дома (info.mlat/mlng, не самого клика)
   // любая точка карты открывала уверенную карточку «отключений нет» для случайного
   // соседа — выглядело так, будто на пустое место тоже можно «нажать, как на дом».
-  const distM = info ? Math.hypot((info.mlat - lat) * 111000, (info.mlng - lng) * 68000) : Infinity;
+  const distM = info ? near0m(info.mlat, info.mlng) : Infinity;
   if (!info || distM > 40) { showToast(t().addrNotFound, 2200); return; }
   const near = outagesNear(info.mlat, info.mlng, info.address);
   openAddressCard({ address: info.address, district: info.district, lat: info.mlat, lng: info.mlng }, near);
