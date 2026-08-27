@@ -235,7 +235,10 @@ async function applyLiveLayer() {
     type: 'emergency',
     status: 'current',
     start: a.start || new Date().toISOString(),
-    end: null,
+    // Срок автовосстановления из админки (см. api/_lib/live-incidents.js) —
+    // раньше был жёстко null здесь ДАЖЕ когда live-слой его присылал: карточка
+    // дома всегда показывала "Восстановят —", хотя админ явно указал дату.
+    end: a.end || null,
     reason: a.reason || 'Подтверждено через BARJOK',
     provider: a.manual ? 'БарЖок · подтверждено администратором' : 'БарЖок · подтверждено жителями',
     citizen: true,

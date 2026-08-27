@@ -54,6 +54,11 @@ async function fetchLiveIncidents() {
       confirmation_type: inc.confirmation_type,
       manual: inc.manual_override === 'FORCE_OUTAGE' || inc.confirmation_type === 'MANUAL',
       start: inc.confirmed_at || inc.created_at || null,
+      // Срок автовосстановления ("Подтвердить" → 1/5 дней в админке, см.
+      // api/admin-api.js:force_outage) — раньше нигде не прокидывался дальше
+      // incidents, карточка дома всегда показывала "Восстановят —", даже
+      // когда админ явно указал дату. null для "без даты" (как раньше).
+      end: inc.manual_override_until || null,
     });
   }
   return { active, restored };
