@@ -46,6 +46,40 @@ const STYLE = `
   .soon { text-align: center; padding: 60px 20px; color: #6b7280; }
   .soon b { color: #9aa2b1; display: block; margin-bottom: 6px; font-size: 15px; }
 
+  /* ============ Мобильная адаптация (≤760px) ============
+     Раньше .side был жёстко 220px, а <table> — обычной таблицей без обёртки:
+     на телефоне это либо горизонтальный скролл всей страницы, либо нечитаемая
+     мелкая сетка из 8 колонок. Меню сворачивается в горизонтальную полосу
+     сверху, таблица — в стопку карточек (по одной строке-инциденту на карточку,
+     подписи колонок — через data-label на <td>, см. api/admin.js:render()). */
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    .side { width: 100%; border-right: none; border-bottom: 1px solid #232733; padding: 12px; }
+    .brand { padding: 0 6px 10px; }
+    .nav { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+    .nav a { flex: none; white-space: nowrap; margin-bottom: 0; }
+    main { padding: 14px; }
+    .card { padding: 12px; }
+    form.new { gap: 6px; }
+    input, select, button, .csel-btn { font-size: 16px; }  /* ≥16px — iOS Safari не зумит инпут при фокусе */
+
+    table, thead, tbody, tr { display: block; width: 100%; }
+    thead { position: absolute; left: -9999px; top: -9999px; }  /* убираем заголовок визуально, оставляем для скринридеров */
+    tbody tr {
+      display: block; margin-bottom: 10px; padding: 10px 10px 6px;
+      background: #12141a; border: 1px solid #232733; border-radius: 10px;
+    }
+    tbody tr td { display: block; border-bottom: none; padding: 5px 0; }
+    tbody tr td:before {
+      content: attr(data-label); display: block; font-size: 11px; color: #6b7280;
+      text-transform: uppercase; letter-spacing: .02em; margin-bottom: 2px;
+    }
+    tbody tr td:empty, tbody tr td[data-label]:has(> :only-child:empty) { display: none; }
+    tbody tr td.actions { padding-top: 8px; border-top: 1px solid #232733; margin-top: 4px; }
+    tbody tr td.actions:before { display: none; }
+    tbody tr td.actions button, tbody tr td.actions select.dur-sel { font-size: 13px; }
+  }
+
   /* ============ .csel — кастомный (не системный) select, тёмная тема ============
      Тот же компонент, что на карте (map/styles.css) — оборачивает <select> в
      <div class="csel" data-csel>, сам select остаётся невидимым источником

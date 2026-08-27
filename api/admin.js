@@ -206,14 +206,14 @@ function render() {
       : esc(inc.address);
     const resLabel = inc.status === 'SUGGESTION' ? '<span class="muted">—</span>' : (UT[inc.utility_type] || inc.utility_type);
     return '<tr>' +
-      '<td>' + esc(cityLabel) + '</td>' +
-      '<td>' + addrLabel + '</td>' +
-      '<td>' + resLabel + '</td>' +
-      '<td>' + statusBadge + '</td>' +
-      '<td>' + confirmCell + '</td>' +
-      '<td>' + overrideCell + '</td>' +
-      '<td class="muted">' + fmt(dateVal) + '</td>' +
-      '<td class="actions">' + actions.join('') + '</td>' +
+      '<td data-label="Город">' + esc(cityLabel) + '</td>' +
+      '<td data-label="Адрес">' + addrLabel + '</td>' +
+      '<td data-label="Ресурс">' + resLabel + '</td>' +
+      '<td data-label="Статус">' + statusBadge + '</td>' +
+      '<td data-label="Подтверждение">' + confirmCell + '</td>' +
+      '<td data-label="Ручное управление">' + overrideCell + '</td>' +
+      '<td data-label="Дата" class="muted">' + fmt(dateVal) + '</td>' +
+      '<td data-label="Действия" class="actions">' + actions.join('') + '</td>' +
       '</tr>';
   }).join('');
 }
