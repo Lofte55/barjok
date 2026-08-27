@@ -26,6 +26,7 @@ const BODY = `
       <div class="csel" data-csel>
         <select name="duration_days" title="Срок автовосстановления">
           <option value="0">Без даты (вручную)</option>
+          <option value="eod">До конца дня (в 00:00)</option>
           <option value="1">Восстановится через 1 день</option>
           <option value="5">Восстановится через 5 дней</option>
         </select>
@@ -117,6 +118,7 @@ function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 function durationSelectHtml() {
   return '<select class="dur-sel" data-duration title="Срок автовосстановления">' +
     '<option value="0">Без даты</option>' +
+    '<option value="eod">До конца дня</option>' +
     '<option value="1">1 день</option>' +
     '<option value="5">5 дней</option>' +
     '</select>';

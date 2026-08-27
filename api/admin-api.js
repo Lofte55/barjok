@@ -8,6 +8,16 @@ const { evaluate, sweepExpiredOverrides } = require('./_lib/decision-engine');
 
 const UTILITIES = new Set(['hot_water', 'cold_water', 'electricity', 'heating', 'gas']);
 
+// Павлодар — UTC+5 круглый год (без перехода на летнее время). Используется
+// только для варианта "До конца дня" в срок автовосстановления — админ
+// выбирает по местному времени, а manual_override_until в БД всегда UTC.
+const TZ_OFFSET_MS = 5 * 3600 * 1000;
+function endOfDayPavlodar() {
+  const local = new Date(Date.now() + TZ_OFFSET_MS);
+  const nextLocalMidnight = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + 1, 0, 0, 0);
+  return new Date(nextLocalMidnight - TZ_OFFSET_MS).toISOString();
+}
+
 async function log(incidentId, eventType, detail) {
   try {
     await insert('incident_log', { incident_id: incidentId, event_type: eventType, detail: detail || null });
@@ -208,13 +218,18 @@ async function handlePost(req, res) {
     const reason = String(b.reason || '').trim().slice(0, 300) || null;
     if (!address || !UTILITIES.has(utility_type)) return res.status(400).json({ ok: false, error: 'bad_input' });
     // Срок автовосстановления: "без даты" (0/отсутствует) — висит, пока админ не
-    // снимет вручную (старое поведение); 1 или 5 — через столько дней sweepExpiredOverrides()
-    // (decision-engine.js, вызывается на каждый живой запрос) сам переведёт в RESTORED
-    // и вернёт адрес под автоматику. ⚠️ Разрешаем ТОЛЬКО эти два значения — произвольное
-    // число дней с клиента не валидируем осмысленно, а эти два соответствуют кнопкам в UI.
-    const durationDays = [1, 5].includes(Number(b.duration_days)) ? Number(b.duration_days) : 0;
+    // снимет вручную (старое поведение); "eod" — до 00:00 по Павлодару (см.
+    // endOfDayPavlodar); 1 или 5 — через столько дней. В обоих случаях
+    // sweepExpiredOverrides() (decision-engine.js, вызывается на каждый живой запрос)
+    // сам переведёт в RESTORED и вернёт адрес под автоматику. ⚠️ Разрешаем ТОЛЬКО эти
+    // значения — произвольный ввод с клиента не валидируем осмысленно, а эти
+    // соответствуют кнопкам в UI.
+    const rawDuration = String(b.duration_days || '0');
+    const isEndOfDay = rawDuration === 'eod';
+    const durationDays = !isEndOfDay && [1, 5].includes(Number(rawDuration)) ? Number(rawDuration) : 0;
     const now = new Date().toISOString();
-    const manualOverrideUntil = durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null;
+    const manualOverrideUntil = isEndOfDay ? endOfDayPavlodar()
+      : durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null;
 
     const existing = await select('incidents',
       `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}&status=eq.ACTIVE&limit=1`);
@@ -232,7 +247,7 @@ async function handlePost(req, res) {
         first_reported_at: now, confirmed_at: now,
       });
     }
-    await log(incident.id, 'MANUAL_FORCE_OUTAGE', { reason, duration_days: durationDays || null });
+    await log(incident.id, 'MANUAL_FORCE_OUTAGE', { reason, duration_days: isEndOfDay ? 'eod' : (durationDays || null) });
     return res.status(200).json({ ok: true, incident });
   }
 
