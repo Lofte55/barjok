@@ -416,8 +416,15 @@ ${jsonLdBlocks}
   /* мобильная плитка "+N ещё" (после 6-й карточки) скрыта по умолчанию —
      переопределяется обратно display:flex внутри @media(max-width:760px) ниже,
      важен порядок: эта строка должна идти РАНЬШЕ media-блока, иначе на мобильном
-     базовое правило (та же специфичность) победит override по source order */
-  .outage-more-mobile{display:none}
+     базовое правило (та же специфичность) победит override по source order.
+     ⚠️⚠️ БАГ (найден на живом скриншоте): элемент несёт ДВА класса
+     (outage-card outage-more outage-more-mobile), и .outage-more{display:flex}
+     ниже — та же специфичность (0,0,1,0), но идёт ПОЗЖЕ в файле, поэтому
+     побеждал на ЛЮБОЙ ширине экрана — мобильная плитка "+N" торчала в
+     середине десктопной сетки. Составной селектор .outage-more.outage-more-mobile
+     (специфичность 0,0,2,0) гарантированно бьёт одиночный .outage-more
+     независимо от порядка в файле — тот же приём нужен и в media-блоке ниже. */
+  .outage-more.outage-more-mobile{display:none}
   .outage-more{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     text-decoration:none;color:var(--ink);background:var(--bg);border-style:dashed;gap:2px;padding:20px 16px;outline:none}
   .outage-more:hover{background:var(--line-2);border-color:var(--ink-3)}
@@ -513,7 +520,11 @@ ${jsonLdBlocks}
        во вкладке "Все" (.tab-all) — в конкретном ресурсе лимита нет вообще. */
     .cards.tab-all .outage-card.mobile-hide{display:none}
     .cards .outage-more:not(.outage-more-mobile){display:none}
-    .outage-more-mobile{display:flex}
+    /* .outage-more.outage-more-mobile (0,0,2,0) — та же специфичность, что у
+       базового hide-правила выше, поэтому именно составной селектор, не
+       одиночный класс (иначе проигрывает базовому правилу вне зависимости
+       от порядка — см. комментарий у .outage-more.outage-more-mobile{display:none}). */
+    .outage-more.outage-more-mobile{display:flex}
   }
 
   /* ---------- /partners/ — B2B/B2G-оффер (ТЗ на страницу Partners) ----------
