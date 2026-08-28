@@ -221,6 +221,12 @@ async function applyLiveLayer() {
   };
 
   // 1) RESTORED из админки убирает наряды по адресу+ресурсу из ЛЮБОГО источника.
+  // ⚠️ Известное ограничение: если дом уже смержен в водный "water" (см. ниже),
+  // а восстанавливают именно 'cold_water'/'hot_water' по отдельности (старая
+  // несмерженная запись Supabase) — merged-запись resource='water' не совпадёт
+  // с r.utility_type и не уберётся сама. Самоисправится на следующем прогоне
+  // парсера (часовой, пересчитывает с нуля); в рамках одной загрузки карты это
+  // редкий переходный случай, а не постоянно неверное состояние.
   (live.restored || []).forEach((r) => {
     const key = forMatch(r.address);
     DATA.houses.forEach((h) => {
@@ -244,10 +250,12 @@ async function applyLiveLayer() {
     citizen: true,
     live: true,                        // пометка: пришло не из data.json
   });
+  const touched = new Set();
   const put = (house, a) => {
     // Тот же ресурс уже есть — замещаем (ручное важнее официального), см. комментарий выше.
     const idx = house.outages.findIndex((o) => o.resource === a.utility_type);
     if (idx >= 0) house.outages[idx] = mkOutage(a); else house.outages.push(mkOutage(a));
+    touched.add(house);
   };
 
   let added = 0;
@@ -285,6 +293,28 @@ async function applyLiveLayer() {
       }
     });
   }
+  // ⚠️ Дублирует mergeWaterOutages() из parser/index.js — та же логика («нет
+  // холодной» + «нет горячей» ОДНОВРЕМЕННО = «нет воды», см. комментарий там),
+  // но здесь нужна ОТДЕЛЬНО: parser не видит подтверждения из живого слоя
+  // (Supabase) — если админ/жители по отдельности подтвердили оба ресурса
+  // через форму/админку, карточка дома без этого показывала бы две строки
+  // вместо одной. Править — в обоих местах.
+  touched.forEach((house) => {
+    const cold = house.outages.find((o) => o.resource === 'cold_water');
+    const hot = house.outages.find((o) => o.resource === 'hot_water');
+    if (!cold || !hot || cold.status !== hot.status) return;
+    house.outages = [{
+      resource: 'water',
+      type: cold.type === 'emergency' || hot.type === 'emergency' ? 'emergency' : cold.type,
+      status: cold.status,
+      start: new Date(cold.start || 0) < new Date(hot.start || 0) ? cold.start : hot.start,
+      end: !cold.end || !hot.end ? null : (new Date(cold.end) > new Date(hot.end) ? cold.end : hot.end),
+      reason: cold.reason === hot.reason ? cold.reason : [cold.reason, hot.reason].filter(Boolean).join('; '),
+      provider: [cold.provider, hot.provider].filter(Boolean).join(' + ') || undefined,
+      citizen: !!(cold.citizen || hot.citizen),
+      live: !!(cold.live || hot.live),
+    }, ...house.outages.filter((o) => o !== cold && o !== hot)];
+  });
   if (added) console.log('[BARJOK] живой слой: применено записей —', added);
 }
 

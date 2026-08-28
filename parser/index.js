@@ -74,6 +74,33 @@ function groupHouses(records) {
   return { houses: [...houses.values()], skipped };
 }
 
+/*
+ * Если у дома ОДНОВРЕМЕННО нет и холодной, и горячей воды (та же фаза — оба
+ * 'current' или оба 'future') — это не два отдельных отключения, а один
+ * физический факт: воды нет вообще (см. water в map/data.js). Раньше карточка
+ * дома показывала две строки («нет горячей» + «нет холодной») вместо одной
+ * («нет воды») со своей пиктограммой. ⚠️ Та же логика продублирована в
+ * map/app.js (applyLiveLayer) для случая, когда оба ресурса подтверждаются по
+ * отдельности через живой слой/админку — парсер не видит Supabase-инциденты,
+ * править нужно в обоих местах.
+ */
+function mergeWaterOutages(outages) {
+  const cold = outages.find((o) => o.resource === 'cold_water');
+  const hot = outages.find((o) => o.resource === 'hot_water');
+  if (!cold || !hot || cold.status !== hot.status) return outages;
+  const merged = {
+    resource: 'water',
+    type: cold.type === 'emergency' || hot.type === 'emergency' ? 'emergency' : cold.type,
+    status: cold.status,
+    start: new Date(cold.start || 0) < new Date(hot.start || 0) ? cold.start : hot.start,
+    end: !cold.end || !hot.end ? null : (new Date(cold.end) > new Date(hot.end) ? cold.end : hot.end),
+    reason: cold.reason === hot.reason ? cold.reason : [cold.reason, hot.reason].filter(Boolean).join('; '),
+    ...(cold.provider || hot.provider ? { provider: [cold.provider, hot.provider].filter(Boolean).join(' + ') } : {}),
+    ...(cold.citizen || hot.citizen ? { citizen: true } : {}),
+  };
+  return [merged, ...outages.filter((o) => o !== cold && o !== hot)];
+}
+
 function median(nums) { const a = [...nums].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 0; }
 
 async function main() {
@@ -89,6 +116,7 @@ async function main() {
 
   const expandedRecords = await expandStreetRecords(records);
   const { houses, skipped } = groupHouses(expandedRecords);
+  houses.forEach((h) => { h.outages = mergeWaterOutages(h.outages); });
   const c = center || [median(houses.map((h) => h.lat)), median(houses.map((h) => h.lng))];
 
   const out = {

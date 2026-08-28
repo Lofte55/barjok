@@ -231,8 +231,30 @@ async function handlePost(req, res) {
     const manualOverrideUntil = isEndOfDay ? endOfDayPavlodar()
       : durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null;
 
+    // ⚠️ Если подтверждают cold_water/hot_water, а ПРОТИВОПОЛОЖНЫЙ ресурс уже
+    // активен по тому же адресу — воды нет вообще, а не «только холодная/только
+    // горячая». Та же логика, что в parser/index.js:mergeWaterOutages и
+    // map/app.js:applyLiveLayer (там — только отображение; здесь — по-настоящему
+    // сливаем записи в БД, иначе в админке висели бы два отдельных активных
+    // инцидента вместо одного water). Обе старые записи переводим в RESTORED
+    // ("замещены") и пишем/обновляем единый water.
+    let effectiveUtility = utility_type;
+    const supersededIds = [];
+    if (utility_type === 'cold_water' || utility_type === 'hot_water') {
+      const opposite = utility_type === 'cold_water' ? 'hot_water' : 'cold_water';
+      const oppositeActive = await select('incidents',
+        `address=eq.${encodeURIComponent(address)}&utility_type=eq.${opposite}&status=eq.ACTIVE&limit=1`);
+      if (oppositeActive && oppositeActive.length) {
+        effectiveUtility = 'water';
+        supersededIds.push(oppositeActive[0].id);
+        const sameActive = await select('incidents',
+          `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}&status=eq.ACTIVE&limit=1`);
+        if (sameActive && sameActive.length) supersededIds.push(sameActive[0].id);
+      }
+    }
+
     const existing = await select('incidents',
-      `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}&status=eq.ACTIVE&limit=1`);
+      `address=eq.${encodeURIComponent(address)}&utility_type=eq.${effectiveUtility}&status=eq.ACTIVE&limit=1`);
     let incident;
     if (existing && existing.length) {
       [incident] = await update('incidents', `id=eq.${existing[0].id}`, {
@@ -241,13 +263,20 @@ async function handlePost(req, res) {
       });
     } else {
       [incident] = await insert('incidents', {
-        address, utility_type, status: 'ACTIVE', confirmation_type: 'MANUAL',
+        address, utility_type: effectiveUtility, status: 'ACTIVE', confirmation_type: 'MANUAL',
         manual_override: 'FORCE_OUTAGE', manual_override_reason: reason, manual_override_created_at: now,
         manual_override_until: manualOverrideUntil,
         first_reported_at: now, confirmed_at: now,
       });
     }
-    await log(incident.id, 'MANUAL_FORCE_OUTAGE', { reason, duration_days: isEndOfDay ? 'eod' : (durationDays || null) });
+    for (const supId of supersededIds) {
+      await update('incidents', `id=eq.${supId}`, { status: 'RESTORED', restored_at: now, updated_at: now });
+      await log(supId, 'MERGED_INTO_WATER', { merged_into: incident.id });
+    }
+    await log(incident.id, 'MANUAL_FORCE_OUTAGE', {
+      reason, duration_days: isEndOfDay ? 'eod' : (durationDays || null),
+      merged_from: supersededIds.length ? supersededIds : null,
+    });
     return res.status(200).json({ ok: true, incident });
   }
 
