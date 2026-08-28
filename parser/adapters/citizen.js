@@ -23,9 +23,10 @@ const CENTER = [52.2871, 76.9674];
 const CAT_RES = {
   hot_water: ['hot_water'], cold_water: ['cold_water'], electricity: ['electricity'],
   heating: ['heating'], gas: ['gas'], water_light: ['cold_water', 'electricity'],
+  water: ['water'],
   'нет горячей воды': ['hot_water'], 'нет холодной воды': ['cold_water'],
   'нет электричества': ['electricity'], 'нет тепла': ['heating'], 'нет газа': ['gas'],
-  'нет воды и света': ['cold_water', 'electricity'],
+  'нет воды и света': ['cold_water', 'electricity'], 'нет воды': ['water'],
 };
 
 // срезаем любые теги и угловые скобки, схлопываем пробелы, ограничиваем длину

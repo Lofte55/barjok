@@ -1,8 +1,8 @@
 const { esc } = require('./seo-layout');
 const { dk } = require('./i18n-kk');
 
-const RES_LABEL = { cold_water: 'холодной воды', hot_water: 'горячей воды', electricity: 'света', heating: 'отопления', gas: 'газа' };
-const RES_LABEL_NOM = { cold_water: 'Холодная вода', hot_water: 'Горячая вода', electricity: 'Электричество', heating: 'Отопление', gas: 'Газ' };
+const RES_LABEL = { cold_water: 'холодной воды', hot_water: 'горячей воды', water: 'воды (совсем)', electricity: 'света', heating: 'отопления', gas: 'газа' };
+const RES_LABEL_NOM = { cold_water: 'Холодная вода', hot_water: 'Горячая вода', water: 'Нет воды (совсем)', electricity: 'Электричество', heating: 'Отопление', gas: 'Газ' };
 
 function fmtDate(iso) {
   if (!iso) return '—';
@@ -34,7 +34,7 @@ function outageCardsHtml(houses, filterFn, limit = 24) {
     if (rows.length >= limit) break;
   }
   if (!rows.length) return '';
-  const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
+  const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', water: 'var(--water)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
   return '<div class="cards cards-compact">' + rows.map(({ h, o }) => {
     const color = RES_COLOR[o.resource] || 'var(--accent)';
     const reason = truncate(o.reason || (o.type === 'emergency' ? 'Аварийные работы' : 'Плановые работы'), 70);
@@ -52,10 +52,10 @@ function outageCardsHtml(houses, filterFn, limit = 24) {
   }).join('') + '</div>';
 }
 
-const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
+const RES_COLOR = { cold_water: 'var(--cold)', hot_water: 'var(--hot)', water: 'var(--water)', electricity: 'var(--elec)', heating: 'var(--hot)', gas: 'var(--ink-3)' };
 const RES_TABS = [
   ['all', 'Все'], ['electricity', 'Электричество'], ['cold_water', 'Холодная вода'],
-  ['hot_water', 'Горячая вода'], ['heating', 'Отопление'], ['gas', 'Газ'],
+  ['hot_water', 'Горячая вода'], ['water', 'Нет воды'], ['heating', 'Отопление'], ['gas', 'Газ'],
 ];
 const splitAddress = (address) => {
   const idx = address.lastIndexOf(',');

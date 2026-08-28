@@ -11,7 +11,7 @@ const BODY = `
 `;
 
 const SCRIPT = `
-const UTILITIES = [['electricity','Электричество'],['cold_water','Холодная вода'],['hot_water','Горячая вода'],['heating','Отопление'],['gas','Газ'],['other','Другое']];
+const UTILITIES = [['electricity','Электричество'],['cold_water','Холодная вода'],['hot_water','Горячая вода'],['water','Нет воды (совсем)'],['heating','Отопление'],['gas','Газ'],['other','Другое']];
 const OUTAGE_STATUSES = [['planned','Плановое'],['active','Активное'],['emergency','Аварийное'],['restored','Восстановлено'],['unknown','Неизвестно']];
 const PAGE_CONTEXTS = [['home','Главная'],['search_result','Результат поиска'],['address_result','Результат по адресу'],['outage_detail','Карточка отключения'],['map','Карта'],['city_page','Страница города']];
 const CAMPAIGN_TYPES = [['local','Локальная'],['context','Контекстная'],['category_exclusive','Эксклюзив категории'],['sponsor','Спонсорство'],['house_ad','Реклама BARJOK']];

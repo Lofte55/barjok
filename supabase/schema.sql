@@ -12,7 +12,7 @@ create table if not exists incidents (
   id bigint generated always as identity primary key,
   city_id text not null default 'pavlodar',
   address text not null,
-  utility_type text not null check (utility_type in ('hot_water','cold_water','electricity','heating','gas')),
+  utility_type text not null check (utility_type in ('hot_water','cold_water','water','electricity','heating','gas')),
   status text not null default 'ACTIVE' check (status in ('ACTIVE','RESTORED')),
   confirmation_type text not null default 'MANUAL' check (confirmation_type in ('COMMUNITY','OFFICIAL','COMMUNITY_AND_OFFICIAL','MANUAL')),
 
@@ -42,7 +42,7 @@ create table if not exists user_reports (
   id bigint generated always as identity primary key,
   incident_id bigint references incidents(id) on delete set null,
   address text not null,
-  utility_type text not null check (utility_type in ('hot_water','cold_water','electricity','heating','gas')),
+  utility_type text not null check (utility_type in ('hot_water','cold_water','water','electricity','heating','gas')),
   reported_state text not null check (reported_state in ('OUTAGE','RESTORED')),
   actor_key text not null,
   reported_at timestamptz not null default now(),
@@ -87,3 +87,19 @@ alter table incidents enable row level security;
 alter table user_reports enable row level security;
 alter table incident_log enable row level security;
 alter table suggestions enable row level security;
+
+-- ⚠️ МИГРАЦИЯ (нужно выполнить отдельно на УЖЕ СУЩЕСТВУЮЩЕЙ базе — CREATE TABLE
+-- IF NOT EXISTS выше её не подхватит, таблицы incidents/user_reports уже есть).
+-- Новый ресурс water — «Нет воды» (совсем, не только холодная/горячая): для
+-- отключений от Водоканала, которые перекрывают общий ввод воды в дом. Раньше
+-- такие записи ошибочно уходили как cold_water, хотя горячей тоже нет. Имена
+-- constraint'ов — дефолтные, которые Postgres даёт безымянному inline check
+-- (<table>_<column>_check); если раньше их переименовывали вручную — заменить
+-- имя на актуальное (посмотреть в Table Editor → incidents → constraints).
+alter table incidents drop constraint if exists incidents_utility_type_check;
+alter table incidents add constraint incidents_utility_type_check
+  check (utility_type in ('hot_water','cold_water','water','electricity','heating','gas'));
+
+alter table user_reports drop constraint if exists user_reports_utility_type_check;
+alter table user_reports add constraint user_reports_utility_type_check
+  check (utility_type in ('hot_water','cold_water','water','electricity','heating','gas'));

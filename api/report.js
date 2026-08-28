@@ -24,7 +24,10 @@ const CATS = {
 const CAT_UTILITIES = {
   hot_water: ['hot_water'], cold_water: ['cold_water'], electricity: ['electricity'],
   heating: ['heating'], gas: ['gas'], water_light: ['cold_water', 'electricity'],
-  water: ['cold_water', 'hot_water'],
+  // "Нет воды" — раньше разворачивалось в ДВА отдельных инцидента (cold_water +
+  // hot_water), карточка дома показывала две строки вместо одной. Теперь свой
+  // ресурс water («Нет воды», см. map/data.js) — один инцидент, своя пиктограмма.
+  water: ['water'],
 };
 const esc = (s) => String(s).replace(/[<&>]/g, (c) => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;' }[c]));
 

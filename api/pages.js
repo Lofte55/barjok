@@ -245,7 +245,7 @@ async function renderService(req, res) {
   let filterFn;
   if (service.resource) filterFn = (o) => o.resource === service.resource;
   else if (service.typeFilter) filterFn = (o) => o.type === service.typeFilter;
-  else if (service.waterGroup) filterFn = (o) => o.resource === 'cold_water' || o.resource === 'hot_water';
+  else if (service.waterGroup) filterFn = (o) => o.resource === 'cold_water' || o.resource === 'hot_water' || o.resource === 'water';
   else filterFn = () => true;
 
   const allHouses = snap.houses || [];

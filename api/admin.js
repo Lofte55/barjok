@@ -17,6 +17,7 @@ const BODY = `
         <select name="utility_type">
           <option value="hot_water">Горячая вода</option>
           <option value="cold_water">Холодная вода</option>
+          <option value="water">Нет воды (совсем)</option>
           <option value="electricity">Электричество</option>
           <option value="heating">Отопление</option>
           <option value="gas">Газ</option>
@@ -56,6 +57,7 @@ const BODY = `
             <option value="all">Все</option>
             <option value="hot_water">Горячая вода</option>
             <option value="cold_water">Холодная вода</option>
+            <option value="water">Нет воды (совсем)</option>
             <option value="electricity">Электричество</option>
             <option value="heating">Отопление</option>
             <option value="gas">Газ</option>
@@ -86,7 +88,7 @@ const BODY = `
 `;
 
 const SCRIPT = `
-const UT = { hot_water: 'Горячая вода', cold_water: 'Холодная вода', electricity: 'Электричество', heating: 'Отопление', gas: 'Газ' };
+const UT = { hot_water: 'Горячая вода', cold_water: 'Холодная вода', water: 'Нет воды (совсем)', electricity: 'Электричество', heating: 'Отопление', gas: 'Газ' };
 const CITY = { pavlodar: 'Павлодар', ekibastuz: 'Экибастуз', aksu: 'Аксу' };
 const CT = { COMMUNITY: 'Жители (авто, 3+ сообщения)', OFFICIAL: 'Официально', COMMUNITY_AND_OFFICIAL: 'Официально + жители', MANUAL: 'Вручную (админ)' };
 // FORCE_OUTAGE/FORCE_RESTORED — это "ручной режим": статус зафиксирован администратором

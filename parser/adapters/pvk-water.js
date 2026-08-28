@@ -1,10 +1,17 @@
 /*
- * Адаптер: ТОО «Павлодар-Водоканал» — отключения ХОЛОДНОГО водоснабжения.
+ * Адаптер: ТОО «Павлодар-Водоканал» — отключения водоснабжения (трубопровод).
  * Источник: https://pvk.pawlodarkz.kz/otklyuchenie (объявления) — свободный текст:
  *   дата, время «с 9:00 до 19:00», причина, адреса списком в <li>.
  * Плюс экстренные уведомления (аварии): /ekstrennyie-uvedomleniya.
  *
- * Возвращает «сырые» записи (resource='cold_water') — геокод улиц делает вызывающий код.
+ * ⚠️ Водоканал перекрывает ОБЩИЙ ввод холодной воды в дом — а не «только холодный
+ * кран». Без него нечего греть, поэтому горячей воды тоже нет (если она не от
+ * отдельного контура теплосетей — см. pavon-heat.js/pts-heat.js, у них своя, чисто
+ * hot_water причина). Раньше это помечалось resource='cold_water', и карточка дома
+ * писала «нет холодной воды», хотя воды нет вообще — вводит в заблуждение о том, что
+ * горячая работает. Теперь отдельный ресурс water («Нет воды», см. map/data.js).
+ *
+ * Возвращает «сырые» записи (resource='water') — геокод улиц делает вызывающий код.
  */
 const { geocode, geocodeGeometry } = require('../lib/geocode');
 const buildings = require('../lib/buildings');
@@ -143,7 +150,7 @@ async function fetchPvkWater() {
       const g = coords.get(s.name);
       const base = {
         district: (g && g.area) || 'Павлодар',
-        resource: 'cold_water', type: p.emerg ? 'emergency' : 'planned', status,
+        resource: 'water', type: p.emerg ? 'emergency' : 'planned', status,
         start, end, reason: p.reason, provider: 'ТОО «Павлодар-Водоканал»',
       };
       if (!s.houses.length) {

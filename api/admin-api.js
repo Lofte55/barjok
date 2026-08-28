@@ -6,7 +6,7 @@ const { requireAdmin } = require('./_lib/auth');
 const { select, insert, update, remove } = require('./_lib/supabase');
 const { evaluate, sweepExpiredOverrides } = require('./_lib/decision-engine');
 
-const UTILITIES = new Set(['hot_water', 'cold_water', 'electricity', 'heating', 'gas']);
+const UTILITIES = new Set(['hot_water', 'cold_water', 'water', 'electricity', 'heating', 'gas']);
 
 // Павлодар — UTC+5 круглый год (без перехода на летнее время). Используется
 // только для варианта "До конца дня" в срок автовосстановления — админ
@@ -27,10 +27,10 @@ async function log(incidentId, eventType, detail) {
 const CAT_UTILITIES = {
   hot_water: ['hot_water'], cold_water: ['cold_water'], electricity: ['electricity'],
   heating: ['heating'], gas: ['gas'], water_light: ['cold_water', 'electricity'],
-  water: ['cold_water', 'hot_water'],
+  water: ['water'],
   'нет горячей воды': ['hot_water'], 'нет холодной воды': ['cold_water'],
   'нет электричества': ['electricity'], 'нет тепла': ['heating'], 'нет газа': ['gas'],
-  'нет воды и света': ['cold_water', 'electricity'], 'нет воды': ['cold_water', 'hot_water'],
+  'нет воды и света': ['cold_water', 'electricity'], 'нет воды': ['water'],
 };
 const KEYWORDS = [
   [/гор[яа]ч/i, 'hot_water'], [/холод/i, 'cold_water'],
@@ -54,7 +54,7 @@ async function importFromSheet(feedUrl) {
     if (isSuggestion) {
       if (!address) { skipped++; continue; }
       const resources = KEYWORDS.filter(([re]) => re.test(o.message || '')).map(([, res]) => res);
-      const list = resources.length ? resources : ['hot_water', 'cold_water', 'electricity', 'heating', 'gas'];
+      const list = resources.length ? resources : ['hot_water', 'cold_water', 'water', 'electricity', 'heating', 'gas'];
       for (const utility_type of list) {
         const existing = await select('incidents',
           `address=eq.${encodeURIComponent(address)}&utility_type=eq.${utility_type}&status=eq.ACTIVE&limit=1`);

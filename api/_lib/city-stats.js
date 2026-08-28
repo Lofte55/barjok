@@ -151,12 +151,18 @@ async function computeSnapshot() {
   liveOnly.forEach((l) => totalAffectedSet.add(l.key));
   const totalAffectedAddresses = totalAffectedSet.size;
 
-  const byResourceAny = (res) => {
+  // ⚠️ 'water' (см. map/data.js) — Водоканал перекрывает ОБЩИЙ ввод воды в дом,
+  // это не «только холодная»: без холодной нечего греть, значит горячей тоже нет.
+  // Поэтому счётчик "без горячей/холодной воды" учитывает и адреса с water —
+  // иначе после ввода отдельного ресурса water эти цифры стали бы ЗАНИЖЕННЫМИ
+  // (раньше те же записи шли как cold_water и уже считались, регресс молчаливый).
+  const byResourceAny = (res, alsoMatch) => {
+    const matches = (r) => r === res || (alsoMatch && alsoMatch.includes(r));
     const set = new Set(
-      houses.filter((h) => (h.outages || []).some((o) => o.resource === res && o.status !== 'past' && !isLiveRestored(h.address, res)))
+      houses.filter((h) => (h.outages || []).some((o) => matches(o.resource) && o.status !== 'past' && !isLiveRestored(h.address, o.resource)))
         .map((h) => addrKey(h.address) || h.id),
     );
-    liveOnly.filter((l) => l.resource === res).forEach((l) => set.add(l.key));
+    liveOnly.filter((l) => matches(l.resource)).forEach((l) => set.add(l.key));
     return set.size;
   };
 
@@ -166,8 +172,9 @@ async function computeSnapshot() {
     activeOutages: current.length + liveCurrentCount,
     affectedAddresses: affectedAddresses.size,
     totalAffectedAddresses,
-    coldWaterAffected: byResourceAny('cold_water'),
-    hotWaterAffected: byResourceAny('hot_water'),
+    coldWaterAffected: byResourceAny('cold_water', ['water']),
+    hotWaterAffected: byResourceAny('hot_water', ['water']),
+    noWaterAffected: byResourceAny('water'),
     electricityAffected: byResourceAny('electricity'),
     heatingAffected: byResourceAny('heating'),
     gasAffected: byResourceAny('gas'),

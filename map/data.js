@@ -10,10 +10,15 @@ const ICON_SVG = {
   electricity: '<svg class="ic-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>',
   heating: '<svg class="ic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M8 7v10M12 7v10M16 7v10"/></svg>',
   gas: '<svg class="ic-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2c.3 2.4-.6 3.9-1.9 5.2-1.3 1.3-2.9 2.6-2.9 5.1a4.3 4.3 0 0 0 8.6.2c0-2-1-3.4-2-4.6.2 1.4-.4 2.3-1.3 2.5.7-2.7-.2-5.6-.5-8.4zM8.4 10.5c-1.2 1-2 2.5-2 4.3a5.6 5.6 0 0 0 1.7 4 3.7 3.7 0 0 1-1-2.5c0-1.6.7-2.8 1.5-3.9-.3-.5-.4-1.2-.2-1.9z"/></svg>',
+  // Контурная (не залитая) капля + диагональная черта — «воды нет вообще».
+  // Контур вместо сплошной заливки (как у cold_water) — чтобы иконка читалась как
+  // «перечёркнуто» на любом фоне, без завязки на конкретный цвет подложки.
+  water: '<svg class="ic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.2 4.2 6 7.6 6 11a6 6 0 1 1-12 0c0-3.4 2.8-6.8 6-11z"/><line x1="4" y1="20" x2="20" y2="4"/></svg>',
 };
 const RESOURCES = {
   hot_water:   { ru: 'Горячая вода',    kk: 'Ыстық су',  icon: ICON_SVG.hot_water,   color: '#e8663d' },
   cold_water:  { ru: 'Холодная вода',   kk: 'Суық су',   icon: ICON_SVG.cold_water,  color: '#2f9bd6' },
+  water:       { ru: 'Нет воды',        kk: 'Су жоқ',    icon: ICON_SVG.water,       color: '#5b6bd6' },
   electricity: { ru: 'Электричество',   kk: 'Электр',    icon: ICON_SVG.electricity, color: '#e0a92c' },
   heating:     { ru: 'Отопление',       kk: 'Жылу',      icon: ICON_SVG.heating,     color: '#c0492f' },
   gas:         { ru: 'Газ',             kk: 'Газ',       icon: ICON_SVG.gas,          color: '#7b8794' },
