@@ -15,11 +15,23 @@
  *
  * НЕ реализовано в этой версии (сознательно отложено, чтобы не разрастаться):
  *  - official source_event / сопоставление с парсером (§15-18, §41-43)
- *  - area anomalies / кластеры по нескольким домам (§23-25)
  *  - периодическая reevaluate_incidents по крону (§47) — только событийно, при report/admin-действии
  *  - confidence % — используются простые пороги, как и просит документ для MVP (§45)
+ *
+ * area anomalies (§23-25) — РЕАЛИЗОВАНО (см. evaluateAreaCluster ниже): если на
+ * одной улице по одному ресурсу набирается ≥3 разных адреса с хотя бы 1 голосом
+ * каждый — считаем районной проблемой и подтверждаем весь диапазон домов между
+ * ними, а не только те, что реально пожаловались.
  */
 const { select, insert, update } = require('./supabase');
+// normStreet — ЧИСТАЯ строковая функция (без fs) из parser/lib/buildings.js,
+// безопасна в serverless. ⚠️ housesOnStreet()/load() из ТОГО ЖЕ модуля — НЕТ:
+// читают parser/buildings.json, которого в Vercel-рантайме не существует (файл
+// в .gitignore, живёт только в кэше GitHub Actions при прогоне парсера, см.
+// .github/workflows/parser.yml). Поэтому для диапазона домов улицы ниже тянем
+// map/addresses.json HTTP-запросом с прод-домена — тот же приём, что уже
+// использует api/_lib/city-stats.js для map/data.json.
+const { normStreet } = require('../../parser/lib/buildings');
 
 // Единая конфигурация окон — документ явно даёт числа только для горячей воды и
 // говорит "позже можно задать свои для остальных" — для MVP применяем те же ко всем.
@@ -108,6 +120,131 @@ function inCooldown(incident) {
   return Date.now() - new Date(incident.updated_at).getTime() < STATE_COOLDOWN_MIN * 60000;
 }
 
+/* «Улица, дом» → { street, house }. Тот же паттерн, что api/_lib/city-stats.js:addrKey(). */
+function splitAddress(address) {
+  const m = String(address || '').match(/^(.*?),\s*([^,]+)$/);
+  return m ? { street: m[1].trim(), house: m[2].trim() } : { street: '', house: '' };
+}
+// Первое число в номере дома («58/1» → 58, «60а» → 60) — для сортировки/диапазона.
+function houseNum(h) { const m = String(h || '').match(/\d+/); return m ? parseInt(m[0], 10) : null; }
+
+const AREA_CLUSTER_MIN_ADDRESSES = 3;   // §23-25: столько РАЗНЫХ адресов на улице запускают кластер
+const AREA_CLUSTER_MAX_HOUSES = 60;     // страховка от чрезмерно широкого диапазона
+const PROD_ORIGIN = 'https://barjok.kz';
+
+let addrRegistryCache = null, addrRegistryCacheAt = 0;
+const ADDR_REGISTRY_TTL_MS = 10 * 60000;
+async function loadAddressRegistry() {
+  const now = Date.now();
+  if (addrRegistryCache && now - addrRegistryCacheAt < ADDR_REGISTRY_TTL_MS) return addrRegistryCache;
+  try {
+    const r = await fetch(`${PROD_ORIGIN}/map/addresses.json`);
+    if (!r.ok) return addrRegistryCache; // временный сбой — отдаём старый кэш, если есть
+    addrRegistryCache = await r.json();
+    addrRegistryCacheAt = now;
+  } catch (e) { console.error('loadAddressRegistry failed:', e.message); }
+  return addrRegistryCache;
+}
+
+/*
+ * §23-25 документа: если на ОДНОЙ УЛИЦЕ по одному ресурсу жалуются ≥3 РАЗНЫХ
+ * адреса (хотя бы 1 засчитываемый голос на каждый, в том же окне outageWindowMin,
+ * что и обычный порог) — это районная проблема, а не совпадение/спам по одному
+ * дому. Подтверждаем ВЕСЬ диапазон домов улицы МЕЖДУ минимальным и максимальным
+ * номером среди жаловавшихся (по адресному реестру map/addresses.json — значит,
+ * включая и те дома, что сами не жаловались вообще).
+ *
+ * ⚠️ НЕЗАВИСИМО от обычного per-address порога в evaluate(): конкретный адрес,
+ * на который пришёл ЭТОТ report, мог не набрать свои 3 голоса в одиночку — но
+ * кластер по улице всё равно сработает, если наберётся 3 РАЗНЫХ адреса.
+ */
+async function evaluateAreaCluster(address, utility_type) {
+  const { street: targetStreet } = splitAddress(address);
+  if (!targetStreet) return [];
+  const targetKey = normStreet(targetStreet);
+  if (!targetKey) return [];
+
+  const since = minutesAgoISO(CONFIG.outageWindowMin);
+  let rows;
+  try {
+    rows = await select('user_reports',
+      `utility_type=eq.${utility_type}&status=eq.VALID&reported_state=eq.OUTAGE` +
+      `&reported_at=gte.${since}&order=reported_at.desc&limit=2000` +
+      '&select=address,actor_key,ip_hash,reported_at');
+  } catch (e) { console.error('evaluateAreaCluster select failed:', e.message); return []; }
+
+  // группируем по адресу — тот же анти-накрутка потолок на IP, что в currentVotes()
+  const byAddress = new Map();
+  for (const r of rows || []) {
+    if (!byAddress.has(r.address)) byAddress.set(r.address, new Map());
+    const actors = byAddress.get(r.address);
+    if (!actors.has(r.actor_key)) actors.set(r.actor_key, r.ip_hash || null);
+  }
+
+  const qualifying = [];   // адреса НА ЭТОЙ УЛИЦЕ с ≥1 засчитываемым голосом
+  const allActors = new Set();   // ⚠️ см. ниже — против «1 человек, 3 адреса»
+  for (const [addr, actors] of byAddress) {
+    const { street, house } = splitAddress(addr);
+    if (normStreet(street) !== targetKey) continue;
+    const perIp = new Map();
+    let countable = 0;
+    for (const [actorKey, ip] of actors) {
+      if (ip) {
+        const used = perIp.get(ip) || 0;
+        if (used >= MAX_ACTORS_PER_IP_OUTAGE) continue;
+        perIp.set(ip, used + 1);
+      }
+      countable++;
+      allActors.add(actorKey);
+    }
+    if (countable >= 1) qualifying.push({ address: addr, num: houseNum(house) });
+  }
+  // ⚠️ Порог «≥3 адреса» сам по себе НЕ защищает от одного человека, который
+  // разными адресами (не сменой cookie — тем же actor_key) шлёт по 1 жалобе на
+  // 3 разных дома и в одиночку запускает подтверждение всего квартала. Требуем
+  // ещё и ≥3 РАЗНЫХ actor_key среди голосов, попавших в qualifying, — реальный
+  // район с реальной проблемой почти всегда даёт разных людей по разным домам.
+  if (qualifying.length < AREA_CLUSTER_MIN_ADDRESSES || allActors.size < AREA_CLUSTER_MIN_ADDRESSES) return [];
+
+  const nums = qualifying.map((q) => q.num).filter((n) => n != null);
+  if (!nums.length) return [];
+  const minNum = Math.min(...nums), maxNum = Math.max(...nums);
+
+  const registry = await loadAddressRegistry();
+  if (!registry) return [];
+  let houses = null;
+  for (const key of Object.keys(registry)) {
+    if (normStreet(key) === targetKey) { houses = registry[key]; break; }
+  }
+  if (!houses) return [];
+
+  const inRange = houses.filter(([house]) => {
+    const n = houseNum(house);
+    return n != null && n >= minNum && n <= maxNum;
+  });
+  if (!inRange.length || inRange.length > AREA_CLUSTER_MAX_HOUSES) return [];
+
+  const now = new Date().toISOString();
+  const created = [];
+  for (const [house] of inRange) {
+    const fullAddress = `${targetStreet}, ${house}`;
+    const existingIncident = await getActiveIncident(fullAddress, utility_type);
+    if (existingIncident) continue;   // уже активно (в т.ч. вручную) — не трогаем
+    let inc;
+    try {
+      [inc] = await insert('incidents', {
+        address: fullAddress, utility_type, status: 'ACTIVE', confirmation_type: 'COMMUNITY',
+        first_reported_at: now, confirmed_at: now,
+      });
+    } catch (e) { console.error('evaluateAreaCluster insert failed for', fullAddress, ':', e.message); continue; }
+    await log(inc.id, 'AUTO_CONFIRM_AREA_CLUSTER', {
+      triggerAddresses: qualifying.map((q) => q.address), rangeMin: minNum, rangeMax: maxNum,
+    });
+    created.push(inc);
+  }
+  return created;
+}
+
 /* Пересчитывает статус incident'а по текущим голосам. Вызывается и после нового
    report, и после снятия manual_override администратором (§32). */
 async function evaluate(address, utility_type) {
@@ -145,6 +282,16 @@ async function evaluate(address, utility_type) {
     await log(created.id, 'AUTO_CONFIRM_OUTAGE', { outageVotes });
     return created;
   }
+
+  // Порог по ОДНОМУ адресу не набрался — проверяем районный кластер (§23-25):
+  // если жалуются ≥3 разных адреса на этой улице, подтверждаем весь диапазон
+  // домов между ними, даже если конкретно этот адрес получил всего 1 голос.
+  try {
+    const clustered = await evaluateAreaCluster(address, utility_type);
+    const own = clustered.find((c) => c.address === address);
+    if (own) return own;
+  } catch (e) { console.error('evaluateAreaCluster failed:', e.message); }
+
   return null;
 }
 

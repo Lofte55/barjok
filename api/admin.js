@@ -90,7 +90,7 @@ const BODY = `
 const SCRIPT = `
 const UT = { hot_water: 'Горячая вода', cold_water: 'Холодная вода', water: 'Нет воды (совсем)', electricity: 'Электричество', heating: 'Отопление', gas: 'Газ' };
 const CITY = { pavlodar: 'Павлодар', ekibastuz: 'Экибастуз', aksu: 'Аксу' };
-const CT = { COMMUNITY: 'Жители (авто, 3+ сообщения)', OFFICIAL: 'Официально', COMMUNITY_AND_OFFICIAL: 'Официально + жители', MANUAL: 'Вручную (админ)' };
+const CT = { COMMUNITY: 'Жители (авто)', OFFICIAL: 'Официально', COMMUNITY_AND_OFFICIAL: 'Официально + жители', MANUAL: 'Вручную (админ)' };
 // FORCE_OUTAGE/FORCE_RESTORED — это "ручной режим": статус зафиксирован администратором
 // и Decision Engine (автоматика по жалобам жителей) больше НЕ может сам его менять,
 // пока не нажать "Снять ручное управление".
