@@ -336,9 +336,9 @@ const GHOST_MARGIN = 3;
 function firstHouseNum(house) { const m = String(house || '').match(/\d+/); return m ? parseInt(m[0], 10) : null; }
 
 async function computeGhostHouses() {
-  // Подтверждённый диапазон номеров по каждой паре улица+ресурс (среди
-  // ДЕЙСТВУЮЩИХ, status='current' нарядов — не future/past).
-  const ranges = new Map();       // "street|resource" -> {street, resource, min, max}
+  // Подтверждённый диапазон номеров + список РЕАЛЬНЫХ домов-источников по
+  // каждой паре улица+ресурс (среди ДЕЙСТВУЮЩИХ, status='current' нарядов).
+  const ranges = new Map();       // "street|resource" -> {street, resource, min, max, sources:[{num,h}]}
   const known = new Set();        // "street|house" — уже РЕАЛЬНЫЕ дома, ghost под ними не нужен
   DATA.houses.forEach((h) => {
     const street = streetName(h.address);
@@ -348,17 +348,18 @@ async function computeGhostHouses() {
     h.outages.forEach((o) => {
       if (o.status !== 'current') return;
       const key = street + '|' + o.resource;
-      if (!ranges.has(key)) ranges.set(key, { street, resource: o.resource, min: num, max: num });
+      if (!ranges.has(key)) ranges.set(key, { street, resource: o.resource, min: num, max: num, sources: [] });
       const r = ranges.get(key);
       if (num < r.min) r.min = num;
       if (num > r.max) r.max = num;
+      r.sources.push({ num, h });
     });
   });
   if (!ranges.size) { GHOSTS = []; return; }
 
   const idx = await loadAddresses();
   const out = new Map();          // ключ — адрес, один ghost на дом (первый подошедший ресурс)
-  for (const { street, resource, min, max } of ranges.values()) {
+  for (const { street, resource, min, max, sources } of ranges.values()) {
     let houses = null;
     for (const s of Object.keys(idx || {})) {
       if (streetMatches(s, street)) { houses = idx[s]; break; }
@@ -371,7 +372,18 @@ async function computeGhostHouses() {
       const address = `${street}, ${house}`;
       const key = street + '|' + houseNumOf(address);
       if (known.has(key) || out.has(address)) return;
-      out.set(address, { address, lat, lng, resource, color: RESOURCES[resource].color });
+      // ⚠️ Ближайший ПО НОМЕРУ реальный дом-источник — не обязательно ближайший
+      // ГЕОГРАФИЧЕСКИ: координаты из addresses.json (OSM) бывают неточны, найдено
+      // на живом кейсе — «Катаева, 91» получил ghost-маркер (номер рядом с
+      // подтверждённым 85/54), но клик открывал пустую карточку "Отключений нет":
+      // outagesNear() пересчитывал «рядом» по координатам заново и не находил
+      // ничего в 350 м, хотя маркер и появился именно из-за близости по номеру.
+      // Решение — не пересчитывать «рядом» повторно, а сразу передать карточке
+      // КОНКРЕТНЫЙ реальный дом, который и породил этот ghost.
+      let nearest = null, nearestDiff = Infinity;
+      sources.forEach((s) => { const d = Math.abs(s.num - num); if (d < nearestDiff) { nearestDiff = d; nearest = s.h; } });
+      if (!nearest) return;
+      out.set(address, { address, lat, lng, resource, color: RESOURCES[resource].color, nearHouse: nearest });
     });
   }
   GHOSTS = [...out.values()];
@@ -539,8 +551,11 @@ function ghostIcon(color, size = 20) {
 }
 function addGhostMarker(g) {
   const m = L.marker([g.lat, g.lng], { icon: ghostIcon(g.color), zIndexOffset: -100 });
-  m.on('click', () => openAddressCard({ address: g.address, district: '', lat: g.lat, lng: g.lng },
-    outagesNear(g.lat, g.lng, g.address)));
+  // ⚠️ НЕ outagesNear() — пересчёт «рядом» по координатам может не найти
+  // ничего (неточные координаты в реестре), хотя маркер появился именно из-за
+  // конкретного g.nearHouse. Передаём его карточке напрямую, см. комментарий
+  // в computeGhostHouses().
+  m.on('click', () => openAddressCard({ address: g.address, district: '', lat: g.lat, lng: g.lng }, [g.nearHouse]));
   markerLayer.addLayer(m);
 }
 
