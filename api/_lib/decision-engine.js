@@ -372,6 +372,22 @@ async function sweepExpiredOverrides() {
       console.error('sweepExpiredOverrides update failed for', inc.id, ':', e.message);
     }
   }
+
+  // Самоисцеление: COMMUNITY-инциденты, подтверждённые ДО того, как этот срок
+  // стал ставиться при создании (см. evaluate()/evaluateAreaCluster()), висят
+  // ACTIVE без manual_override_until вообще — бессрочно, что мы и чиним. Ставим
+  // "до конца дня" ПРЯМО СЕЙЧАС (не задним числом), следующий sweep их снимет.
+  try {
+    const unbounded = await select('incidents',
+      `status=eq.ACTIVE&manual_override=eq.NONE&confirmation_type=eq.COMMUNITY&manual_override_until=is.null&limit=200`);
+    for (const inc of unbounded || []) {
+      try {
+        await update('incidents', `id=eq.${inc.id}`, { manual_override_until: endOfDayPavlodar(), updated_at: now });
+        await log(inc.id, 'BACKFILL_END_OF_DAY', {});
+      } catch (e) { console.error('sweepExpiredOverrides backfill failed for', inc.id, ':', e.message); }
+    }
+  } catch (e) { console.error('sweepExpiredOverrides backfill select failed:', e.message); }
+
   return restored;
 }
 

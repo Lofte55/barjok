@@ -1119,7 +1119,13 @@ function openAddressCard(pt, nearHouses) {
     </div>
     ${outs.length ? `<div class="hc-sum">${hasExact
       ? `<span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span>`
-      : `<span class="hc-off nearby">${t().nearbyOnly}: ${outs.length} ${systemsWord(outs.length)}</span>
+      // ⚠️ Бейдж "Рядом на этой улице" раньше был чистым текстом без иконки —
+      // единственный визуальный сигнал в карточке был у строк НИЖЕ (после
+      // прокрутки/чтения). Точки цвета ресурса здесь — тот же приём, что и у
+      // "Рядом: <адрес>" внутри строки (см. .hc-dot) — сразу видно, ЧТО рядом,
+      // не читая текст целиком.
+      : `<span class="hc-off nearby">${[...new Set(outs.map((x) => x.o.resource))].map((r) =>
+          `<span class="hc-dot" style="background:${RESOURCES[r].color}"></span>`).join('')}${t().nearbyOnly}: ${outs.length} ${systemsWord(outs.length)}</span>
          <span class="hc-note">${t().notListed}</span>`}</div>` : ''}
     <div class="hc-list">${inner}</div>
     <div class="hc-actions">
