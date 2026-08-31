@@ -130,9 +130,19 @@ function inCooldown(incident) {
   return Date.now() - new Date(incident.updated_at).getTime() < STATE_COOLDOWN_MIN * 60000;
 }
 
-/* «Улица, дом» → { street, house }. Тот же паттерн, что api/_lib/city-stats.js:addrKey(). */
+/* «Улица, дом» → { street, house }. Тот же паттерн, что api/_lib/city-stats.js:addrKey().
+ * ⚠️ address — свободный текст от жителя, гарантий формата нет. Если запятых
+ * БОЛЬШЕ ОДНОЙ — это не «улица, дом», а испорченный/склеенный ввод (реальный
+ * кейс: житель вписал в поле адреса «Ломова, 159, 154/2», думая, что сообщает
+ * сразу про два дома). Раньше split-по-последней-запятой в этом случае давал
+ * street="Ломова, 159" (номер дома прилипал К УЛИЦЕ), и evaluateAreaCluster()
+ * ниже, заполняя диапазон, штамповал эту порчу в АДРЕС КАЖДОГО нового
+ * инцидента («улица Ломова, 159, 154/2» и т.д. — видно на живой карте).
+ * Не пытаемся угадать, какая часть — дом: просто отказываемся от разбора. */
 function splitAddress(address) {
-  const m = String(address || '').match(/^(.*?),\s*([^,]+)$/);
+  const s = String(address || '');
+  if ((s.match(/,/g) || []).length !== 1) return { street: '', house: '' };
+  const m = s.match(/^(.*?),\s*([^,]+)$/);
   return m ? { street: m[1].trim(), house: m[2].trim() } : { street: '', house: '' };
 }
 // Первое число в номере дома («58/1» → 58, «60а» → 60) — для сортировки/диапазона.
@@ -387,6 +397,24 @@ async function sweepExpiredOverrides() {
       } catch (e) { console.error('sweepExpiredOverrides backfill failed for', inc.id, ':', e.message); }
     }
   } catch (e) { console.error('sweepExpiredOverrides backfill select failed:', e.message); }
+
+  // Самоисцеление #2: инциденты с ИСПОРЧЕННЫМ адресом (2+ запятых — до фикса в
+  // evaluateAreaCluster()/api/report.js битый ввод жителя типа «Ломова, 159,
+  // 154/2» плодился районным кластером на весь подтверждённый диапазон, см.
+  // комментарий у splitAddress() выше). Такие адреса уже были опубликованы на
+  // карте — снимаем их так же, событийно, без ручной SQL-миграции по каждой
+  // записи. AUTO_RESTORE_BAD_ADDRESS в логе — чтобы отличить от обычного
+  // восстановления по голосам/сроку.
+  try {
+    const activeAll = await select('incidents', 'status=eq.ACTIVE&limit=500&select=id,address');
+    const bad = (activeAll || []).filter((inc) => (String(inc.address || '').match(/,/g) || []).length > 1);
+    for (const inc of bad) {
+      try {
+        await update('incidents', `id=eq.${inc.id}`, { status: 'RESTORED', restored_at: now, updated_at: now });
+        await log(inc.id, 'AUTO_RESTORE_BAD_ADDRESS', { address: inc.address });
+      } catch (e) { console.error('sweepExpiredOverrides bad-address cleanup failed for', inc.id, ':', e.message); }
+    }
+  } catch (e) { console.error('sweepExpiredOverrides bad-address select failed:', e.message); }
 
   return restored;
 }

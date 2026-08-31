@@ -94,7 +94,15 @@ module.exports = async (req, res) => {
   const isSuggest = b.kind === 'suggestion';
   const kind = isPartner ? 'Заявка партнёра' : (isSuggest ? 'Предложение' : 'Жалоба');
   const message = String(b.message || '').trim().slice(0, 1500);
-  const address = String(b.address || '').trim().slice(0, 200);
+  const rawAddress = String(b.address || '').trim().slice(0, 200);
+  // ⚠️ Свободный текст — бывает, житель вписывает «Абая, 12, 14» (думая, что
+  // сообщает сразу про два дома). Больше одной запятой — берём только первую
+  // пару «улица, дом», остальное отбрасываем. Без этого битый адрес уходит в
+  // Decision Engine, а районный кластер (evaluateAreaCluster, decision-engine.js)
+  // штампует эту порчу в адрес КАЖДОГО дома в подтверждённом диапазоне — найдено
+  // на живом кейсе («улица Ломова, 159, 154/2» и т.п. на публичной карте).
+  const commaParts = rawAddress.split(',').map((s) => s.trim()).filter(Boolean);
+  const address = commaParts.length > 2 ? `${commaParts[0]}, ${commaParts[1]}` : rawAddress;
   const category = (isSuggest || isPartner) ? '' : (CATS[b.category] || '');
 
   // Заявка с /partners/ — свои поля и своя валидация (см. api/_lib/partners-page.js),
