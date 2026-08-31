@@ -318,6 +318,65 @@ async function applyLiveLayer() {
   if (added) console.log('[BARJOK] живой слой: применено записей —', added);
 }
 
+/* ---------- Ghost-маркеры: «вы рядом с проблемой» ----------
+ * Районный кластер (§23-25, decision-engine.js) подтверждает ВЕСЬ диапазон
+ * домов между жалобами — но только когда наберётся ≥3 разных адреса, и только
+ * ТЕ дома, что есть в диапазоне НА МОМЕНТ подтверждения (диапазон растёт
+ * дальше только с новыми жалобами). Дом прямо на краю уже подтверждённого
+ * участка визуально выглядит «как будто у него всё в порядке» — хотя жалоба
+ * с одной стороны уже пришла. Ghost-маркер — чисто ВИЗУАЛЬНАЯ подсказка
+ * (НЕ подтверждение, никаких incidents не создаёт): дома в пределах
+ * GHOST_MARGIN номеров ЗА краем подтверждённого диапазона той же улицы+
+ * ресурса, у которых своих данных ещё нет. Стиль — сознательно светлее
+ * confirmed-пина (см. ghostIcon/.pin-ghost), чтобы не читаться как
+ * подтверждённая информация.
+ */
+let GHOSTS = [];
+const GHOST_MARGIN = 3;
+function firstHouseNum(house) { const m = String(house || '').match(/\d+/); return m ? parseInt(m[0], 10) : null; }
+
+async function computeGhostHouses() {
+  // Подтверждённый диапазон номеров по каждой паре улица+ресурс (среди
+  // ДЕЙСТВУЮЩИХ, status='current' нарядов — не future/past).
+  const ranges = new Map();       // "street|resource" -> {street, resource, min, max}
+  const known = new Set();        // "street|house" — уже РЕАЛЬНЫЕ дома, ghost под ними не нужен
+  DATA.houses.forEach((h) => {
+    const street = streetName(h.address);
+    known.add(street + '|' + houseNumOf(h.address));
+    const num = firstHouseNum(houseNumOf(h.address));
+    if (num == null) return;
+    h.outages.forEach((o) => {
+      if (o.status !== 'current') return;
+      const key = street + '|' + o.resource;
+      if (!ranges.has(key)) ranges.set(key, { street, resource: o.resource, min: num, max: num });
+      const r = ranges.get(key);
+      if (num < r.min) r.min = num;
+      if (num > r.max) r.max = num;
+    });
+  });
+  if (!ranges.size) { GHOSTS = []; return; }
+
+  const idx = await loadAddresses();
+  const out = new Map();          // ключ — адрес, один ghost на дом (первый подошедший ресурс)
+  for (const { street, resource, min, max } of ranges.values()) {
+    let houses = null;
+    for (const s of Object.keys(idx || {})) {
+      if (streetMatches(s, street)) { houses = idx[s]; break; }
+    }
+    if (!houses) continue;
+    const lo = min - GHOST_MARGIN, hi = max + GHOST_MARGIN;
+    houses.forEach(([house, lat, lng]) => {
+      const num = firstHouseNum(house);
+      if (num == null || num < lo || num > hi) return;
+      const address = `${street}, ${house}`;
+      const key = street + '|' + houseNumOf(address);
+      if (known.has(key) || out.has(address)) return;
+      out.set(address, { address, lat, lng, resource, color: RESOURCES[resource].color });
+    });
+  }
+  GHOSTS = [...out.values()];
+}
+
 async function load() {
   let d;
   try {
@@ -332,6 +391,10 @@ async function load() {
   // Живой слой — ДО построения фильтров/индексов ниже, чтобы подтверждённое из
   // админки сразу попадало и в счётчики, и в пины, а не только в карточку.
   await applyLiveLayer();
+  // Ghost-маркеры (см. computeGhostHouses) тянут addresses.json (~1 МБ) —
+  // НЕ ждём здесь: не блокируем первую отрисовку карты ради визуального
+  // дополнения. Появятся отдельным проходом, как только посчитаются.
+  computeGhostHouses().then(() => scheduleRender());
 
   // индекс улиц (из адресов домов)
   const streetMap = new Map();
@@ -467,6 +530,19 @@ function clusterIcon(count, emerg) {
   return L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
     html: `<div class="cluster" style="width:${size}px;height:${size}px;background:${color};font-size:${count>99?12:14}px">${count}</div>` });
 }
+// Ghost — см. computeGhostHouses(): «рядом с проблемой», но не подтверждено.
+// Специально светлее/мельче confirmed-пина (pinIcon) — не должно читаться как то же самое.
+function ghostIcon(color, size = 20) {
+  size = Math.round(size * (window.BARJOK_FS || 1));
+  return L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+    html: `<div class="pin-ghost" style="width:${size}px;height:${size}px;color:${color}"></div>` });
+}
+function addGhostMarker(g) {
+  const m = L.marker([g.lat, g.lng], { icon: ghostIcon(g.color), zIndexOffset: -100 });
+  m.on('click', () => openAddressCard({ address: g.address, district: '', lat: g.lat, lng: g.lng },
+    outagesNear(g.lat, g.lng, g.address)));
+  markerLayer.addLayer(m);
+}
 
 function renderMarkers() {
   markerLayer.clearLayers();
@@ -484,6 +560,12 @@ function renderMarkers() {
 
   if (individual) {
     houses.forEach((h) => addHouseMarker(h));
+    // Ghost-маркеры уважают те же фильтры ресурса/времени, что и обычные пины —
+    // иначе снятая в панели "Электричество" всё равно оставляла бы жёлтые точки.
+    if (state.time !== 'future') {
+      GHOSTS.filter((g) => state.resources.has(g.resource) && vb.contains([g.lat, g.lng]))
+        .forEach((g) => addGhostMarker(g));
+    }
   } else {
     const cell = z >= 14 ? 0.004 : z >= 13 ? 0.008 : z >= 12 ? 0.016 : 0.03;
     const grid = new Map();
