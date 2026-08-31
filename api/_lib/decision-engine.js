@@ -43,6 +43,16 @@ const CONFIG = {
 };
 const STATE_COOLDOWN_MIN = 15;
 
+// Павлодар — UTC+5 круглый год (без перехода на летнее время). ⚠️ Каноническое
+// определение — раньше дублировалось в api/admin-api.js, теперь та копия
+// импортирует эту (см. require ниже там же), единственное место правки.
+const TZ_OFFSET_MS = 5 * 3600 * 1000;
+function endOfDayPavlodar() {
+  const local = new Date(Date.now() + TZ_OFFSET_MS);
+  const nextLocalMidnight = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + 1, 0, 0, 0);
+  return new Date(nextLocalMidnight - TZ_OFFSET_MS).toISOString();
+}
+
 const enc = (s) => encodeURIComponent(s);
 const minutesAgoISO = (min) => new Date(Date.now() - min * 60000).toISOString();
 
@@ -235,6 +245,11 @@ async function evaluateAreaCluster(address, utility_type) {
       [inc] = await insert('incidents', {
         address: fullAddress, utility_type, status: 'ACTIVE', confirmation_type: 'COMMUNITY',
         first_reported_at: now, confirmed_at: now,
+        // «До конца дня» вместо бессрочного «Восстановят —»: автоподтверждение
+        // без даты выглядело как гарантия «сломано неизвестно на сколько».
+        // Голоса «восстановилось» по-прежнему могут снять раньше (см. evaluate);
+        // sweepExpiredOverrides теперь снимает и без manual_override, см. там же.
+        manual_override_until: endOfDayPavlodar(),
       });
     } catch (e) { console.error('evaluateAreaCluster insert failed for', fullAddress, ':', e.message); continue; }
     await log(inc.id, 'AUTO_CONFIRM_AREA_CLUSTER', {
@@ -278,6 +293,9 @@ async function evaluate(address, utility_type) {
     const [created] = await insert('incidents', {
       address, utility_type, status: 'ACTIVE', confirmation_type: 'COMMUNITY',
       first_reported_at: now, confirmed_at: now,
+      // «До конца дня» вместо бессрочного «Восстановят —» — см. комментарий у
+      // того же поля в evaluateAreaCluster() выше, причина та же.
+      manual_override_until: endOfDayPavlodar(),
     });
     await log(created.id, 'AUTO_CONFIRM_OUTAGE', { outageVotes });
     return created;
@@ -308,10 +326,19 @@ async function submitReport({ address, utility_type, reported_state, actor_key, 
 }
 
 /*
- * Автовосстановление по сроку, заданному админом ("Подтвердить" → 1 день / 5
- * дней вместо "без даты", см. api/admin-api.js:force_outage). Использует
- * ГОТОВУЮ колонку manual_override_until (была в схеме, но раньше только
- * очищалась при "Снять ручное управление" — никогда не заполнялась).
+ * Автовосстановление по сроку — ДВА источника manual_override_until:
+ *  1) админ выбрал "Подтвердить" → 1 день / 5 дней вместо "без даты"
+ *     (api/admin-api.js:force_outage), manual_override='FORCE_OUTAGE';
+ *  2) Decision Engine сам автоподтвердил (COMMUNITY, обычный порог ИЛИ
+ *     районный кластер §23-25, см. evaluate()/evaluateAreaCluster() выше) —
+ *     manual_override остаётся 'NONE', срок всегда "до конца дня" (не
+ *     оставляем "Восстановят —" бессрочно висеть на публичной карте).
+ * ⚠️ Фильтр НЕ проверяет manual_override — раньше проверял только
+ * FORCE_OUTAGE, из-за чего community-инциденты с истёкшим сроком (2) никогда
+ * бы не снимались автоматически. Голоса "восстановилось" по community-
+ * инцидентам (manual_override=NONE) всё ещё могут снять их РАНЬШЕ через
+ * обычный evaluate() — sweep здесь только верхняя граница на случай, если
+ * голосов не набралось.
  *
  * НЕ periodic-крон (§47 документа сознательно не реализован, см. шапку файла) —
  * событийный sweep, вызывается на каждый живой запрос к incidents (карта,
@@ -326,7 +353,7 @@ async function sweepExpiredOverrides() {
   let expired;
   try {
     expired = await select('incidents',
-      `status=eq.ACTIVE&manual_override=eq.FORCE_OUTAGE&manual_override_until=not.is.null&manual_override_until=lte.${now}&limit=200`);
+      `status=eq.ACTIVE&manual_override_until=not.is.null&manual_override_until=lte.${now}&limit=200`);
   } catch (e) {
     console.error('sweepExpiredOverrides select failed:', e.message);
     return [];
@@ -348,4 +375,4 @@ async function sweepExpiredOverrides() {
   return restored;
 }
 
-module.exports = { submitReport, evaluate, sweepExpiredOverrides, CONFIG };
+module.exports = { submitReport, evaluate, sweepExpiredOverrides, endOfDayPavlodar, CONFIG };

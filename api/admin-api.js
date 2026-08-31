@@ -4,19 +4,12 @@
  */
 const { requireAdmin } = require('./_lib/auth');
 const { select, insert, update, remove } = require('./_lib/supabase');
-const { evaluate, sweepExpiredOverrides } = require('./_lib/decision-engine');
+// endOfDayPavlodar — каноническое определение теперь в decision-engine.js
+// (нужно и там для автоподтверждённых COMMUNITY-инцидентов), сюда просто
+// импортируем, чтобы не держать вторую копию.
+const { evaluate, sweepExpiredOverrides, endOfDayPavlodar } = require('./_lib/decision-engine');
 
 const UTILITIES = new Set(['hot_water', 'cold_water', 'water', 'electricity', 'heating', 'gas']);
-
-// Павлодар — UTC+5 круглый год (без перехода на летнее время). Используется
-// только для варианта "До конца дня" в срок автовосстановления — админ
-// выбирает по местному времени, а manual_override_until в БД всегда UTC.
-const TZ_OFFSET_MS = 5 * 3600 * 1000;
-function endOfDayPavlodar() {
-  const local = new Date(Date.now() + TZ_OFFSET_MS);
-  const nextLocalMidnight = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + 1, 0, 0, 0);
-  return new Date(nextLocalMidnight - TZ_OFFSET_MS).toISOString();
-}
 
 async function log(incidentId, eventType, detail) {
   try {
