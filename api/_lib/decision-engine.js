@@ -383,13 +383,18 @@ async function sweepExpiredOverrides() {
     }
   }
 
-  // Самоисцеление: COMMUNITY-инциденты, подтверждённые ДО того, как этот срок
-  // стал ставиться при создании (см. evaluate()/evaluateAreaCluster()), висят
-  // ACTIVE без manual_override_until вообще — бессрочно, что мы и чиним. Ставим
-  // "до конца дня" ПРЯМО СЕЙЧАС (не задним числом), следующий sweep их снимет.
+  // Самоисцеление: ЛЮБОЙ ACTIVE-инцидент без срока — бессрочное "Восстановят —",
+  // которое иначе может провисеть на публичной карте неограниченно (найдено на
+  // живом кейсе: админ жмёт "Подтвердить" в списке жалоб, а селект срока рядом
+  // по умолчанию стоит на "Без даты" — если не переключить вручную, запись
+  // остаётся без даты навсегда). Раньше чинили только COMMUNITY+manual_override
+  // =NONE (авто-подтверждения) — теперь ЛЮБОЙ ACTIVE без даты, включая ручные
+  // MANUAL/FORCE_OUTAGE подтверждения через админку (см. также смену дефолта
+  // на "До конца дня" у кнопки "Подтвердить", api/admin.js:durationSelectHtml).
+  // Ставим "до конца дня" ПРЯМО СЕЙЧАС (не задним числом), следующий sweep снимет.
   try {
     const unbounded = await select('incidents',
-      `status=eq.ACTIVE&manual_override=eq.NONE&confirmation_type=eq.COMMUNITY&manual_override_until=is.null&limit=200`);
+      `status=eq.ACTIVE&manual_override_until=is.null&limit=200`);
     for (const inc of unbounded || []) {
       try {
         await update('incidents', `id=eq.${inc.id}`, { manual_override_until: endOfDayPavlodar(), updated_at: now });

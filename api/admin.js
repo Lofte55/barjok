@@ -26,10 +26,10 @@ const BODY = `
       <input name="reason" placeholder="причина (необязательно)" style="flex:1;min-width:180px">
       <div class="csel" data-csel>
         <select name="duration_days" title="Срок автовосстановления">
-          <option value="0">Без даты (вручную)</option>
-          <option value="eod">До конца дня (в 00:00)</option>
+          <option value="eod" selected>До конца дня (в 00:00)</option>
           <option value="1">Восстановится через 1 день</option>
           <option value="5">Восстановится через 5 дней</option>
+          <option value="0">Без даты (вручную)</option>
         </select>
       </div>
       <button type="submit">Принудительно отключить</button>
@@ -117,12 +117,16 @@ function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 // динамически ПОСЛЕ инициализации .csel при загрузке страницы, .csel не
 // подхватит их без повторного вызова инициализатора; для одной служебной
 // строки не стоит усложнять.
+// ⚠️ "До конца дня" — ДЕФОЛТ (selected), а не "Без даты": найден живой кейс,
+// когда админ жмёт "Подтвердить" в списке жалоб и не задумывается об этом
+// селекте рядом — раньше по умолчанию срок оставался пустым, и запись висела
+// "Восстановят —" бессрочно. "Без даты" всё ещё доступна как осознанный выбор.
 function durationSelectHtml() {
   return '<select class="dur-sel" data-duration title="Срок автовосстановления">' +
-    '<option value="0">Без даты</option>' +
-    '<option value="eod">До конца дня</option>' +
+    '<option value="eod" selected>До конца дня</option>' +
     '<option value="1">1 день</option>' +
     '<option value="5">5 дней</option>' +
+    '<option value="0">Без даты</option>' +
     '</select>';
 }
 
