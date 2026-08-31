@@ -403,6 +403,10 @@ body {
 .hc-when .st.soon { background: var(--elec); }
 .hc-when .st.ended { background: var(--ink-3); }
 .hc-period { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+/* Цветная точка перед "Рядом: <адрес>" — тот же цвет ресурса, что и у иконки
+   строки выше, чтобы при беглом просмотре карточки сразу было видно, к какому
+   ресурсу относится соседний дом, не читая текст. */
+.hc-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 .hc-reason { font-size: 12px; color: var(--ink-2); margin-top: 6px; line-height: 1.4; }
 .hc-sub { display: block; width: calc(100% - 24px); margin: 6px 12px 14px; padding: 11px; background: var(--brand); color: #fff;
   border: 0; border-radius: 11px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: var(--sans); transition: .15s; }
