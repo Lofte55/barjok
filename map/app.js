@@ -932,9 +932,29 @@ function normStreet(s) {
     .replace(/^(улица|ул\.?|проспект|пр\.?|переулок|пер\.?|мкр\.?|площадь|пл\.?)\s*/i, '')
     .replace(/[.,]/g, ' ').replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
 }
+/* Точечные пары написаний ОДНОЙ и той же улицы, разошедшиеся в самом OSM: у казахских
+   фамилий с «ай/уй»-звуком разные источники транслитерируют по-разному (сама линия
+   дороги — name=«...Дюсембиновых», а addr:street домов на ней — «...Дуйсембиновых»).
+   Список, а не общая фонетическая эвристика — чтобы не плодить ложные совпадения
+   между непохожими улицами. Проверено: без этой пары наш реестр (addresses.json,
+   где дома лежат под «Дуйсембиновых») не находился по адресу, набранному так, как
+   подписана сама улица на карте и как её знает Nominatim — «Дюсембиновых». */
+// [канонический вариант, альтернативный] — альтернативный ВСЕГДА схлопывается
+// в канонический, а не наоборот, иначе два написания дают РАЗНЫЕ канонические
+// строки и продолжают не совпадать друг с другом.
+const STREET_SPELLING_ALIASES = [
+  ['дуйсембинов', 'дюсембинов'],
+];
+function canonStreet(s) {
+  const n = normStreet(s);
+  for (const [canon, alt] of STREET_SPELLING_ALIASES) {
+    if (n.includes(alt)) return n.replace(alt, canon);
+  }
+  return n;
+}
 /* Совпадение улицы: подстрока в любую сторону (Лермонтова ↔ Лермонтов) */
 function streetMatches(candidate, query) {
-  const a = normStreet(candidate), b = normStreet(query);
+  const a = canonStreet(candidate), b = canonStreet(query);
   if (!b) return false;
   if (a === b) return true;
   // Подстрочный матч — только для достаточно длинных названий, иначе «б» (Проезд Б)
@@ -1192,7 +1212,20 @@ async function geocodeAddress(q) {
   let r = null;
   try {
     const res = await fetch(url, { headers: { 'Accept-Language': LANG } });
-    if (res.ok) { const a = await res.json(); if (a[0]) r = { lat: +a[0].lat, lng: +a[0].lon, name: a[0].display_name }; }
+    if (res.ok) {
+      const a = await res.json();
+      // ⚠️ Nominatim, не найдя точный дом, тихо «сваливается» на более широкий
+      // уровень — улицу (addresstype: road) или населённый пункт — и всё равно
+      // возвращает координаты (центр/точку на линии улицы). Без этой проверки
+      // «Братьев Дюсембиновых, 4» (такого дома нет в OSM) открывал уверенную
+      // карточку «отключений нет» где-то на середине улицы, а не по дому: живой
+      // случай — house_number=26772278 отсутствует, но запрос вернул точку
+      // с addresstype=road. Тот же риск и для addresstype=place (город/район).
+      // Доверяем только реальному дому: addresstype building/house.
+      if (a[0] && (a[0].addresstype === 'building' || a[0].addresstype === 'house')) {
+        r = { lat: +a[0].lat, lng: +a[0].lon, name: a[0].display_name };
+      }
+    }
   } catch (e) {}
   geoCache.set(key, r); return r;
 }
