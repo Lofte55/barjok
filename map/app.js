@@ -338,7 +338,12 @@ async function applyLiveLayer() {
 let GHOSTS = [];
 const GHOST_RADIUS_M = 150;   // «во дворе/соседний дом» — не весь квартал
 const GHOST_CELL = 0.002;     // ~200 м: ячейка грид-индекса для быстрого поиска соседей
-const GHOST_MAX = 5000;       // потолок на всякий случай (маркеры и так режутся по вьюпорту)
+// ⚠️ Потолок — ПО КАЖДОМУ РЕСУРСУ ОТДЕЛЬНО, не общий. Общий (5000 на всех)
+// приводил к голоданию: в data.json сейчас ~1600 точек и ВСЕ они электричество
+// (официальные плановые наряды), а вода приходит из живого слоя и попадает в
+// КОНЕЦ DATA.houses — электричество выбирало весь лимит раньше, чем очередь
+// доходила до воды, и круги воды пропадали с карты целиком.
+const GHOST_MAX_PER_RESOURCE = 2500;
 const coordKey = (lat, lng) => lat.toFixed(5) + '_' + lng.toFixed(5);
 
 async function computeGhostHouses() {
@@ -377,8 +382,9 @@ async function computeGhostHouses() {
   }
 
   const out = new Map();          // адрес → ghost (один на дом, первый подошедший ресурс)
+  const perResource = new Map();  // ресурс → сколько уже набрали (см. GHOST_MAX_PER_RESOURCE)
   for (const c of confirmed) {
-    if (out.size >= GHOST_MAX) break;
+    if ((perResource.get(c.resource) || 0) >= GHOST_MAX_PER_RESOURCE) continue;
     const ci = Math.round(c.lat / GHOST_CELL), cj = Math.round(c.lng / GHOST_CELL);
     for (let di = -1; di <= 1; di++) {
       for (let dj = -1; dj <= 1; dj++) {
@@ -398,6 +404,7 @@ async function computeGhostHouses() {
             address, lat: a.lat, lng: a.lng, resource: c.resource,
             color: RESOURCES[c.resource].color, nearHouse: c.h,
           });
+          perResource.set(c.resource, (perResource.get(c.resource) || 0) + 1);
         }
       }
     }
