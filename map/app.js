@@ -963,7 +963,30 @@ function addressSuggestions(pq, limit = 8) {
     }
     if (out.length >= CEILING) break;
   }
-  return preferLang(out, (a) => a.street).slice(0, limit);
+  /* ⚠️ НЕ preferLang() на весь список. Он выкидывал ВСЕ адреса «чужого» языкового
+     варианта улицы, если в предпочитаемом нашёлся хоть один дом. Но OSM пишет
+     разные дома ОДНОЙ улицы то по-русски, то по-казахски, и дом, существующий
+     ТОЛЬКО в другом варианте, пропадал из поиска совсем. Живой кейс: «Набережная, 1»
+     лежит в реестре только как «Набережная көшесі, 1», а в «Набережная улица» есть
+     11/11-1 — в русском интерфейсе дом 1 не находился вообще. По всему реестру так
+     терялось 109 домов в RU и 821 в KZ (13 улиц записаны в обоих вариантах).
+     Дедупим по НОМЕРУ ДОМА: один и тот же дом из двух вариантов схлопываем и
+     показываем на языке интерфейса, уникальные дома не теряем ни в одном языке. */
+  const byHouse = new Map();
+  for (const a of out) {
+    const key = normStreet(a.street) + '|' + String(a.house).toLowerCase().replace(/\s+/g, '');
+    const cur = byHouse.get(key);
+    if (!cur) { byHouse.set(key, a); continue; }
+    if (streetLangOf(cur.street) !== LANG && streetLangOf(a.street) === LANG) byHouse.set(key, a);
+  }
+  const list = [...byHouse.values()];
+  // Точное совпадение номера — вперёд: дедуп мог поставить «11» (из RU-варианта)
+  // раньше точной «1» (из KK-варианта), потому что улицы обходятся по очереди.
+  if (pq.house) {
+    const want = pq.house.toLowerCase();
+    list.sort((a, b) => (String(a.house).toLowerCase() === want ? 0 : 1) - (String(b.house).toLowerCase() === want ? 0 : 1));
+  }
+  return list.slice(0, limit);
 }
 
 function buildSuggest(qraw, box) {
@@ -986,10 +1009,22 @@ function buildSuggest(qraw, box) {
     // Дома с известными отключениями (DATA.houses) + остальные дома улицы из общего
     // справочника — ОДИН объединённый список, без текстовых пометок «N систем»/«ок»:
     // статус читается по цвету точки, как и у остальных элементов поиска.
-    const houseHits = preferLang(DATA.houses.filter((h) =>
+    // ⚠️ Дедуп по номеру дома, а не preferLang() — та же причина, что и в
+    // addressSuggestions() выше (RU/KZ варианты одной улицы держат РАЗНЫЕ дома;
+    // фильтр по языку прятал дом целиком). Здесь потерять дом ещё хуже: у него
+    // есть реальный наряд, а он бы просто не нашёлся поиском.
+    const houseMatches = DATA.houses.filter((h) =>
       h.address.toLowerCase().includes(q) ||
       (streetMatches(h.address, pq.street) && h.address.includes(pq.house))
-    ), (h) => h.address).slice(0, 8);
+    );
+    const houseByNum = new Map();
+    for (const h of houseMatches) {
+      const key = normStreet(streetName(h.address)) + '|' + houseNumOf(h.address);
+      const cur = houseByNum.get(key);
+      if (!cur) { houseByNum.set(key, h); continue; }
+      if (streetLangOf(cur.address) !== LANG && streetLangOf(h.address) === LANG) houseByNum.set(key, h);
+    }
+    const houseHits = [...houseByNum.values()].slice(0, 8);
     const known = new Set(houseHits.map((h) => h.address.toLowerCase()));
     const addrHits = addressSuggestions(pq, 10).filter((a) =>
       !known.has(`${a.street}, ${a.house}`.toLowerCase()));
