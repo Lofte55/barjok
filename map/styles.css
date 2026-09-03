@@ -250,11 +250,18 @@ body {
    Полая точка (не залитый пин с иконкой) — сознательно светлее confirmed-маркера,
    чтобы читалось как подсказка, а не как факт отключения по этому адресу. */
 .pin-ghost {
+  position: relative;   /* якорь для счётчика ресурсов (.pin-badge-ghost) */
   border-radius: 50%; box-sizing: border-box; display: grid; place-items: center;
   background: rgba(255,255,255,.6); border: 2px solid currentColor;
   box-shadow: 0 1px 5px rgba(0,0,0,.18);
 }
 .pin-ghost::after { content: ''; width: 38%; height: 38%; border-radius: 50%; background: currentColor; }
+/* Счётчик «рядом больше одной проблемы» (напр. плановое электричество + авария
+   по воде). Мельче обычного .pin-badge — ghost-маркер сам всего ~20px. */
+.pin-badge-ghost {
+  top: -5px; right: -5px; min-width: 13px; height: 13px; font-size: 8.5px;
+  border-width: 1.5px; padding: 0 2px;
+}
 /* Крестик закрытия — чёткая круглая кнопка на синей шапке карточки */
 .house-popup .leaflet-popup-close-button {
   width: 30px !important; height: 30px !important; top: 12px !important; right: 12px !important;

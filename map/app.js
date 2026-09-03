@@ -381,7 +381,11 @@ async function computeGhostHouses() {
     }
   }
 
-  const out = new Map();          // адрес → ghost (один на дом, первый подошедший ресурс)
+  // ⚠️ Ключ — АДРЕС + РЕСУРС, не только адрес. Раньше дом получал подсказку
+  // лишь по ПЕРВОМУ подошедшему ресурсу: рядом с домом могло быть и плановое
+  // электричество, и авария по воде, а карточка показывала «РЯДОМ: 1 СИСТЕМА»
+  // (что попалось первым — обычно электричество, оно идёт первым в data.json).
+  const out = new Map();          // "адрес|ресурс" → {address, lat, lng, resource, color, nearHouse}
   const perResource = new Map();  // ресурс → сколько уже набрали (см. GHOST_MAX_PER_RESOURCE)
   for (const c of confirmed) {
     if ((perResource.get(c.resource) || 0) >= GHOST_MAX_PER_RESOURCE) continue;
@@ -395,12 +399,13 @@ async function computeGhostHouses() {
           const d = Math.hypot((a.lat - c.lat) * 111000, (a.lng - c.lng) * 68000);
           if (d > GHOST_RADIUS_M) continue;
           const address = `${a.street}, ${a.house}`;
-          if (out.has(address)) continue;
+          const key = address + '|' + c.resource;
+          if (out.has(key)) continue;
           // Карточку ghost'а наполняет КОНКРЕТНЫЙ дом-источник (c.h), из-за
           // которого маркер и появился — не пересчитываем «рядом» заново
           // (outagesNear по координатам мог не найти ничего и открыть пустую
           // карточку «Отключений нет», хотя маркер стоял обоснованно).
-          out.set(address, {
+          out.set(key, {
             address, lat: a.lat, lng: a.lng, resource: c.resource,
             color: RESOURCES[c.resource].color, nearHouse: c.h,
           });
@@ -409,7 +414,18 @@ async function computeGhostHouses() {
       }
     }
   }
-  GHOSTS = [...out.values()];
+  // Схлопываем в ОДИН маркер на дом со списком ресурсов — иначе на одной точке
+  // рисовалось бы несколько маркеров друг поверх друга.
+  const byAddress = new Map();
+  for (const g of out.values()) {
+    const cur = byAddress.get(g.address);
+    if (cur) { cur.items.push({ resource: g.resource, color: g.color, nearHouse: g.nearHouse }); continue; }
+    byAddress.set(g.address, {
+      address: g.address, lat: g.lat, lng: g.lng,
+      items: [{ resource: g.resource, color: g.color, nearHouse: g.nearHouse }],
+    });
+  }
+  GHOSTS = [...byAddress.values()];
 }
 
 async function load() {
@@ -567,18 +583,25 @@ function clusterIcon(count, emerg) {
 }
 // Ghost — см. computeGhostHouses(): «рядом с проблемой», но не подтверждено.
 // Специально светлее/мельче confirmed-пина (pinIcon) — не должно читаться как то же самое.
-function ghostIcon(color, size = 20) {
+function ghostIcon(items, size = 20) {
   size = Math.round(size * (window.BARJOK_FS || 1));
+  // Рядом может быть несколько разных проблем (напр. плановое электричество
+  // + авария по воде) — цвет по первому, счётчик показывает, что их больше.
+  const badge = items.length > 1 ? `<span class="pin-badge pin-badge-ghost">${items.length}</span>` : '';
   return L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
-    html: `<div class="pin-ghost" style="width:${size}px;height:${size}px;color:${color}"></div>` });
+    html: `<div class="pin-ghost" style="width:${size}px;height:${size}px;color:${items[0].color}">${badge}</div>` });
 }
 function addGhostMarker(g) {
-  const m = L.marker([g.lat, g.lng], { icon: ghostIcon(g.color), zIndexOffset: -100 });
+  // Уважаем фильтр ресурсов: показываем только то, что сейчас включено в панели.
+  const items = g.items.filter((i) => state.resources.has(i.resource));
+  if (!items.length) return;
+  const m = L.marker([g.lat, g.lng], { icon: ghostIcon(items), zIndexOffset: -100 });
   // ⚠️ НЕ outagesNear() — пересчёт «рядом» по координатам может не найти
   // ничего (неточные координаты в реестре), хотя маркер появился именно из-за
-  // конкретного g.nearHouse. Передаём его карточке напрямую, см. комментарий
-  // в computeGhostHouses().
-  m.on('click', () => openAddressCard({ address: g.address, district: '', lat: g.lat, lng: g.lng }, [g.nearHouse]));
+  // конкретных домов-источников. Передаём их карточке напрямую (по одному на
+  // ресурс) — openAddressCard сам схлопнет в строки «РЯДОМ: N систем».
+  m.on('click', () => openAddressCard({ address: g.address, district: '', lat: g.lat, lng: g.lng },
+    items.map((i) => i.nearHouse)));
   markerLayer.addLayer(m);
 }
 
@@ -601,7 +624,7 @@ function renderMarkers() {
     // Ghost-маркеры уважают фильтр ресурса (снятое в панели "Электричество" не
     // должно оставлять жёлтые точки). Фильтр времени НЕ применяем: подсказка
     // строится и вокруг плановых нарядов тоже (см. computeGhostHouses).
-    GHOSTS.filter((g) => state.resources.has(g.resource) && vb.contains([g.lat, g.lng]))
+    GHOSTS.filter((g) => vb.contains([g.lat, g.lng]) && g.items.some((i) => state.resources.has(i.resource)))
       .forEach((g) => addGhostMarker(g));
   } else {
     const cell = z >= 14 ? 0.004 : z >= 13 ? 0.008 : z >= 12 ? 0.016 : 0.03;
