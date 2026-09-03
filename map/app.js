@@ -318,73 +318,84 @@ async function applyLiveLayer() {
   if (added) console.log('[BARJOK] живой слой: применено записей —', added);
 }
 
-/* ---------- Ghost-маркеры: «вы рядом с проблемой» ----------
- * Районный кластер (§23-25, decision-engine.js) подтверждает ВЕСЬ диапазон
- * домов между жалобами — но только когда наберётся ≥3 разных адреса, и только
- * ТЕ дома, что есть в диапазоне НА МОМЕНТ подтверждения (диапазон растёт
- * дальше только с новыми жалобами). Дом прямо на краю уже подтверждённого
- * участка визуально выглядит «как будто у него всё в порядке» — хотя жалоба
- * с одной стороны уже пришла. Ghost-маркер — чисто ВИЗУАЛЬНАЯ подсказка
- * (НЕ подтверждение, никаких incidents не создаёт): дома в пределах
- * GHOST_MARGIN номеров ЗА краем подтверждённого диапазона той же улицы+
- * ресурса, у которых своих данных ещё нет. Стиль — сознательно светлее
- * confirmed-пина (см. ghostIcon/.pin-ghost), чтобы не читаться как
- * подтверждённая информация.
+/* ---------- Ghost-маркеры: «возможно, задело и этот дом» ----------
+ * Подтверждённым (обычный пин) дом становится, только если есть официальный
+ * наряд ИЛИ жители заявили ИМЕННО ЭТОТ адрес. Всё остальное — максимум
+ * «возможно»: ghost-маркер, чисто ВИЗУАЛЬНАЯ подсказка, incidents для него не
+ * создаются (см. decision-engine.js:evaluateAreaCluster — раньше он, наоборот,
+ * штамповал подтверждённые отключения по всему диапазону номеров улицы, и на
+ * карте появлялись «факты» о домах, которые никто не заявлял).
+ *
+ * ⚠️ РАДИУС, А НЕ ДИАПАЗОН НОМЕРОВ. Первая версия брала дома «от min до max
+ * номера на той же улице» — это линия вдоль улицы, а не зона аварии: авария на
+ * подстанции/водоводе накрывает КРУГ (соседние дворы, дома с других улиц),
+ * а нумерация домов с географией связана слабо (соседний дом напротив может
+ * иметь номер из другой сотни или стоять на другой улице). Плюс сопоставление
+ * названий улиц (RU/KZ-варианты, streetMatches) регулярно промахивалось — у
+ * электричества ghost-подсказки не появлялись вообще. Теперь — честное
+ * расстояние в метрах от подтверждённой точки, без участия названий улиц.
  */
 let GHOSTS = [];
-const GHOST_MARGIN = 3;
-function firstHouseNum(house) { const m = String(house || '').match(/\d+/); return m ? parseInt(m[0], 10) : null; }
+const GHOST_RADIUS_M = 150;   // «во дворе/соседний дом» — не весь квартал
+const GHOST_CELL = 0.002;     // ~200 м: ячейка грид-индекса для быстрого поиска соседей
+const GHOST_MAX = 5000;       // потолок на всякий случай (маркеры и так режутся по вьюпорту)
+const coordKey = (lat, lng) => lat.toFixed(5) + '_' + lng.toFixed(5);
 
 async function computeGhostHouses() {
-  // Подтверждённый диапазон номеров + список РЕАЛЬНЫХ домов-источников по
-  // каждой паре улица+ресурс (среди ДЕЙСТВУЮЩИХ, status='current' нарядов).
-  const ranges = new Map();       // "street|resource" -> {street, resource, min, max, sources:[{num,h}]}
-  const known = new Set();        // "street|house" — уже РЕАЛЬНЫЕ дома, ghost под ними не нужен
+  // Подтверждённые ДЕЙСТВУЮЩИЕ точки + координаты уже известных домов (под ними
+  // ghost не нужен — там уже есть настоящий пин).
+  const confirmed = [];           // {lat, lng, resource, h}
+  const knownCoords = new Set();  // ⚠️ дедуп по КООРДИНАТАМ, а не по адресу: один
+  // и тот же дом в data.json и addresses.json бывает записан по-разному
+  // («Ломов көшесі, 154/2» vs «улица Ломова, 154/2»), а координаты у обоих из
+  // одного источника (OSM) и совпадают до 5 знаков.
   DATA.houses.forEach((h) => {
-    const street = streetName(h.address);
-    known.add(street + '|' + houseNumOf(h.address));
-    const num = firstHouseNum(houseNumOf(h.address));
-    if (num == null) return;
+    knownCoords.add(coordKey(h.lat, h.lng));
     h.outages.forEach((o) => {
-      if (o.status !== 'current') return;
-      const key = street + '|' + o.resource;
-      if (!ranges.has(key)) ranges.set(key, { street, resource: o.resource, min: num, max: num, sources: [] });
-      const r = ranges.get(key);
-      if (num < r.min) r.min = num;
-      if (num > r.max) r.max = num;
-      r.sources.push({ num, h });
+      if (o.status === 'current') confirmed.push({ lat: h.lat, lng: h.lng, resource: o.resource, h });
     });
   });
-  if (!ranges.size) { GHOSTS = []; return; }
+  if (!confirmed.length) { GHOSTS = []; return; }
 
   const idx = await loadAddresses();
-  const out = new Map();          // ключ — адрес, один ghost на дом (первый подошедший ресурс)
-  for (const { street, resource, min, max, sources } of ranges.values()) {
-    let houses = null;
-    for (const s of Object.keys(idx || {})) {
-      if (streetMatches(s, street)) { houses = idx[s]; break; }
+  if (!idx) { GHOSTS = []; return; }
+
+  // Грид по всему реестру — один проход на ~40 тыс. адресов, чтобы дальше не
+  // сканировать весь реестр на каждую подтверждённую точку.
+  const grid = new Map();
+  for (const street of Object.keys(idx)) {
+    for (const [house, lat, lng] of idx[street] || []) {
+      const key = Math.round(lat / GHOST_CELL) + '_' + Math.round(lng / GHOST_CELL);
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push({ street, house, lat, lng });
     }
-    if (!houses) continue;
-    const lo = min - GHOST_MARGIN, hi = max + GHOST_MARGIN;
-    houses.forEach(([house, lat, lng]) => {
-      const num = firstHouseNum(house);
-      if (num == null || num < lo || num > hi) return;
-      const address = `${street}, ${house}`;
-      const key = street + '|' + houseNumOf(address);
-      if (known.has(key) || out.has(address)) return;
-      // ⚠️ Ближайший ПО НОМЕРУ реальный дом-источник — не обязательно ближайший
-      // ГЕОГРАФИЧЕСКИ: координаты из addresses.json (OSM) бывают неточны, найдено
-      // на живом кейсе — «Катаева, 91» получил ghost-маркер (номер рядом с
-      // подтверждённым 85/54), но клик открывал пустую карточку "Отключений нет":
-      // outagesNear() пересчитывал «рядом» по координатам заново и не находил
-      // ничего в 350 м, хотя маркер и появился именно из-за близости по номеру.
-      // Решение — не пересчитывать «рядом» повторно, а сразу передать карточке
-      // КОНКРЕТНЫЙ реальный дом, который и породил этот ghost.
-      let nearest = null, nearestDiff = Infinity;
-      sources.forEach((s) => { const d = Math.abs(s.num - num); if (d < nearestDiff) { nearestDiff = d; nearest = s.h; } });
-      if (!nearest) return;
-      out.set(address, { address, lat, lng, resource, color: RESOURCES[resource].color, nearHouse: nearest });
-    });
+  }
+
+  const out = new Map();          // адрес → ghost (один на дом, первый подошедший ресурс)
+  for (const c of confirmed) {
+    if (out.size >= GHOST_MAX) break;
+    const ci = Math.round(c.lat / GHOST_CELL), cj = Math.round(c.lng / GHOST_CELL);
+    for (let di = -1; di <= 1; di++) {
+      for (let dj = -1; dj <= 1; dj++) {
+        const cell = grid.get((ci + di) + '_' + (cj + dj));
+        if (!cell) continue;
+        for (const a of cell) {
+          if (knownCoords.has(coordKey(a.lat, a.lng))) continue;   // уже настоящий пин
+          const d = Math.hypot((a.lat - c.lat) * 111000, (a.lng - c.lng) * 68000);
+          if (d > GHOST_RADIUS_M) continue;
+          const address = `${a.street}, ${a.house}`;
+          if (out.has(address)) continue;
+          // Карточку ghost'а наполняет КОНКРЕТНЫЙ дом-источник (c.h), из-за
+          // которого маркер и появился — не пересчитываем «рядом» заново
+          // (outagesNear по координатам мог не найти ничего и открыть пустую
+          // карточку «Отключений нет», хотя маркер стоял обоснованно).
+          out.set(address, {
+            address, lat: a.lat, lng: a.lng, resource: c.resource,
+            color: RESOURCES[c.resource].color, nearHouse: c.h,
+          });
+        }
+      }
+    }
   }
   GHOSTS = [...out.values()];
 }
@@ -678,7 +689,7 @@ function houseCardHtml(h) {
     <div id="adSlotHouse"></div>
     <div class="hc-actions">
       <button class="hc-share" type="button">${t().share}</button>
-      <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(h.address)}">Сообщить о проблеме</button>
+      <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(h.address)}">Уведомить BARJOK</button>
     </div>
   </div>`;
   // Кнопка «Подписаться» временно скрыта — подписки будут позже.
@@ -1227,7 +1238,7 @@ function openAddressCard(pt, nearHouses) {
     <div class="hc-list">${inner}</div>
     <div class="hc-actions">
       ${outs.length ? `<button class="hc-share" type="button">${t().share}</button>` : ''}
-      <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(pt.address)}">Сообщить о проблеме</button>
+      <button class="hc-report" type="button" data-report-addr="${encodeURIComponent(pt.address)}">Уведомить BARJOK</button>
     </div>
   </div>`;
   const pad = popupPanPadding();

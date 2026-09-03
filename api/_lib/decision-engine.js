@@ -20,17 +20,16 @@
  *
  * area anomalies (§23-25) — РЕАЛИЗОВАНО (см. evaluateAreaCluster ниже): если на
  * одной улице по одному ресурсу набирается ≥3 разных адреса с хотя бы 1 голосом
- * каждый — считаем районной проблемой и подтверждаем весь диапазон домов между
- * ними, а не только те, что реально пожаловались.
+ * каждый — считаем районной проблемой и снижаем порог для САМИХ ЭТИХ адресов
+ * (одного голоса хватает). Дома между ними инцидентов не получают — только
+ * визуальная подсказка «возможно» на карте (map/app.js:computeGhostHouses).
  */
 const { select, insert, update } = require('./supabase');
 // normStreet — ЧИСТАЯ строковая функция (без fs) из parser/lib/buildings.js,
 // безопасна в serverless. ⚠️ housesOnStreet()/load() из ТОГО ЖЕ модуля — НЕТ:
 // читают parser/buildings.json, которого в Vercel-рантайме не существует (файл
 // в .gitignore, живёт только в кэше GitHub Actions при прогоне парсера, см.
-// .github/workflows/parser.yml). Поэтому для диапазона домов улицы ниже тянем
-// map/addresses.json HTTP-запросом с прод-домена — тот же приём, что уже
-// использует api/_lib/city-stats.js для map/data.json.
+// .github/workflows/parser.yml).
 const { normStreet } = require('../../parser/lib/buildings');
 
 // Единая конфигурация окон — документ явно даёт числа только для горячей воды и
@@ -145,34 +144,18 @@ function splitAddress(address) {
   const m = s.match(/^(.*?),\s*([^,]+)$/);
   return m ? { street: m[1].trim(), house: m[2].trim() } : { street: '', house: '' };
 }
-// Первое число в номере дома («58/1» → 58, «60а» → 60) — для сортировки/диапазона.
-function houseNum(h) { const m = String(h || '').match(/\d+/); return m ? parseInt(m[0], 10) : null; }
-
 const AREA_CLUSTER_MIN_ADDRESSES = 3;   // §23-25: столько РАЗНЫХ адресов на улице запускают кластер
-const AREA_CLUSTER_MAX_HOUSES = 60;     // страховка от чрезмерно широкого диапазона
-const PROD_ORIGIN = 'https://barjok.kz';
-
-let addrRegistryCache = null, addrRegistryCacheAt = 0;
-const ADDR_REGISTRY_TTL_MS = 10 * 60000;
-async function loadAddressRegistry() {
-  const now = Date.now();
-  if (addrRegistryCache && now - addrRegistryCacheAt < ADDR_REGISTRY_TTL_MS) return addrRegistryCache;
-  try {
-    const r = await fetch(`${PROD_ORIGIN}/map/addresses.json`);
-    if (!r.ok) return addrRegistryCache; // временный сбой — отдаём старый кэш, если есть
-    addrRegistryCache = await r.json();
-    addrRegistryCacheAt = now;
-  } catch (e) { console.error('loadAddressRegistry failed:', e.message); }
-  return addrRegistryCache;
-}
 
 /*
  * §23-25 документа: если на ОДНОЙ УЛИЦЕ по одному ресурсу жалуются ≥3 РАЗНЫХ
  * адреса (хотя бы 1 засчитываемый голос на каждый, в том же окне outageWindowMin,
  * что и обычный порог) — это районная проблема, а не совпадение/спам по одному
- * дому. Подтверждаем ВЕСЬ диапазон домов улицы МЕЖДУ минимальным и максимальным
- * номером среди жаловавшихся (по адресному реестру map/addresses.json — значит,
- * включая и те дома, что сами не жаловались вообще).
+ * дому. Кластер СНИЖАЕТ ПОРОГ для самих жаловавшихся адресов: одного голоса
+ * на адрес достаточно, если рядом по той же улице жалуются ещё минимум двое.
+ *
+ * ⚠️ Подтверждаются ТОЛЬКО заявленные адреса — дома между ними инцидентов НЕ
+ * получают (см. большой комментарий в теле функции: было наоборот и давало
+ * ложные «отключения» у домов, которые никто не заявлял).
  *
  * ⚠️ НЕЗАВИСИМО от обычного per-address порога в evaluate(): конкретный адрес,
  * на который пришёл ЭТОТ report, мог не набрать свои 3 голоса в одиночку — но
@@ -204,7 +187,7 @@ async function evaluateAreaCluster(address, utility_type) {
   const qualifying = [];   // адреса НА ЭТОЙ УЛИЦЕ с ≥1 засчитываемым голосом
   const allActors = new Set();   // ⚠️ см. ниже — против «1 человек, 3 адреса»
   for (const [addr, actors] of byAddress) {
-    const { street, house } = splitAddress(addr);
+    const { street } = splitAddress(addr);
     if (normStreet(street) !== targetKey) continue;
     const perIp = new Map();
     let countable = 0;
@@ -217,7 +200,7 @@ async function evaluateAreaCluster(address, utility_type) {
       countable++;
       allActors.add(actorKey);
     }
-    if (countable >= 1) qualifying.push({ address: addr, num: houseNum(house) });
+    if (countable >= 1) qualifying.push({ address: addr });
   }
   // ⚠️ Порог «≥3 адреса» сам по себе НЕ защищает от одного человека, который
   // разными адресами (не сменой cookie — тем же actor_key) шлёт по 1 жалобе на
@@ -226,34 +209,31 @@ async function evaluateAreaCluster(address, utility_type) {
   // район с реальной проблемой почти всегда даёт разных людей по разным домам.
   if (qualifying.length < AREA_CLUSTER_MIN_ADDRESSES || allActors.size < AREA_CLUSTER_MIN_ADDRESSES) return [];
 
-  const nums = qualifying.map((q) => q.num).filter((n) => n != null);
-  if (!nums.length) return [];
-  const minNum = Math.min(...nums), maxNum = Math.max(...nums);
-
-  const registry = await loadAddressRegistry();
-  if (!registry) return [];
-  let houses = null;
-  for (const key of Object.keys(registry)) {
-    if (normStreet(key) === targetKey) { houses = registry[key]; break; }
-  }
-  if (!houses) return [];
-
-  const inRange = houses.filter(([house]) => {
-    const n = houseNum(house);
-    return n != null && n >= minNum && n <= maxNum;
-  });
-  if (!inRange.length || inRange.length > AREA_CLUSTER_MAX_HOUSES) return [];
-
+  // ⚠️⚠️ ПЕРЕДЕЛАНО ПОСЛЕ ЖИВОГО ФИДБЕКА (риск ложных отключений на публичной
+  // карте). Раньше здесь подтверждался ВЕСЬ диапазон домов между жалобами — по
+  // адресному реестру, по НОМЕРУ дома. Два изъяна, оба видны на карте:
+  //  1) дом, который НИКТО не заявлял, получал полноценный ACTIVE-инцидент и
+  //     карточку «ЧТО ОТКЛЮЧЕНО ПО АДРЕСУ» — то есть утверждение о факте, за
+  //     которым нет ни официального наряда, ни свидетельства жителя;
+  //  2) «диапазон по номеру дома» — это линия вдоль улицы, а не зона аварии:
+  //     номера идут не по кругу и не по подстанции, соседний двор мог попасть,
+  //     а дом напротив — нет.
+  // Теперь подтверждаем ТОЛЬКО адреса, по которым реально пришла жалоба
+  // (qualifying — у каждого есть минимум одно свидетельство жителя). Дома
+  // МЕЖДУ ними и вокруг них — исключительно визуальная подсказка «возможно»
+  // (ghost-маркеры, map/app.js:computeGhostHouses), incidents для них не
+  // создаются. Официальные источники (парсер) как были, так и остаются
+  // единственным способом показать отключение как подтверждённый факт без
+  // участия жителей.
   const now = new Date().toISOString();
   const created = [];
-  for (const [house] of inRange) {
-    const fullAddress = `${targetStreet}, ${house}`;
-    const existingIncident = await getActiveIncident(fullAddress, utility_type);
+  for (const q of qualifying) {
+    const existingIncident = await getActiveIncident(q.address, utility_type);
     if (existingIncident) continue;   // уже активно (в т.ч. вручную) — не трогаем
     let inc;
     try {
       [inc] = await insert('incidents', {
-        address: fullAddress, utility_type, status: 'ACTIVE', confirmation_type: 'COMMUNITY',
+        address: q.address, utility_type, status: 'ACTIVE', confirmation_type: 'COMMUNITY',
         first_reported_at: now, confirmed_at: now,
         // «До конца дня» вместо бессрочного «Восстановят —»: автоподтверждение
         // без даты выглядело как гарантия «сломано неизвестно на сколько».
@@ -261,9 +241,9 @@ async function evaluateAreaCluster(address, utility_type) {
         // sweepExpiredOverrides теперь снимает и без manual_override, см. там же.
         manual_override_until: endOfDayPavlodar(),
       });
-    } catch (e) { console.error('evaluateAreaCluster insert failed for', fullAddress, ':', e.message); continue; }
+    } catch (e) { console.error('evaluateAreaCluster insert failed for', q.address, ':', e.message); continue; }
     await log(inc.id, 'AUTO_CONFIRM_AREA_CLUSTER', {
-      triggerAddresses: qualifying.map((q) => q.address), rangeMin: minNum, rangeMax: maxNum,
+      triggerAddresses: qualifying.map((x) => x.address),
     });
     created.push(inc);
   }
