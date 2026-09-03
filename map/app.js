@@ -342,8 +342,13 @@ const GHOST_MAX = 5000;       // потолок на всякий случай (
 const coordKey = (lat, lng) => lat.toFixed(5) + '_' + lng.toFixed(5);
 
 async function computeGhostHouses() {
-  // Подтверждённые ДЕЙСТВУЮЩИЕ точки + координаты уже известных домов (под ними
-  // ghost не нужен — там уже есть настоящий пин).
+  // Точки-источники (действующие И плановые) + координаты уже известных домов
+  // (под ними ghost не нужен — там уже есть настоящий пин).
+  // ⚠️ Берём и 'future' тоже: у электричества большинство нарядов — ПЛАНОВЫЕ от
+  // официального источника, они висят как future до наступления времени. Пока
+  // считали только 'current', вокруг жёлтых плановых пинов не появлялось ни
+  // одной подсказки — ровно то, на что жаловался владелец («у воды круги есть,
+  // у света нет»). Соседний дом планового отключения рискует ровно так же.
   const confirmed = [];           // {lat, lng, resource, h}
   const knownCoords = new Set();  // ⚠️ дедуп по КООРДИНАТАМ, а не по адресу: один
   // и тот же дом в data.json и addresses.json бывает записан по-разному
@@ -352,7 +357,7 @@ async function computeGhostHouses() {
   DATA.houses.forEach((h) => {
     knownCoords.add(coordKey(h.lat, h.lng));
     h.outages.forEach((o) => {
-      if (o.status === 'current') confirmed.push({ lat: h.lat, lng: h.lng, resource: o.resource, h });
+      if (o.status !== 'past') confirmed.push({ lat: h.lat, lng: h.lng, resource: o.resource, h });
     });
   });
   if (!confirmed.length) { GHOSTS = []; return; }
@@ -586,12 +591,11 @@ function renderMarkers() {
 
   if (individual) {
     houses.forEach((h) => addHouseMarker(h));
-    // Ghost-маркеры уважают те же фильтры ресурса/времени, что и обычные пины —
-    // иначе снятая в панели "Электричество" всё равно оставляла бы жёлтые точки.
-    if (state.time !== 'future') {
-      GHOSTS.filter((g) => state.resources.has(g.resource) && vb.contains([g.lat, g.lng]))
-        .forEach((g) => addGhostMarker(g));
-    }
+    // Ghost-маркеры уважают фильтр ресурса (снятое в панели "Электричество" не
+    // должно оставлять жёлтые точки). Фильтр времени НЕ применяем: подсказка
+    // строится и вокруг плановых нарядов тоже (см. computeGhostHouses).
+    GHOSTS.filter((g) => state.resources.has(g.resource) && vb.contains([g.lat, g.lng]))
+      .forEach((g) => addGhostMarker(g));
   } else {
     const cell = z >= 14 ? 0.004 : z >= 13 ? 0.008 : z >= 12 ? 0.016 : 0.03;
     const grid = new Map();
