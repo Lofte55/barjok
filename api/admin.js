@@ -25,13 +25,23 @@ const BODY = `
       </div>
       <input name="reason" placeholder="причина (необязательно)" style="flex:1;min-width:180px">
       <div class="csel" data-csel>
-        <select name="duration_days" title="Срок автовосстановления">
+        <select name="duration_days" title="Срок автовосстановления" id="newDurationSel">
           <option value="eod" selected>До конца дня (в 00:00)</option>
           <option value="1">Восстановится через 1 день</option>
           <option value="5">Восстановится через 5 дней</option>
+          <option value="custom">Своё значение…</option>
           <option value="0">Без даты (вручную)</option>
         </select>
       </div>
+      <span id="newCustomDurationWrap" style="display:none;gap:6px;align-items:center">
+        <input type="number" name="duration_custom_value" min="1" max="999" placeholder="8" style="width:64px">
+        <div class="csel" data-csel>
+          <select name="duration_custom_unit">
+            <option value="hours">часы</option>
+            <option value="days">дни</option>
+          </select>
+        </div>
+      </span>
       <button type="submit">Принудительно отключить</button>
     </form>
   </div>
@@ -121,12 +131,21 @@ function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 // когда админ жмёт "Подтвердить" в списке жалоб и не задумывается об этом
 // селекте рядом — раньше по умолчанию срок оставался пустым, и запись висела
 // "Восстановят —" бессрочно. "Без даты" всё ещё доступна как осознанный выбор.
+// "Своё значение" — число + часы/дни, рядом с основным селектом, скрыты по
+// умолчанию (см. слушатель change на .dur-sel ниже — общий делегированный,
+// строки рендерятся динамически). Обычные <select>/<input>, не .csel — та же
+// причина, что и у dur-sel самого (см. комментарий выше).
 function durationSelectHtml() {
   return '<select class="dur-sel" data-duration title="Срок автовосстановления">' +
     '<option value="eod" selected>До конца дня</option>' +
     '<option value="1">1 день</option>' +
     '<option value="5">5 дней</option>' +
+    '<option value="custom">Своё значение…</option>' +
     '<option value="0">Без даты</option>' +
+    '</select>' +
+    '<input type="number" class="dur-custom-val" data-duration-value min="1" max="999" placeholder="8" style="display:none">' +
+    '<select class="dur-custom-unit" data-duration-unit style="display:none">' +
+    '<option value="hours">часы</option><option value="days">дни</option>' +
     '</select>';
 }
 
@@ -269,6 +288,25 @@ document.getElementById('resourceFilter').addEventListener('change', render);
 document.getElementById('cityFilter').addEventListener('change', render);
 document.getElementById('exportCsv').addEventListener('click', downloadCsv);
 document.getElementById('refreshBtn').addEventListener('click', load);
+
+// "Своё значение" в форме "Принудительно отключить" — показать/скрыть поле
+// числа + селект часы/дни рядом с основным .csel (тот дублирует change на
+// native <select>, см. buildCsel в admin-layout.js — слушаем именно его).
+const newDurationSel = document.getElementById('newDurationSel');
+const newCustomWrap = document.getElementById('newCustomDurationWrap');
+newDurationSel.addEventListener('change', () => {
+  newCustomWrap.style.display = newDurationSel.value === 'custom' ? 'inline-flex' : 'none';
+});
+// То же для динамических .dur-sel в строках таблицы (durationSelectHtml()) —
+// делегированный слушатель, строки перерисовываются на каждый load()/render().
+document.getElementById('rows').addEventListener('change', (e) => {
+  if (!e.target.classList.contains('dur-sel')) return;
+  const show = e.target.value === 'custom' ? 'inline-block' : 'none';
+  const val = e.target.parentElement.querySelector('.dur-custom-val');
+  const unit = e.target.parentElement.querySelector('.dur-custom-unit');
+  if (val) val.style.display = show;
+  if (unit) unit.style.display = show;
+});
 // Автообновление раз в 60с — жалобы приходят в реальном времени, страница
 // раньше загружала список один раз при открытии и больше не обновляла его.
 setInterval(load, 60000);
@@ -299,9 +337,14 @@ document.getElementById('newForm').addEventListener('submit', async (e) => {
   try {
     await api('/api/admin-api', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action: 'force_outage', address: f.get('address'), utility_type: f.get('utility_type'), reason: f.get('reason'), duration_days: f.get('duration_days') }),
+      body: JSON.stringify({
+        action: 'force_outage', address: f.get('address'), utility_type: f.get('utility_type'), reason: f.get('reason'),
+        duration_days: f.get('duration_days'),
+        duration_custom_value: f.get('duration_custom_value'), duration_custom_unit: f.get('duration_custom_unit'),
+      }),
     });
     e.target.reset();
+    newCustomWrap.style.display = 'none';
     await load();
   } catch (err) { alert('Ошибка: ' + err.message); }
   btn.disabled = false;
@@ -322,11 +365,18 @@ document.getElementById('rows').addEventListener('click', async (e) => {
         body: JSON.stringify({ action: 'delete', id: Number(btn.dataset.id) }),
       });
     } else if (act === 'force_outage_again' || act === 'confirm_pending') {
-      // Селект срока — сосед кнопки в той же ячейке .actions (см. durationSelectHtml()).
+      // Селект срока + поля "Своё значение" — соседи кнопки в той же ячейке
+      // .actions (см. durationSelectHtml()).
       const durSel = btn.parentElement.querySelector('[data-duration]');
+      const durVal = btn.parentElement.querySelector('[data-duration-value]');
+      const durUnit = btn.parentElement.querySelector('[data-duration-unit]');
       await api('/api/admin-api', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'force_outage', address: btn.dataset.address, utility_type: btn.dataset.utility, duration_days: durSel ? durSel.value : '0' }),
+        body: JSON.stringify({
+          action: 'force_outage', address: btn.dataset.address, utility_type: btn.dataset.utility,
+          duration_days: durSel ? durSel.value : '0',
+          duration_custom_value: durVal ? durVal.value : '', duration_custom_unit: durUnit ? durUnit.value : '',
+        }),
       });
     } else if (act === 'reject_pending') {
       await api('/api/admin-api', {

@@ -212,16 +212,27 @@ async function handlePost(req, res) {
     if (!address || !UTILITIES.has(utility_type)) return res.status(400).json({ ok: false, error: 'bad_input' });
     // Срок автовосстановления: "без даты" (0/отсутствует) — висит, пока админ не
     // снимет вручную (старое поведение); "eod" — до 00:00 по Павлодару (см.
-    // endOfDayPavlodar); 1 или 5 — через столько дней. В обоих случаях
-    // sweepExpiredOverrides() (decision-engine.js, вызывается на каждый живой запрос)
-    // сам переведёт в RESTORED и вернёт адрес под автоматику. ⚠️ Разрешаем ТОЛЬКО эти
-    // значения — произвольный ввод с клиента не валидируем осмысленно, а эти
-    // соответствуют кнопкам в UI.
+    // endOfDayPavlodar); 1 или 5 — через столько дней; "custom" — своё число часов/
+    // дней (админ точно знает срок, напр. "на 8 часов отключили свет"). В любом
+    // случае sweepExpiredOverrides() (decision-engine.js, вызывается на каждый
+    // живой запрос) сам переведёт в RESTORED и вернёт адрес под автоматику.
     const rawDuration = String(b.duration_days || '0');
     const isEndOfDay = rawDuration === 'eod';
-    const durationDays = !isEndOfDay && [1, 5].includes(Number(rawDuration)) ? Number(rawDuration) : 0;
+    const isCustom = rawDuration === 'custom';
+    const durationDays = !isEndOfDay && !isCustom && [1, 5].includes(Number(rawDuration)) ? Number(rawDuration) : 0;
+    // ⚠️ Своё значение — единственное место здесь, где число реально приходит от
+    // клиента, а не выбирается из фиксированного списка кнопок. Валидируем: целое,
+    // положительное, единица measure — только hours/days (иначе часы по умолчанию),
+    // и жёсткий потолок 90 дней — страховка от опечатки/абсурдного ввода, который
+    // повесил бы "отключение" на публичной карте на годы вперёд.
+    const customUnit = b.duration_custom_unit === 'days' ? 'days' : 'hours';
+    const customValRaw = Math.floor(Number(b.duration_custom_value));
+    const customHours = isCustom && Number.isFinite(customValRaw) && customValRaw > 0
+      ? Math.min(customUnit === 'days' ? customValRaw * 24 : customValRaw, 90 * 24)
+      : 0;
     const now = new Date().toISOString();
     const manualOverrideUntil = isEndOfDay ? endOfDayPavlodar()
+      : isCustom ? (customHours ? new Date(Date.now() + customHours * 3600000).toISOString() : null)
       : durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null;
 
     // ⚠️ Если подтверждают cold_water/hot_water, а ПРОТИВОПОЛОЖНЫЙ ресурс уже
@@ -267,7 +278,8 @@ async function handlePost(req, res) {
       await log(supId, 'MERGED_INTO_WATER', { merged_into: incident.id });
     }
     await log(incident.id, 'MANUAL_FORCE_OUTAGE', {
-      reason, duration_days: isEndOfDay ? 'eod' : (durationDays || null),
+      reason,
+      duration_days: isEndOfDay ? 'eod' : isCustom ? `custom:${customValRaw}${customUnit}` : (durationDays || null),
       merged_from: supersededIds.length ? supersededIds : null,
     });
     return res.status(200).json({ ok: true, incident });

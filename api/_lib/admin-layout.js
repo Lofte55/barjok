@@ -41,7 +41,10 @@ const STYLE = `
   .b-new { background: #1a2f47; color: #6ab6ff; }
   .muted { color: #6b7280; }
   .actions button { margin-right: 6px; margin-bottom: 4px; }
-  .actions select.dur-sel { margin-right: 6px; margin-bottom: 4px; padding: 6px 8px; font-size: 12.5px; vertical-align: middle; }
+  .actions select.dur-sel, .actions input.dur-custom-val, .actions select.dur-custom-unit
+    { margin-right: 6px; margin-bottom: 4px; padding: 6px 8px; font-size: 12.5px; vertical-align: middle;
+      background: #0f1115; border: 1px solid #2c3140; color: #e7e9ee; border-radius: 8px; }
+  .actions input.dur-custom-val { width: 60px; }
   .empty { color: #6b7280; padding: 20px 0; text-align: center; }
   .soon { text-align: center; padding: 60px 20px; color: #6b7280; }
   .soon b { color: #9aa2b1; display: block; margin-bottom: 6px; font-size: 15px; }
@@ -77,7 +80,8 @@ const STYLE = `
     tbody tr td:empty, tbody tr td[data-label]:has(> :only-child:empty) { display: none; }
     tbody tr td.actions { padding-top: 8px; border-top: 1px solid #232733; margin-top: 4px; }
     tbody tr td.actions:before { display: none; }
-    tbody tr td.actions button, tbody tr td.actions select.dur-sel { font-size: 13px; }
+    tbody tr td.actions button, tbody tr td.actions select.dur-sel,
+    tbody tr td.actions input.dur-custom-val, tbody tr td.actions select.dur-custom-unit { font-size: 13px; }
   }
 
   /* ============ .csel — кастомный (не системный) select, тёмная тема ============
