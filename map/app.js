@@ -345,12 +345,15 @@ const GHOST_RADIUS_M = 150;   // «во дворе/соседний дом» —
 const GHOST_SAME_STREET_M = 350;
 const GHOST_CELL = 0.002;     // ~200 м: ячейка грид-индекса для быстрого поиска соседей
 const GHOST_CELL_SPAN = 2;    // ±2 ячейки ≈ 400 м — покрывает GHOST_SAME_STREET_M
-// ⚠️ Потолок — ПО КАЖДОМУ РЕСУРСУ ОТДЕЛЬНО, не общий. Общий (5000 на всех)
-// приводил к голоданию: в data.json сейчас ~1600 точек и ВСЕ они электричество
-// (официальные плановые наряды), а вода приходит из живого слоя и попадает в
-// КОНЕЦ DATA.houses — электричество выбирало весь лимит раньше, чем очередь
-// доходила до воды, и круги воды пропадали с карты целиком.
-const GHOST_MAX_PER_RESOURCE = 2500;
+// ⚠️ Потолок ОБЩИЙ и намеренно большой — только чтобы память не росла без границ.
+// Прежние варианты (5000 на всех, потом 2500 НА РЕСУРС) молча резали подсказки:
+// в data.json ~1600 точек официальных ПЛАНОВЫХ нарядов, они идут первыми, а живые
+// жалобы жителей дописываются в КОНЕЦ DATA.houses — лимит выбирался до них, и
+// вокруг реальных аварий подсказок не появлялось вообще (живой кейс: «Катаева,
+// 15/17/35» — жалобы есть, кругов вокруг нет). Живые точки теперь ещё и идут
+// первыми в очереди (см. сортировку ниже) — они важнее плановых.
+const GHOST_MAX_TOTAL = 20000;
+const GHOST_CHUNK = 250;      // точек за один проход, между порциями отдаём поток UI
 const coordKey = (lat, lng) => lat.toFixed(5) + '_' + lng.toFixed(5);
 
 async function computeGhostHouses() {
@@ -369,10 +372,14 @@ async function computeGhostHouses() {
   DATA.houses.forEach((h) => {
     knownCoords.add(coordKey(h.lat, h.lng));
     h.outages.forEach((o) => {
-      if (o.status !== 'past') confirmed.push({ lat: h.lat, lng: h.lng, resource: o.resource, h });
+      if (o.status !== 'past') confirmed.push({ lat: h.lat, lng: h.lng, resource: o.resource, h, live: !!o.live });
     });
   });
   if (!confirmed.length) { GHOSTS = []; return; }
+  // Живые подтверждения (жалобы жителей / админка) — вперёд плановых нарядов:
+  // если упрёмся в GHOST_MAX_TOTAL, обрезать должно плановое будущее, а не
+  // происходящую прямо сейчас аварию.
+  confirmed.sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
 
   const idx = await loadAddresses();
   if (!idx) { GHOSTS = []; return; }
@@ -396,9 +403,13 @@ async function computeGhostHouses() {
   // электричество, и авария по воде, а карточка показывала «РЯДОМ: 1 СИСТЕМА»
   // (что попалось первым — обычно электричество, оно идёт первым в data.json).
   const out = new Map();          // "адрес|ресурс" → {address, lat, lng, resource, color, nearHouse}
-  const perResource = new Map();  // ресурс → сколько уже набрали (см. GHOST_MAX_PER_RESOURCE)
-  for (const c of confirmed) {
-    if ((perResource.get(c.resource) || 0) >= GHOST_MAX_PER_RESOURCE) continue;
+  for (let n = 0; n < confirmed.length; n++) {
+    // Порциями, с уступкой потока: полный проход по всем точкам занимает ~250 мс,
+    // одним куском это заметная пауза интерфейса (расчёт идёт уже после первой
+    // отрисовки карты, но пользователь в этот момент может её листать).
+    if (n && n % GHOST_CHUNK === 0) await new Promise((r) => setTimeout(r, 0));
+    if (out.size >= GHOST_MAX_TOTAL) break;
+    const c = confirmed[n];
     const cSkey = streetPairKey(streetName(c.h.address));
     const ci = Math.round(c.lat / GHOST_CELL), cj = Math.round(c.lng / GHOST_CELL);
     for (let di = -GHOST_CELL_SPAN; di <= GHOST_CELL_SPAN; di++) {
@@ -422,7 +433,6 @@ async function computeGhostHouses() {
             address, lat: a.lat, lng: a.lng, resource: c.resource,
             color: RESOURCES[c.resource].color, nearHouse: c.h,
           });
-          perResource.set(c.resource, (perResource.get(c.resource) || 0) + 1);
         }
       }
     }
