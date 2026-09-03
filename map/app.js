@@ -692,7 +692,7 @@ function houseCardHtml(h) {
   }).join('');
   return `<div class="house-card">
     <div class="hc-head">
-      <div class="hc-addr">${esc(h.address)}</div>
+      <div class="hc-addr">${esc(displayAddress(h.address))}</div>
       ${h.district ? `<div class="hc-district">${esc(h.district)}</div>` : ''}
     </div>
     <div class="hc-sum"><span class="hc-off">${t().whatsOff}: ${outs.length} ${systemsWord(outs.length)}</span></div>
@@ -865,7 +865,7 @@ function listCardHtml(h) {
       <div class="lc-chips">${chips}${outs.length > 4 ? `<span class="rc more">+${outs.length - 4}</span>` : ''}</div>
       ${emerg ? `<span class="badge emergency">${t().emergency}</span>` : ''}
     </div>
-    <div class="lc-addr">${esc(h.address)}</div>
+    <div class="lc-addr">${esc(displayAddress(h.address))}</div>
     <div class="lc-meta">${h.district ? esc(h.district) + ' · ' : ''}${t().to} ${fmtDate(soonest)}</div>
   </div>`;
 }
@@ -933,9 +933,62 @@ function loadAddresses() {
   if (ADDR) return Promise.resolve(ADDR);
   if (!addrLoading) {
     addrLoading = fetch('/map/addresses.json').then((r) => r.ok ? r.json() : {})
-      .then((j) => { ADDR = j; return j; }).catch(() => (ADDR = {}));
+      .then((j) => { ADDR = j; STREET_NAMES = null; return j; }).catch(() => (ADDR = {}));
   }
   return addrLoading;
+}
+
+/* ---------- Название улицы на языке интерфейса ----------
+ * Одна и та же улица лежит в реестре ДВУМЯ ключами («Набережная улица» и
+ * «Набережная көшесі»), причём дома распределены между ними: дом 1 может быть
+ * только в казахском варианте. Поиск (addressSuggestions) специально НЕ
+ * отбрасывает «чужой» вариант — иначе такой дом не найти вообще. Но ПОКАЗЫВАТЬ
+ * его нужно на языке интерфейса, иначе в русском списке вперемешку «Набережная
+ * көшесі, 1» и «Набережная улица, 11». Здесь и подменяем — только ОТОБРАЖЕНИЕ;
+ * исходный address остаётся как есть, на нём завязаны сопоставление адресов
+ * (sameAddress/outagesNear) и форма «Уведомить BARJOK». */
+/* ⚠️ СВОЙ ключ, не normStreet(): тот снимает тип улицы только В НАЧАЛЕ строки
+   («улица Ломова»), а у RU/KZ-пары тип стоит в РАЗНЫХ местах — «Набережная
+   улица» и «Набережная көшесі». По normStreet они дают разные ключи и в пару
+   не сходятся. Здесь тип снимается где угодно, слова стеммятся, ключ — самое
+   длинное значимое слово (обычно фамилия). Та же схема, что в
+   parser/lib/buildings.js:normStreet — но копию завести пришлось: map/app.js
+   грузится в браузер без бандлера и require оттуда невозможен. */
+const STREET_TYPES = ['улица', 'ул', 'проспект', 'пр', 'пр-т', 'переулок', 'пер', 'бульвар',
+  'б-р', 'площадь', 'пл', 'шоссе', 'аллея', 'тупик', 'микрорайон', 'мкр', 'квартал',
+  'көшесі', 'даңғылы', 'алаңы', 'тұйығы', 'шағын', 'ауданы'];
+const STREET_STOP = ['академик', 'академика', 'генерал', 'генерала', 'батыр', 'батыра', 'имени'];
+function streetPairKey(name) {
+  const words = String(name || '').toLowerCase().replace(/ё/g, 'е')
+    .replace(/[.,()«»"']/g, ' ').replace(/-/g, ' ').split(/\s+/).filter(Boolean)
+    .filter((w) => !STREET_TYPES.includes(w))
+    .map((w) => { const st = w.replace(/(ского|ская|ские|ина|ыны|ая|ой|ый|ого|ому|ым|ых|а|я|ы|и|о|е|у)$/i, ''); return st.length >= 3 ? st : w; })
+    .filter((w) => w.length >= 3 && !STREET_STOP.includes(w));
+  if (!words.length) return '';
+  return words.slice().sort((a, b) => b.length - a.length)[0];
+}
+
+let STREET_NAMES = null;   // streetPairKey → { ru: '…', kk: '…' }
+function buildStreetNames() {
+  STREET_NAMES = new Map();
+  const add = (name) => {
+    const k = streetPairKey(name);
+    if (!k) return;
+    const rec = STREET_NAMES.get(k) || {};
+    const lang = streetLangOf(name);
+    if (!rec[lang]) { rec[lang] = name; STREET_NAMES.set(k, rec); }
+  };
+  Object.keys(ADDR || {}).forEach(add);
+  (DATA.houses || []).forEach((h) => add(streetName(h.address)));
+}
+function displayStreet(street) {
+  if (!STREET_NAMES) buildStreetNames();
+  const rec = STREET_NAMES.get(streetPairKey(street));
+  return (rec && rec[LANG]) || street;   // нет варианта на нужном языке — лучше чужой, чем ничего
+}
+function displayAddress(address) {
+  const m = String(address || '').match(/^(.*?),\s*([^,]+)$/);
+  return m ? `${displayStreet(m[1].trim())}, ${m[2].trim()}` : address;
 }
 /* Подсказки из справочника: «Павлова 38» → улица Павлова, 38 / 38/1 / 38а.
    ⚠️ Собираем кандидатов БЕЗ раннего обрыва по limit — та же улица хранится в реестре
@@ -1000,8 +1053,9 @@ function buildSuggest(qraw, box) {
   let html = '';
   if (streetHits.length) {
     html += `<div class="sg-head">${t().streets}</div>` + streetHits.map((s) =>
+      // data-name — исходное название (по нему фильтруются дома), показываем — на языке интерфейса
       `<div class="sg" data-kind="street" data-name="${encodeURIComponent(s.name)}">
-        <span class="dot" style="background:#1f6feb"></span><span class="tt">${s.name}</span>
+        <span class="dot" style="background:#1f6feb"></span><span class="tt">${esc(displayStreet(s.name))}</span>
         <span class="tag">${s.n} ${t().houses}</span></div>`).join('');
   }
 
@@ -1032,14 +1086,16 @@ function buildSuggest(qraw, box) {
     const rows = [];
     houseHits.forEach((h) => {
       const o = cardOutages(h)[0] || h.outages[0];
-      rows.push({ kind: 'house', id: h.id, label: h.address, dot: o ? RESOURCES[o.resource].color : '#8a94a3' });
+      rows.push({ kind: 'house', id: h.id, label: displayAddress(h.address), dot: o ? RESOURCES[o.resource].color : '#8a94a3' });
     });
     addrHits.forEach((a) => {
       // ⚠️ Не подписывать «отключений нет» вслепую — сначала реально проверяем адрес.
       const near = outagesNear(a.lat, a.lng, `${a.street}, ${a.house}`);
       const hasOut = near.some((h) => cardOutages(h).length);
+      // label — на языке интерфейса (displayStreet), а data-street в атрибуте
+      // остаётся ИСХОДНЫМ: по нему потом ищется дом и строится карточка.
       rows.push({ kind: 'addr', street: a.street, house: a.house, lat: a.lat, lng: a.lng,
-        label: `${a.street}, ${a.house}`, dot: hasOut ? '#e8663d' : '#cfd6e0' });
+        label: `${displayStreet(a.street)}, ${a.house}`, dot: hasOut ? '#e8663d' : '#cfd6e0' });
     });
 
     if (rows.length) {
@@ -1257,7 +1313,7 @@ function openAddressCard(pt, nearHouses) {
             <span class="badge ${o.citizen ? 'citizen' : o.type}">${o.citizen ? 'Сообщение жителя' : (o.type === 'emergency' ? t().emergency : t().planned)}</span></div>
           <div class="hc-when"><span class="st ${rs.cls}"></span>${t().to} <b>${fmtDate(o.end)}</b></div>
           <div class="hc-period">${t().from}: ${fmtDate(o.start)}</div>
-          ${!sameAddress(h.address, pt.address) ? `<div class="hc-period"><span class="hc-dot" style="background:${R.color}"></span>${t().nearby}: ${esc(h.address)}</div>` : ''}
+          ${!sameAddress(h.address, pt.address) ? `<div class="hc-period"><span class="hc-dot" style="background:${R.color}"></span>${t().nearby}: ${esc(displayAddress(h.address))}</div>` : ''}
           ${o.reason ? `<div class="hc-reason">${esc(o.reason)}</div>` : ''}
         </div></div>`;
     }).join('');
@@ -1268,7 +1324,7 @@ function openAddressCard(pt, nearHouses) {
   }
   const html = `<div class="house-card">
     <div class="hc-head">
-      <div class="hc-addr">${esc(pt.address)}</div>
+      <div class="hc-addr">${esc(displayAddress(pt.address))}</div>
       ${pt.district ? `<div class="hc-district">${esc(pt.district)}</div>` : ''}
     </div>
     ${outs.length ? `<div class="hc-sum">${hasExact
