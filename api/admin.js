@@ -122,31 +122,31 @@ function esc(s) { return String(s).replace(/[<&>]/g, (c) => ({ '<': '&lt;', '&':
 function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 
 // Срок автовосстановления рядом с "Подтвердить"/"Снова отключить" — читается
-// кликом по кнопке (её предыдущий sibling в той же ячейке .actions), см.
-// обработчик клика ниже. Обычный <select> (не .csel) — строки рендерятся
-// динамически ПОСЛЕ инициализации .csel при загрузке страницы, .csel не
-// подхватит их без повторного вызова инициализатора; для одной служебной
-// строки не стоит усложнять.
+// кликом по кнопке (querySelector внутри той же ячейки .actions), см.
+// обработчик клика ниже. Оба <select> обёрнуты в .csel — те же кастомные
+// (не системные) дропдауны, что и везде в админке. Строки рендерятся
+// динамически ПОСЛЕ того, как CSEL_SCRIPT уже просканировал DOM на
+// DOMContentLoaded — здесь их инициализирует сам render() ниже, вызывая
+// window.buildCsel() (см. admin-layout.js) на каждый новый [data-csel].
 // ⚠️ "До конца дня" — ДЕФОЛТ (selected), а не "Без даты": найден живой кейс,
 // когда админ жмёт "Подтвердить" в списке жалоб и не задумывается об этом
 // селекте рядом — раньше по умолчанию срок оставался пустым, и запись висела
 // "Восстановят —" бессрочно. "Без даты" всё ещё доступна как осознанный выбор.
 // "Своё значение" — число + часы/дни, рядом с основным селектом, скрыты по
 // умолчанию (см. слушатель change на .dur-sel ниже — общий делегированный,
-// строки рендерятся динамически). Обычные <select>/<input>, не .csel — та же
-// причина, что и у dur-sel самого (см. комментарий выше).
+// строки рендерятся динамически).
 function durationSelectHtml() {
-  return '<select class="dur-sel" data-duration title="Срок автовосстановления">' +
+  return '<div class="csel dur-csel" data-csel><select class="dur-sel" data-duration title="Срок автовосстановления">' +
     '<option value="eod" selected>До конца дня</option>' +
     '<option value="1">1 день</option>' +
     '<option value="5">5 дней</option>' +
     '<option value="custom">Своё значение…</option>' +
     '<option value="0">Без даты</option>' +
-    '</select>' +
+    '</select></div>' +
     '<input type="number" class="dur-custom-val" data-duration-value min="1" max="999" placeholder="8" style="display:none">' +
-    '<select class="dur-custom-unit" data-duration-unit style="display:none">' +
+    '<div class="csel dur-csel" data-csel style="display:none"><select class="dur-custom-unit" data-duration-unit>' +
     '<option value="hours">часы</option><option value="days">дни</option>' +
-    '</select>';
+    '</select></div>';
 }
 
 function currentFilters() {
@@ -243,6 +243,11 @@ function render() {
       '<td data-label="Действия" class="actions">' + actions.join('') + '</td>' +
       '</tr>';
   }).join('');
+  // Динамически вставленные [data-csel] (durationSelectHtml()) не попали в
+  // сканирование на DOMContentLoaded (admin-layout.js) — инициализируем сами.
+  // buildCsel сам пропускает уже готовые (data-cselReady), повторный вызов
+  // на каждый render() безопасен.
+  if (window.buildCsel) rows.querySelectorAll('[data-csel]').forEach(window.buildCsel);
 }
 
 function csvEscape(s) {
@@ -299,13 +304,21 @@ newDurationSel.addEventListener('change', () => {
 });
 // То же для динамических .dur-sel в строках таблицы (durationSelectHtml()) —
 // делегированный слушатель, строки перерисовываются на каждый load()/render().
+// ⚠️ .dur-sel теперь ВНУТРИ .csel (см. durationSelectHtml()) — ближайший
+// общий контейнер с полем числа и селектом единицы это ячейка <td>, а не
+// e.target.parentElement (это уже сам .csel). Для .dur-custom-unit скрывать
+// нужно её .csel-обёртку целиком, иначе кастомная кнопка останется видна
+// поверх скрытого системного <select>.
 document.getElementById('rows').addEventListener('change', (e) => {
   if (!e.target.classList.contains('dur-sel')) return;
+  const td = e.target.closest('td');
+  if (!td) return;
   const show = e.target.value === 'custom' ? 'inline-block' : 'none';
-  const val = e.target.parentElement.querySelector('.dur-custom-val');
-  const unit = e.target.parentElement.querySelector('.dur-custom-unit');
+  const val = td.querySelector('.dur-custom-val');
+  const unitSel = td.querySelector('.dur-custom-unit');
+  const unitWrap = unitSel ? unitSel.closest('.csel') : null;
   if (val) val.style.display = show;
-  if (unit) unit.style.display = show;
+  if (unitWrap) unitWrap.style.display = show;
 });
 // Автообновление раз в 60с — жалобы приходят в реальном времени, страница
 // раньше загружала список один раз при открытии и больше не обновляла его.
