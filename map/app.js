@@ -336,8 +336,15 @@ async function applyLiveLayer() {
  * расстояние в метрах от подтверждённой точки, без участия названий улиц.
  */
 let GHOSTS = [];
-const GHOST_RADIUS_M = 150;   // «во дворе/соседний дом» — не весь квартал
+const GHOST_RADIUS_M = 150;   // «во дворе/соседний дом» — не весь квартал, любая улица
+// ⚠️ ДОЛЖНО СОВПАДАТЬ с правилом outagesNear() (та же улица, d < 0.35 км) — именно
+// оно решает, что покажет КАРТОЧКА при клике по карте/выборе адреса в поиске. Пока
+// у маркеров был только радиус 150 м, дом на той же улице в 150–350 м открывал
+// карточку «РЯДОМ НА ЭТОЙ УЛИЦЕ», но пиктограммы под ним на карте не было —
+// состояние есть, а значка нет (живой кейс: «улица Катаева, 29»).
+const GHOST_SAME_STREET_M = 350;
 const GHOST_CELL = 0.002;     // ~200 м: ячейка грид-индекса для быстрого поиска соседей
+const GHOST_CELL_SPAN = 2;    // ±2 ячейки ≈ 400 м — покрывает GHOST_SAME_STREET_M
 // ⚠️ Потолок — ПО КАЖДОМУ РЕСУРСУ ОТДЕЛЬНО, не общий. Общий (5000 на всех)
 // приводил к голоданию: в data.json сейчас ~1600 точек и ВСЕ они электричество
 // (официальные плановые наряды), а вода приходит из живого слоя и попадает в
@@ -374,10 +381,13 @@ async function computeGhostHouses() {
   // сканировать весь реестр на каждую подтверждённую точку.
   const grid = new Map();
   for (const street of Object.keys(idx)) {
+    // Ключ улицы считаем ОДИН раз на улицу, а не на каждый адрес: дальше по нему
+    // сверяем «та же улица» вместо дорогого streetMatches() на каждую пару.
+    const skey = streetPairKey(street);
     for (const [house, lat, lng] of idx[street] || []) {
       const key = Math.round(lat / GHOST_CELL) + '_' + Math.round(lng / GHOST_CELL);
       if (!grid.has(key)) grid.set(key, []);
-      grid.get(key).push({ street, house, lat, lng });
+      grid.get(key).push({ street, house, lat, lng, skey });
     }
   }
 
@@ -389,15 +399,18 @@ async function computeGhostHouses() {
   const perResource = new Map();  // ресурс → сколько уже набрали (см. GHOST_MAX_PER_RESOURCE)
   for (const c of confirmed) {
     if ((perResource.get(c.resource) || 0) >= GHOST_MAX_PER_RESOURCE) continue;
+    const cSkey = streetPairKey(streetName(c.h.address));
     const ci = Math.round(c.lat / GHOST_CELL), cj = Math.round(c.lng / GHOST_CELL);
-    for (let di = -1; di <= 1; di++) {
-      for (let dj = -1; dj <= 1; dj++) {
+    for (let di = -GHOST_CELL_SPAN; di <= GHOST_CELL_SPAN; di++) {
+      for (let dj = -GHOST_CELL_SPAN; dj <= GHOST_CELL_SPAN; dj++) {
         const cell = grid.get((ci + di) + '_' + (cj + dj));
         if (!cell) continue;
         for (const a of cell) {
           if (knownCoords.has(coordKey(a.lat, a.lng))) continue;   // уже настоящий пин
           const d = Math.hypot((a.lat - c.lat) * 111000, (a.lng - c.lng) * 68000);
-          if (d > GHOST_RADIUS_M) continue;
+          // Либо физически рядом (любая улица), либо ТА ЖЕ улица чуть дальше —
+          // второе повторяет правило outagesNear(), по которому строится карточка.
+          if (d > GHOST_RADIUS_M && !(d <= GHOST_SAME_STREET_M && cSkey && a.skey === cSkey)) continue;
           const address = `${a.street}, ${a.house}`;
           const key = address + '|' + c.resource;
           if (out.has(key)) continue;
