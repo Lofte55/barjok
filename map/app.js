@@ -1105,6 +1105,7 @@ function streetKeyWords(name) {
     .map(streetStem).filter(Boolean);
 }
 const streetKey = (name) => streetKeyWords(name).slice().sort().join(' ');
+const exactKey = (name) => String(name || '').toLowerCase().replace(/ё/g, 'е').replace(/\s{2,}/g, ' ').trim();
 
 /* Производное название, когда в реестре нет варианта на нужном языке.
    Меняется ТОЛЬКО тип улицы — имя остаётся как есть («улица Камзина» →
@@ -1150,17 +1151,48 @@ function deriveStreetName(name, lang) {
    Возвращает { index, names }: index — улица (русское название) → дома,
    names — ключ улицы → { ru, kk }. */
 function mergeStreetIndex(raw) {
-  const items = Object.keys(raw || {}).map((k) => ({
-    name: k, houses: raw[k] || [], words: streetKeyWords(k), key: streetKey(k), lang: streetLangOf(k),
-    grouped: /\(/.test(k),   // «(СТ Южный)» — уточнение дачного общества, отдельная улица
-  }));
+  const items = Object.keys(raw || {}).map((k) => {
+    const houses = raw[k] || [];
+    const at = new Map();
+    houses.forEach((h) => { const n = String(h[0]).toLowerCase().replace(/\s+/g, ''); if (!at.has(n)) at.set(n, h); });
+    const mid = (i) => { const v = houses.map((h) => h[i]).sort((a, b) => a - b); return v[Math.floor(v.length / 2)] || 0; };
+    return {
+      name: k, houses, at, center: [mid(1), mid(2)],
+      words: streetKeyWords(k), key: streetKey(k), lang: streetLangOf(k),
+      grouped: /\(/.test(k),   // «(СТ Южный)» — уточнение дачного общества, отдельная улица
+    };
+  });
+  /* ⚠️ Совпадения названия МАЛО. Дачные «Рябиновая» и «Рябиновая аллея» — разные
+     улицы в разных садовых товариществах: дом 27 есть в обеих и стоит в 11 км
+     друг от друга. Слив их, мы бы потеряли реальный дом и отправили человека не
+     туда. Поэтому варианты объединяются, только если они лежат в одном месте:
+     общие номера домов совпадают по координатам, а если общих номеров нет —
+     близки середины улиц. */
+  const kmBetween = (a, b) => Math.hypot((a[0] - b[0]) * 111.2, (a[1] - b[1]) * 61);
+  function sameStreet(a, b) {
+    let shared = 0, far = 0;
+    a.at.forEach((h, n) => {
+      const o = b.at.get(n);
+      if (!o) return;
+      shared++;
+      if (kmBetween([h[1], h[2]], [o[1], o[2]]) > 0.3) far++;
+    });
+    if (shared) return far / shared < 0.5;
+    return kmBetween(a.center, b.center) < 1.5;
+  }
   const parent = new Map();
   const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
   const union = (a, b) => { a = find(a); b = find(b); if (a !== b) parent.set(a, b); };
   items.forEach((i) => parent.set(i.name, i.name));
   const byKey = new Map();
   items.forEach((i) => { const a = byKey.get(i.key) || []; a.push(i); byKey.set(i.key, a); });
-  byKey.forEach((arr) => arr.slice(1).forEach((i) => union(arr[0].name, i.name)));
+  byKey.forEach((arr) => {
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        if (find(arr[i].name) !== find(arr[j].name) && sameStreet(arr[i], arr[j])) union(arr[i].name, arr[j].name);
+      }
+    }
+  });
   /* Дополнительно — только ЧЕРЕЗ языковую границу: казахский вариант часто несёт
      лишнее слово («Қабдеш Нұркин» против «Нуркина улица», «Жүсіпбек Аймауытұлы»
      против «Аймауытова»). Внутри одного языка так сливать нельзя: «Малиновая»
@@ -1172,12 +1204,13 @@ function mergeStreetIndex(raw) {
       const aw = new Set(a.words), bw = new Set(b.words);
       const small = aw.size <= bw.size ? aw : bw, big = aw.size <= bw.size ? bw : aw;
       if (!small.size || ![...small].some((w) => w.length >= 5)) continue;   // короткие слова — слишком слабое совпадение
-      if ([...small].every((w) => big.has(w))) union(a.name, b.name);
+      if ([...small].every((w) => big.has(w)) && sameStreet(a, b)) union(a.name, b.name);
     }
   }
   const groups = new Map();
   items.forEach((i) => { const r = find(i.name); const g = groups.get(r) || []; g.push(i); groups.set(r, g); });
   const index = {}, names = new Map();
+  // exactKey — точное название, приведённое к сравнимому виду (регистр, ё, пробелы)
   groups.forEach((g) => {
     // Дома всех вариантов в один список; дубли по номеру схлопываем, координаты
     // берём у первого варианта (они у дублей совпадают с точностью до метров).
@@ -1196,8 +1229,15 @@ function mergeStreetIndex(raw) {
     const ru = ruItem ? ruItem.name : deriveStreetName(kkItem.name, 'ru');
     const kk = kkItem ? kkItem.name : deriveStreetName(ru, 'kk');
     index[ru] = houses;
-    names.set(streetKey(ru), { ru, kk });
-    if (kkItem) names.set(streetKey(kkItem.name), { ru, kk });   // ключи вариантов могут отличаться
+    const rec = { ru, kk, n: houses.length };
+    // По ТОЧНОМУ названию — каждый вариант из реестра: «Рябиновая» и «Рябиновая
+    // аллея» имеют одинаковый ключ, но это РАЗНЫЕ улицы (см. sameStreet выше),
+    // и подменять одно название другим нельзя.
+    g.forEach((i) => names.set(exactKey(i.name), rec));
+    // По ключу — как запасной путь для написаний, которых нет в реестре (адреса
+    // из data.json). При совпадении ключа выигрывает улица с бо́льшим числом домов.
+    const cur = names.get(streetKey(ru));
+    if (!cur || cur.n < rec.n) names.set(streetKey(ru), rec);
   });
   return { index, names };
 }
@@ -1261,7 +1301,7 @@ function displayStreet(street) {
   // названия на табличке уже нет.
   const ren = renameOf(street);
   if (ren) return ren.display;
-  const rec = STREET_NAMES && STREET_NAMES.get(streetKey(street));
+  const rec = STREET_NAMES && (STREET_NAMES.get(exactKey(street)) || STREET_NAMES.get(streetKey(street)));
   if (rec && rec[LANG]) return rec[LANG];
   return deriveStreetName(street, LANG);
 }
