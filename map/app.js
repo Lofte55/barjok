@@ -968,7 +968,43 @@ function normStreet(s) {
 const STREET_SPELLING_ALIASES = [
   ['дуйсембинов', 'дюсембинов'],
 ];
+
+/* ---------- ПЕРЕИМЕНОВАННЫЕ улицы ----------
+ * Город переименовал улицу, а наш адресный реестр (map/addresses.json) приходит
+ * из OSM и ещё держит старое название. Здесь решаются обе задачи сразу:
+ *   1) ПОКАЗЫВАЕМ новое имя (displayStreet ниже);
+ *   2) НАХОДИМ дом и по новому, и по старому — реестр лежит под старым, а люди
+ *      набирают то, что видят на табличке (и наоборот, годами по привычке
+ *      набирают старое).
+ * Совпадение — по streetPairKey (самое длинное значимое слово), поэтому в
+ * variants достаточно перечислить написания, а тип улицы/падеж не важны.
+ * ⚠️ Ручной список, не эвристика: переименования знает только город, вывести
+ * их из данных нельзя. Новую пару добавлять сюда. */
+const STREET_RENAMES = [
+  {
+    display: 'Мағжан Жұмабаев',
+    // старое название (как в реестре) + написания нового, включая русскую
+    // транслитерацию — по ней тоже должны находиться дома
+    variants: ['Донецкая улица', 'Мағжан Жұмабаев', 'Магжан Жумабаев', 'Жұмабаев', 'Жумабаев'],
+  },
+];
+let RENAME_BY_KEY = null;   // streetPairKey любого варианта → {canon, display}
+function renameOf(street) {
+  if (!RENAME_BY_KEY) {
+    RENAME_BY_KEY = new Map();
+    STREET_RENAMES.forEach((r) => {
+      // canon — ключ ПЕРВОГО варианта (старого, как в реестре): к нему сводим все
+      // написания, иначе два варианта дают разные ключи и не совпадают друг с другом.
+      const canon = streetPairKey(r.variants[0]);
+      r.variants.forEach((v) => { const k = streetPairKey(v); if (k) RENAME_BY_KEY.set(k, { canon, display: r.display }); });
+    });
+  }
+  return RENAME_BY_KEY.get(streetPairKey(street)) || null;
+}
+
 function canonStreet(s) {
+  const ren = renameOf(s);
+  if (ren) return ren.canon;   // и старое, и новое написание → один ключ
   const n = normStreet(s);
   for (const [canon, alt] of STREET_SPELLING_ALIASES) {
     if (n.includes(alt)) return n.replace(alt, canon);
@@ -1048,6 +1084,11 @@ function buildStreetNames() {
   (DATA.houses || []).forEach((h) => add(streetName(h.address)));
 }
 function displayStreet(street) {
+  // Переименованная городом улица — показываем НОВОЕ имя, что бы ни лежало в
+  // реестре (см. STREET_RENAMES). Это важнее выбора RU/KZ-варианта ниже: старого
+  // названия на табличке уже нет.
+  const ren = renameOf(street);
+  if (ren) return ren.display;
   if (!STREET_NAMES) buildStreetNames();
   const rec = STREET_NAMES.get(streetPairKey(street));
   return (rec && rec[LANG]) || street;   // нет варианта на нужном языке — лучше чужой, чем ничего
