@@ -159,11 +159,20 @@ function currentFilters() {
 function rowDate(r) {
   if (r.status === 'NEW') return r.latest_report_at;
   if (r.status === 'SUGGESTION') return r.created_at;
+  // ⚠️ Есть свежие жалобы после подтверждения — сортируем по НИМ, а не по дате
+  // подтверждения: иначе инцидент, подтверждённый три дня назад, оставался внизу
+  // списка, хотя люди жалуются на него сегодня (жалоба владельца).
+  if (r.status === 'ACTIVE' && r.fresh_at) return r.fresh_at;
   return r.status === 'ACTIVE' ? r.confirmed_at : r.restored_at;
 }
-// Новые жалобы И необработанные предложения — оба "требуют внимания",
-// оба сверху списка (см. сортировку ниже).
-function needsAttention(r) { return r.status === 'NEW' || (r.status === 'SUGGESTION' && !r.done); }
+// Новые жалобы, необработанные предложения И подтверждённые отключения, по
+// которым продолжают жаловаться ("не починили") — всё это требует внимания,
+// всё идёт сверху списка (см. сортировку ниже).
+function needsAttention(r) {
+  return r.status === 'NEW'
+    || (r.status === 'SUGGESTION' && !r.done)
+    || (r.status === 'ACTIVE' && r.fresh_votes > 0);
+}
 function filteredRows() {
   const f = currentFilters();
   return allRows
@@ -213,7 +222,17 @@ function render() {
       actions.push('<button class="ghost" data-act="reject_pending" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Отклонить</button>');
     } else {
       statusBadge = inc.status === 'ACTIVE' ? '<span class="badge b-active">Отключено</span>' : '<span class="badge b-restored">Восстановлено</span>';
-      confirmCell = CT[inc.confirmation_type] || inc.confirmation_type;
+      // Продолжают жаловаться после подтверждения — значит, не починили. Раньше
+      // такие жалобы админка не показывала вообще (см. loadPendingReports).
+      if (inc.status === 'ACTIVE' && inc.fresh_votes > 0) {
+        statusBadge += ' <span class="badge b-new">Жалуются снова: ' + inc.fresh_votes + '</span>';
+      }
+      confirmCell = (CT[inc.confirmation_type] || inc.confirmation_type)
+        + (inc.fresh_votes > 0
+          ? '<div class="muted">После подтверждения ещё ' + inc.fresh_votes + ' '
+            + (inc.fresh_votes === 1 ? 'сообщение' : 'сообщений') + ', последнее ' + fmt(inc.fresh_at) + '</div>'
+            + (inc.fresh_message ? '<div class="muted">' + esc(inc.fresh_message) + '</div>' : '')
+          : '');
       // manual_override_until — срок автовосстановления (см. api/admin-api.js:force_outage,
       // api/_lib/decision-engine.js:sweepExpiredOverrides). Показываем рядом с бейджем,
       // иначе после "Подтвердить → 5 дней" не видно, что вообще что-то запланировано.
@@ -279,9 +298,16 @@ function downloadCsv() {
 async function load() {
   const rows = document.getElementById('rows');
   try {
-    const { incidents, pending, suggestions } = await api('/api/admin-api');
+    const { incidents, pending, fresh, suggestions } = await api('/api/admin-api');
     const pendingRows = (pending || []).map((p) => Object.assign({ status: 'NEW' }, p));
     const suggestionRows = (suggestions || []).map((s) => Object.assign({}, s, { status: 'SUGGESTION', done: s.status === 'DONE' }));
+    // Жалобы, пришедшие ПОСЛЕ подтверждения ("не починили") — вешаем на строку
+    // самого инцидента: она и подсветится, и поднимется наверх (см. needsAttention/rowDate).
+    const freshByKey = new Map((fresh || []).map((f) => [f.address + '|' + f.utility_type, f]));
+    incidents.forEach((inc) => {
+      const f = freshByKey.get(inc.address + '|' + inc.utility_type);
+      if (f) { inc.fresh_votes = f.votes; inc.fresh_raw = f.raw_votes; inc.fresh_at = f.latest_report_at; inc.fresh_message = f.message; }
+    });
     allRows = incidents.concat(pendingRows, suggestionRows);
     render();
   } catch (e) {

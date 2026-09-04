@@ -156,30 +156,48 @@ async function loadPendingReports(incidents) {
   const reports = await select('user_reports',
     `status=eq.VALID&reported_state=eq.OUTAGE&reported_at=gte.${pendingSince()}&order=reported_at.desc&limit=1000` +
     '&select=address,utility_type,actor_key,ip_hash,reported_at,message');
-  const groups = new Map();
+  const groups = new Map();   // «Новая» — подтверждать нечего, incident'а ещё нет
+  const fresh = new Map();    // ⚠️ жалобы ПОСЛЕ подтверждения — см. ниже
+  const bump = (map, key, r) => {
+    if (!map.has(key)) map.set(key, { address: r.address, utility_type: r.utility_type, actors: new Map(), latest: r.reported_at, message: null });
+    const g = map.get(key);
+    if (!g.actors.has(r.actor_key)) g.actors.set(r.actor_key, r.ip_hash || null);
+    if (r.reported_at > g.latest) g.latest = r.reported_at;
+    if (!g.message && r.message) g.message = r.message;
+  };
   for (const r of reports || []) {
     const key = r.address + '|' + r.utility_type;
     const inc = latestByKey.get(key);
     if (inc) {
-      if (inc.status === 'ACTIVE') continue;                                    // уже подтверждено
+      // ⚠️ РАНЬШЕ здесь стоял `if (inc.status === 'ACTIVE') continue;` — и все
+      // повторные жалобы по уже подтверждённому адресу пропадали из админки
+      // бесследно. Живой кейс владельца: отключение подтверждено вчера, сегодня
+      // люди жалуются снова (не починили), а в списке пусто — строка висит внизу
+      // со вчерашней датой подтверждения, как будто ничего не происходит.
+      // Теперь такие жалобы НЕ выбрасываем, а собираем отдельно: админка
+      // покажет их на строке инцидента и поднимет её наверх (см. api/admin.js).
+      if (inc.status === 'ACTIVE') {
+        const since = inc.confirmed_at || inc.created_at;
+        if (!since || r.reported_at > since) bump(fresh, key, r);
+        continue;
+      }
       if (inc.status === 'RESTORED' && r.reported_at <= inc.restored_at) continue; // уже учтено при восстановлении
     }
-    if (!groups.has(key)) groups.set(key, { address: r.address, utility_type: r.utility_type, actors: new Map(), latest: r.reported_at, message: null });
-    const g = groups.get(key);
-    if (!g.actors.has(r.actor_key)) g.actors.set(r.actor_key, r.ip_hash || null);
-    if (r.reported_at > g.latest) g.latest = r.reported_at;
-    if (!g.message && r.message) g.message = r.message;
+    bump(groups, key, r);
   }
-  return Array.from(groups.values())
-    .map((g) => ({
-      address: g.address,
-      utility_type: g.utility_type,
-      votes: countableVotes(g.actors),
-      raw_votes: g.actors.size,
-      latest_report_at: g.latest,
-      message: g.message,
-    }))
-    .sort((a, b) => (a.latest_report_at < b.latest_report_at ? 1 : -1));
+  const shape = (g) => ({
+    address: g.address,
+    utility_type: g.utility_type,
+    votes: countableVotes(g.actors),
+    raw_votes: g.actors.size,
+    latest_report_at: g.latest,
+    message: g.message,
+  });
+  const byLatest = (a, b) => (a.latest_report_at < b.latest_report_at ? 1 : -1);
+  return {
+    pending: Array.from(groups.values()).map(shape).sort(byLatest),
+    fresh: Array.from(fresh.values()).map(shape).sort(byLatest),
+  };
 }
 
 async function handleGet(req, res) {
@@ -188,7 +206,10 @@ async function handleGet(req, res) {
   // "Отключено" ещё до минуты на следующий автообновляемый load().
   try { await sweepExpiredOverrides(); } catch (e) { console.error('sweepExpiredOverrides failed:', e.message); }
   const incidents = await select('incidents', 'order=updated_at.desc&limit=200');
-  const pending = await loadPendingReports(incidents);
+  // pending — жалобы, которые ещё нечего подтверждать; fresh — жалобы, пришедшие
+  // ПОСЛЕ подтверждения (значит, не починили) — админка вешает их на строку
+  // инцидента и поднимает её наверх.
+  const { pending, fresh } = await loadPendingReports(incidents);
   // Предложения (вкладка "Предложение" формы "Уведомление BARJOK") — раньше
   // уходили только в Telegram, теперь видны и здесь. NEW+DONE вместе (DONE —
   // для истории, как ACTIVE/RESTORED у incidents), таблицы suggestions может
@@ -196,7 +217,7 @@ async function handleGet(req, res) {
   let suggestions = [];
   try { suggestions = await select('suggestions', 'order=created_at.desc&limit=200'); }
   catch (e) { console.error('suggestions select failed:', e.message); }
-  res.status(200).json({ ok: true, incidents, pending, suggestions });
+  res.status(200).json({ ok: true, incidents, pending, fresh, suggestions });
 }
 
 async function handlePost(req, res) {
