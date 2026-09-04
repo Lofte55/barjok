@@ -284,16 +284,16 @@ async function applyLiveLayer() {
       const pq = parseQuery(a.address);
       if (!pq.street || !pq.house) return;
       const wantHouse = pq.house.toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е');
-      // ⚠️ Сверяем улицы по streetPairKey, а НЕ streetMatches: у последнего
+      // ⚠️ Сверяем улицы по streetKey, а НЕ streetMatches: у последнего
       // «Набережная улица» и «Набережная көшесі» — разные улицы (тип стоит в
       // конце, стемминг их не сводит). А в реестре одна и та же улица лежит
       // двумя ключами, и дома распределены между ними: дом «1» есть ТОЛЬКО в
       // казахском варианте. Из-за этого добавленные в админке «Набережная, 1»
       // и «Набережная, 3» вообще не появлялись на карте — инцидент есть в БД,
       // координаты не нашлись, запись молча отбрасывалась.
-      const wantStreet = streetPairKey(pq.street);
+      const wantStreet = streetKey(pq.street);
       for (const street of Object.keys(idx || {})) {
-        if (wantStreet ? streetPairKey(street) !== wantStreet : !streetMatches(street, pq.street)) continue;
+        if (wantStreet ? streetKey(street) !== wantStreet : !streetMatches(street, pq.street)) continue;
         const hit = (idx[street] || []).find(
           ([house]) => String(house).toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е') === wantHouse,
         );
@@ -407,7 +407,7 @@ async function computeGhostHouses() {
   for (const street of Object.keys(idx)) {
     // Ключ улицы считаем ОДИН раз на улицу, а не на каждый адрес: дальше по нему
     // сверяем «та же улица» вместо дорогого streetMatches() на каждую пару.
-    const skey = streetPairKey(street);
+    const skey = streetKey(street);
     for (const [house, lat, lng] of idx[street] || []) {
       const key = Math.round(lat / GHOST_CELL) + '_' + Math.round(lng / GHOST_CELL);
       if (!grid.has(key)) grid.set(key, []);
@@ -427,7 +427,7 @@ async function computeGhostHouses() {
     if (n && n % GHOST_CHUNK === 0) await new Promise((r) => setTimeout(r, 0));
     if (out.size >= GHOST_MAX_TOTAL) break;
     const c = confirmed[n];
-    const cSkey = streetPairKey(streetName(c.h.address));
+    const cSkey = streetKey(streetName(c.h.address));
     const ci = Math.round(c.lat / GHOST_CELL), cj = Math.round(c.lng / GHOST_CELL);
     for (let di = -GHOST_CELL_SPAN; di <= GHOST_CELL_SPAN; di++) {
       for (let dj = -GHOST_CELL_SPAN; dj <= GHOST_CELL_SPAN; dj++) {
@@ -1045,6 +1045,163 @@ function streetMatches(candidate, query) {
   return bw.every((w) => aw.some((x) => x.startsWith(w) || w.startsWith(x)));
 }
 
+/* Слова-типы улиц и служебные слова — общий словарь для streetKey (ниже) и
+   streetPairKey (переименования). */
+const STREET_TYPES = ['улица', 'ул', 'проспект', 'пр', 'пр-т', 'переулок', 'пер', 'бульвар',
+  'б-р', 'площадь', 'пл', 'шоссе', 'аллея', 'тупик', 'микрорайон', 'мкр', 'квартал',
+  'көшесі', 'даңғылы', 'алаңы', 'тұйығы', 'шағын', 'ауданы'];
+const STREET_STOP = ['академик', 'академика', 'генерал', 'генерала', 'батыр', 'батыра', 'имени'];
+
+/* ---------- ОДНА УЛИЦА — ОДИН СПИСОК ДОМОВ, ДВА НАЗВАНИЯ ----------
+ * Реестр приходит из OSM, и там одна и та же улица разбита на несколько ключей:
+ * «Набережная улица» (дома 3/1,5,5/1,7,9,11,11/1,3/2) и «Набережная көшесі»
+ * (дома 1 и 3) — это НЕ две улицы и не два языка, а один список, случайно
+ * разорванный пополам. Точно так же рвутся чисто русские ключи: «Камзина» и
+ * «улица Камзина», «Рябиновая» и «Рябиновая аллея», проспект Назарбаева вообще
+ * лежит в ПЯТИ вариантах написания. Из-за этого при переключении языка (и просто
+ * в поиске) часть домов пропадала.
+ *
+ * Здесь варианты сводятся в одну запись с общим списком домов, а название
+ * подставляется по языку интерфейса. Правило названия (согласовано с владельцем):
+ * САМО имя улицы остаётся русским, меняется только тип — «улица» → «көшесі».
+ * Настоящее казахское имя используется, если оно есть в реестре: «улица
+ * Академика Сатпаева» на казахской версии — «Академик Сәтбаев көшесі», а не
+ * «Сатпаева көшесі».
+ *
+ * ⚠️ Ключ группировки — СВОЙ, не normStreet/streetPairKey: нужно сводить написания
+ * через языковую границу («Сатпаева» ↔ «Сәтбаев», «Торайгырова» ↔ «Торайғыров»),
+ * поэтому казахские буквы складываются в русские аналоги, снимается тип улицы
+ * где угодно в строке, слова стеммятся и сортируются. Ключ — ВСЕ значимые слова,
+ * а не одно самое длинное: иначе «Проезд Б» и «Проезд В» схлопнулись бы в одну
+ * улицу, а дачные «Малиновая аллея (СТ Южный)» и «(СТ Северный)» — тем более. */
+const KK_FOLD = { 'ә': 'а', 'і': 'и', 'ң': 'н', 'ғ': 'г', 'ұ': 'у', 'ү': 'у', 'қ': 'к', 'ө': 'о', 'һ': 'х' };
+/* Пары написаний, которые механически не сводятся (казахская и русская форма
+   одной фамилии разошлись сильнее, чем на «свою» букву). Слева — русская форма. */
+const STREET_WORD_ALIASES = [
+  ['сатпаев', 'сатбаев'],         // улица Академика Сатпаева ↔ Академик Сәтбаев көшесі
+  ['жусуп', 'жусип'],             // Машхур Жусупа ↔ Мәшһүр Жүсіп
+  ['бухар', 'букар'],             // Бухар Жырау ↔ Бұқар жырау
+  ['аймауытов', 'аймауытул'],     // Аймауытова ↔ Аймауытұлы
+  ['кудайбердиев', 'кудайбердиул'], // Кудайбердиева ↔ Құдайбердіұлы
+  ['дюсенов', 'дуйсенов'],        // Генерала Дюсенова ↔ Генерал Дүйсенов
+  ['каирбаев', 'кайырбаев'],      // Каирбаева ↔ Қайырбаев
+];
+const foldKk = (s) => s.replace(/[әіңғұүқөһ]/g, (c) => KK_FOLD[c] || c);
+const FOLDED_TYPES = STREET_TYPES.map(foldKk);
+const STREET_SUFFIX = /(ого|его|ому|ыми|ими|ая|ое|ые|ый|ой|ую|ым|ых|ай|ей)$/;
+function streetStem(w) {
+  let x = w.replace(STREET_SUFFIX, '');
+  if (x.length < 3) x = w;                                   // «Абай» не должен стать «аб»
+  if (/[аяыиоеуй]$/.test(x) && x.length > 3) x = x.slice(0, -1);   // Сатпаева → сатпаев
+  for (const [ru, kk] of STREET_WORD_ALIASES) if (x === kk) return ru;
+  return x;
+}
+function streetKeyWords(name) {
+  return foldKk(String(name || '').toLowerCase().replace(/ё/g, 'е'))
+    .replace(/[^a-zа-я0-9]+/gi, ' ').split(/\s+/).filter(Boolean)
+    // тип улицы снимаем где угодно; startsWith ловит мусор из OSM вроде «көшесіqr»
+    .filter((w) => !FOLDED_TYPES.some((t) => w === t || (t.length >= 5 && w.startsWith(t))))
+    .filter((w) => !STREET_STOP.includes(w))
+    .map(streetStem).filter(Boolean);
+}
+const streetKey = (name) => streetKeyWords(name).slice().sort().join(' ');
+
+/* Производное название, когда в реестре нет варианта на нужном языке.
+   Меняется ТОЛЬКО тип улицы — имя остаётся как есть («улица Камзина» →
+   «Камзина көшесі»). Дачные аллеи, проезды и тупики не трогаем: казахского
+   названия у них не существует, придумывать его мы не будем.
+   ⚠️ Работаем по словам, а не регулярками с \b: в JS граница слова определена
+   только для латиницы, и /\bулица\b/ по кириллице просто не срабатывает. */
+const TYPE_KEEP = ['аллея', 'проезд', 'тупик', 'шоссе', 'квартал', 'бульвар', 'б-р'];
+const TYPE_RU_TO_KK = { 'улица': 'көшесі', 'ул': 'көшесі', 'проспект': 'даңғылы', 'пр-т': 'даңғылы',
+  'площадь': 'алаңы', 'пл': 'алаңы', 'переулок': 'тұйығы', 'пер': 'тұйығы', 'мкр': 'шағын ауданы',
+  'микрорайон': 'шағын ауданы' };
+const TYPE_KK_TO_RU = { 'көшесі': 'улица', 'даңғылы': 'проспект', 'алаңы': 'площадь',
+  'тұйығы': 'переулок', 'ауданы': 'микрорайон', 'шағын': '' };
+const tidyName = (s) => s.replace(/\\/g, ' ').replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').trim();
+const typeToken = (w) => w.toLowerCase().replace(/[^a-z\u0400-\u04ff-]/gi, '');   // весь кириллический блок, включая ә/і/ө/ұ/қ
+function deriveStreetName(name, lang) {
+  const src = tidyName(String(name || ''));
+  const toks = src.split(/\s+/).filter(Boolean);
+  if (lang === 'kk') {
+    if (streetLangOf(src) === 'kk') return src;
+    if (toks.some((w) => TYPE_KEEP.includes(typeToken(w)))) return src;
+    let type = 'көшесі';
+    const rest = toks.filter((w) => {
+      const kk = TYPE_RU_TO_KK[typeToken(w)];
+      if (!kk) return true;
+      type = kk;
+      return false;
+    });
+    return rest.length ? tidyName(rest.join(' ')) + ' ' + type : src;
+  }
+  if (streetLangOf(src) !== 'kk') return src;
+  let type = 'улица';
+  const rest = toks.filter((w) => {
+    const ru = TYPE_KK_TO_RU[typeToken(w)];
+    if (ru === undefined) return true;
+    if (ru) type = ru;
+    return false;
+  });
+  return rest.length ? type + ' ' + tidyName(rest.join(' ')) : src;
+}
+
+/* Сливает варианты одной улицы в общий список домов и раздаёт названия по языкам.
+   Возвращает { index, names }: index — улица (русское название) → дома,
+   names — ключ улицы → { ru, kk }. */
+function mergeStreetIndex(raw) {
+  const items = Object.keys(raw || {}).map((k) => ({
+    name: k, houses: raw[k] || [], words: streetKeyWords(k), key: streetKey(k), lang: streetLangOf(k),
+    grouped: /\(/.test(k),   // «(СТ Южный)» — уточнение дачного общества, отдельная улица
+  }));
+  const parent = new Map();
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  const union = (a, b) => { a = find(a); b = find(b); if (a !== b) parent.set(a, b); };
+  items.forEach((i) => parent.set(i.name, i.name));
+  const byKey = new Map();
+  items.forEach((i) => { const a = byKey.get(i.key) || []; a.push(i); byKey.set(i.key, a); });
+  byKey.forEach((arr) => arr.slice(1).forEach((i) => union(arr[0].name, i.name)));
+  /* Дополнительно — только ЧЕРЕЗ языковую границу: казахский вариант часто несёт
+     лишнее слово («Қабдеш Нұркин» против «Нуркина улица», «Жүсіпбек Аймауытұлы»
+     против «Аймауытова»). Внутри одного языка так сливать нельзя: «Малиновая»
+     и «Малиновая аллея (СТ Южный)» — разные улицы. */
+  const kkItems = items.filter((i) => i.lang === 'kk'), ruItems = items.filter((i) => i.lang !== 'kk');
+  for (const a of kkItems) {
+    for (const b of ruItems) {
+      if (a.grouped !== b.grouped || find(a.name) === find(b.name)) continue;
+      const aw = new Set(a.words), bw = new Set(b.words);
+      const small = aw.size <= bw.size ? aw : bw, big = aw.size <= bw.size ? bw : aw;
+      if (!small.size || ![...small].some((w) => w.length >= 5)) continue;   // короткие слова — слишком слабое совпадение
+      if ([...small].every((w) => big.has(w))) union(a.name, b.name);
+    }
+  }
+  const groups = new Map();
+  items.forEach((i) => { const r = find(i.name); const g = groups.get(r) || []; g.push(i); groups.set(r, g); });
+  const index = {}, names = new Map();
+  groups.forEach((g) => {
+    // Дома всех вариантов в один список; дубли по номеру схлопываем, координаты
+    // берём у первого варианта (они у дублей совпадают с точностью до метров).
+    const seen = new Map();
+    g.forEach((i) => i.houses.forEach((h) => {
+      const k = String(h[0]).toLowerCase().replace(/\s+/g, '');
+      if (!seen.has(k)) seen.set(k, h);
+    }));
+    const houses = [...seen.values()].sort((a, b) => {
+      const na = parseInt(a[0], 10) || 0, nb = parseInt(b[0], 10) || 0;
+      return na !== nb ? na - nb : String(a[0]).localeCompare(String(b[0]));   // 3 → 3/1 → 3/2
+    });
+    const pick = (lang) => g.filter((i) => (lang === 'kk' ? i.lang === 'kk' : i.lang !== 'kk'))
+      .sort((a, b) => b.houses.length - a.houses.length)[0];
+    const ruItem = pick('ru'), kkItem = pick('kk');
+    const ru = ruItem ? ruItem.name : deriveStreetName(kkItem.name, 'ru');
+    const kk = kkItem ? kkItem.name : deriveStreetName(ru, 'kk');
+    index[ru] = houses;
+    names.set(streetKey(ru), { ru, kk });
+    if (kkItem) names.set(streetKey(kkItem.name), { ru, kk });   // ключи вариантов могут отличаться
+  });
+  return { index, names };
+}
+
 /* Адресный справочник города (все дома, не только с отключениями).
    Грузится лениво при первом обращении к поиску — 1 МБ, ~250 КБ в gzip. */
 let ADDR = null, addrLoading = null;
@@ -1052,7 +1209,17 @@ function loadAddresses() {
   if (ADDR) return Promise.resolve(ADDR);
   if (!addrLoading) {
     addrLoading = fetch('/map/addresses.json').then((r) => r.ok ? r.json() : {})
-      .then((j) => { ADDR = j; STREET_NAMES = null; return j; }).catch(() => (ADDR = {}));
+      .then((j) => {
+        // Реестр сразу приводим к виду «одна улица — один список домов»: варианты
+        // написания (в т.ч. казахский) сливаются, названия раздаются по языкам.
+        const m = mergeStreetIndex(j);
+        ADDR = m.index; STREET_NAMES = m.names;
+        // Реестр знает НАСТОЯЩИЕ казахские имена («Академик Сәтбаев көшесі»), а до
+        // его загрузки список рисовался с производными («Ак.Сатпаева көшесі»).
+        // Перерисовываем, чтобы название не менялось под курсором.
+        if (LANG === 'kk' && typeof applyFilters === 'function') { try { applyFilters(); } catch (e) {} }
+        return ADDR;
+      }).catch(() => (ADDR = {}));
   }
   return addrLoading;
 }
@@ -1073,10 +1240,6 @@ function loadAddresses() {
    длинное значимое слово (обычно фамилия). Та же схема, что в
    parser/lib/buildings.js:normStreet — но копию завести пришлось: map/app.js
    грузится в браузер без бандлера и require оттуда невозможен. */
-const STREET_TYPES = ['улица', 'ул', 'проспект', 'пр', 'пр-т', 'переулок', 'пер', 'бульвар',
-  'б-р', 'площадь', 'пл', 'шоссе', 'аллея', 'тупик', 'микрорайон', 'мкр', 'квартал',
-  'көшесі', 'даңғылы', 'алаңы', 'тұйығы', 'шағын', 'ауданы'];
-const STREET_STOP = ['академик', 'академика', 'генерал', 'генерала', 'батыр', 'батыра', 'имени'];
 function streetPairKey(name) {
   const words = String(name || '').toLowerCase().replace(/ё/g, 'е')
     .replace(/[.,()«»"']/g, ' ').replace(/-/g, ' ').split(/\s+/).filter(Boolean)
@@ -1087,38 +1250,30 @@ function streetPairKey(name) {
   return words.slice().sort((a, b) => b.length - a.length)[0];
 }
 
-let STREET_NAMES = null;   // streetPairKey → { ru: '…', kk: '…' }
-function buildStreetNames() {
-  STREET_NAMES = new Map();
-  const add = (name) => {
-    const k = streetPairKey(name);
-    if (!k) return;
-    const rec = STREET_NAMES.get(k) || {};
-    const lang = streetLangOf(name);
-    if (!rec[lang]) { rec[lang] = name; STREET_NAMES.set(k, rec); }
-  };
-  Object.keys(ADDR || {}).forEach(add);
-  (DATA.houses || []).forEach((h) => add(streetName(h.address)));
-}
+/* Ключ улицы → { ru, kk }. Заполняется при слиянии реестра (mergeStreetIndex).
+   ⚠️ Реестр грузится ЛЕНИВО (1 МБ, только при первом обращении к поиску), а
+   карточки домов рисуются сразу — поэтому displayStreet не имеет права зависеть
+   от него: без реестра название выводится правилом «меняется только тип улицы». */
+let STREET_NAMES = null;
 function displayStreet(street) {
   // Переименованная городом улица — показываем НОВОЕ имя, что бы ни лежало в
   // реестре (см. STREET_RENAMES). Это важнее выбора RU/KZ-варианта ниже: старого
   // названия на табличке уже нет.
   const ren = renameOf(street);
   if (ren) return ren.display;
-  if (!STREET_NAMES) buildStreetNames();
-  const rec = STREET_NAMES.get(streetPairKey(street));
-  return (rec && rec[LANG]) || street;   // нет варианта на нужном языке — лучше чужой, чем ничего
+  const rec = STREET_NAMES && STREET_NAMES.get(streetKey(street));
+  if (rec && rec[LANG]) return rec[LANG];
+  return deriveStreetName(street, LANG);
 }
 function displayAddress(address) {
   const m = String(address || '').match(/^(.*?),\s*([^,]+)$/);
   return m ? `${displayStreet(m[1].trim())}, ${m[2].trim()}` : address;
 }
 /* Подсказки из справочника: «Павлова 38» → улица Павлова, 38 / 38/1 / 38а.
-   ⚠️ Собираем кандидатов БЕЗ раннего обрыва по limit — та же улица хранится в реестре
-   ДВУМЯ ключами (RU «улица Естая» и KK «Естай көшесі»), нужно набрать оба варианта
-   ПЕРЕД тем как отфильтровать по текущему языку (preferLang), иначе ранний break мог
-   бы отсечь нужный язык раньше, чем список до него дойдёт. */
+   Реестр здесь уже слит (mergeStreetIndex): одна улица — один ключ и один общий
+   список домов, поэтому дом 1 на Набережной находится и в русском интерфейсе,
+   и в казахском. Дедуп по номеру дома ниже оставлен как страховка: адреса
+   приходят ещё и из data.json, где написание улицы бывает своим. */
 function addressSuggestions(pq, limit = 8) {
   if (!ADDR) return [];
   const out = [];
@@ -1140,15 +1295,11 @@ function addressSuggestions(pq, limit = 8) {
     }
     if (out.length >= CEILING) break;
   }
-  /* ⚠️ НЕ preferLang() на весь список. Он выкидывал ВСЕ адреса «чужого» языкового
-     варианта улицы, если в предпочитаемом нашёлся хоть один дом. Но OSM пишет
-     разные дома ОДНОЙ улицы то по-русски, то по-казахски, и дом, существующий
-     ТОЛЬКО в другом варианте, пропадал из поиска совсем. Живой кейс: «Набережная, 1»
-     лежит в реестре только как «Набережная көшесі, 1», а в «Набережная улица» есть
-     11/11-1 — в русском интерфейсе дом 1 не находился вообще. По всему реестру так
-     терялось 109 домов в RU и 821 в KZ (13 улиц записаны в обоих вариантах).
-     Дедупим по НОМЕРУ ДОМА: один и тот же дом из двух вариантов схлопываем и
-     показываем на языке интерфейса, уникальные дома не теряем ни в одном языке. */
+  /* ⚠️ НЕ preferLang(): фильтр по языку выкидывал дом целиком, если он лежал под
+     «чужим» вариантом названия улицы. Живой кейс: «Набережная, 1» в реестре был
+     только как «Набережная көшесі, 1» — в русском интерфейсе дом 1 не находился
+     вообще (по всему реестру так терялось 109 домов в RU и 821 в KZ). Корень
+     вылечен слиянием реестра, а дедуп по НОМЕРУ ДОМА остаётся страховкой. */
   const byHouse = new Map();
   for (const a of out) {
     const key = normStreet(a.street) + '|' + String(a.house).toLowerCase().replace(/\s+/g, '');

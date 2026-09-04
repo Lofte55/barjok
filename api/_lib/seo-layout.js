@@ -813,10 +813,38 @@ ${a11yWidgetHtml()}
     return { street: norm(m?m[1]:s), house: m?m[2].toLowerCase():'' };
   }
   function esc2(s){return String(s).replace(/[<&>"]/g,function(c){return {'<':'&lt;','&':'&amp;','>':'&gt;','"':'&quot;'}[c];});}
+  /* Одна улица в реестре бывает разбита на два ключа — «Набережная улица»
+     (дома 3/1,5,7,9,11…) и «Набережная көшесі» (дома 1 и 3). Без склейки
+     подсказка показывала бы оба варианта вперемешку, а часть домов терялась.
+     Склеиваем по имени без типа улицы и показываем название на языке страницы;
+     полный разбор написаний живёт на карте (map/app.js:mergeStreetIndex). */
+  var MERGED=null;
+  function coreName(s){ return norm(s).replace(/(улица|көшесі|даңғылы|проспект|алаңы|площадь|переулок|тұйығы|шағын ауданы|мкр)/g,' ').replace(/\s+/g,' ').trim(); }
+  function mergeStreets(raw){
+    if(MERGED) return MERGED;
+    var isKk=document.documentElement.lang==='kk', groups={};
+    Object.keys(raw).forEach(function(s){
+      var c=coreName(s); if(!c) c=norm(s);
+      var kk=/(көшесі|даңғылы|алаңы|тұйығы)/i.test(s)||/[әіңғұүқөһ]/i.test(s);
+      var g=groups[c]||(groups[c]={names:[],houses:{}});
+      g.names.push({name:s,kk:kk,n:raw[s].length});
+      raw[s].forEach(function(h){ var k=String(h[0]).toLowerCase(); if(!g.houses[k]) g.houses[k]=h; });
+    });
+    MERGED={};
+    Object.keys(groups).forEach(function(c){
+      var g=groups[c];
+      var pick=g.names.filter(function(x){return x.kk===isKk;});
+      var name=(pick.length?pick:g.names).sort(function(a,b){return b.n-a.n;})[0].name;
+      MERGED[name]=Object.keys(g.houses).map(function(k){return g.houses[k];})
+        .sort(function(a,b){var na=parseInt(a[0],10)||0,nb=parseInt(b[0],10)||0;return na-nb||String(a[0]).localeCompare(String(b[0]));});
+    });
+    return MERGED;
+  }
   function renderSug(raw){
     var q=(raw||'').trim(); if(q.length<2){ lsug.classList.remove('show'); return; }
     var pq=parseQ(q);
-    loadAddr().then(function(d){
+    loadAddr().then(function(raw){
+      var d=mergeStreets(raw);
       var streets=Object.keys(d).filter(function(s){return norm(s).indexOf(pq.street)>=0;})
         .sort(function(a,b){return d[b].length-d[a].length;});
       var html='';
