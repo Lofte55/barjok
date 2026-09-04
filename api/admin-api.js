@@ -8,6 +8,7 @@ const { select, insert, update, remove } = require('./_lib/supabase');
 // (нужно и там для автоподтверждённых COMMUNITY-инцидентов), сюда просто
 // импортируем, чтобы не держать вторую копию.
 const { evaluate, sweepExpiredOverrides, endOfDayPavlodar } = require('./_lib/decision-engine');
+const { loadAddressBook, findAreaHouses, streetKey, splitAddress } = require('./_lib/address-book');
 
 const UTILITIES = new Set(['hot_water', 'cold_water', 'water', 'electricity', 'heating', 'gas']);
 
@@ -16,6 +17,47 @@ async function log(incidentId, eventType, detail) {
     await insert('incident_log', { incident_id: incidentId, event_type: eventType, detail: detail || null });
   } catch (e) { console.error('incident_log insert failed:', e.message); }
 }
+
+/*
+ * Срок автовосстановления из тела запроса — общий для force_outage и force_area.
+ * "без даты" (0/отсутствует) — висит, пока админ не снимет вручную; "eod" — до
+ * 00:00 по Павлодару (см. endOfDayPavlodar); 1 или 5 — через столько дней;
+ * "custom" — своё число часов/дней (админ точно знает срок, напр. "на 8 часов
+ * отключили свет"). В любом случае sweepExpiredOverrides() (decision-engine.js,
+ * вызывается на каждый живой запрос) сам переведёт в RESTORED и вернёт адрес
+ * под автоматику.
+ *
+ * ⚠️ "Своё значение" — единственное место, где число реально приходит от клиента,
+ * а не выбирается из фиксированного списка кнопок. Валидируем: целое,
+ * положительное, единица измерения только hours/days (иначе часы по умолчанию),
+ * и жёсткий потолок 90 дней — страховка от опечатки, которая повесила бы
+ * "отключение" на публичной карте на годы вперёд.
+ */
+function parseDuration(b) {
+  const raw = String(b.duration_days || '0');
+  const isEod = raw === 'eod', isCustom = raw === 'custom';
+  const days = !isEod && !isCustom && [1, 5].includes(Number(raw)) ? Number(raw) : 0;
+  const unit = b.duration_custom_unit === 'days' ? 'days' : 'hours';
+  const valRaw = Math.floor(Number(b.duration_custom_value));
+  const hours = isCustom && Number.isFinite(valRaw) && valRaw > 0
+    ? Math.min(unit === 'days' ? valRaw * 24 : valRaw, 90 * 24) : 0;
+  const until = isEod ? endOfDayPavlodar()
+    : isCustom ? (hours ? new Date(Date.now() + hours * 3600000).toISOString() : null)
+    : days ? new Date(Date.now() + days * 86400000).toISOString() : null;
+  return { until, label: isEod ? 'eod' : isCustom ? `custom:${valRaw}${unit}` : (days || null) };
+}
+
+// Потолок массового отключения. Самая длинная улица города (Камзина) — 337 домов,
+// радиус 500 м в центре — до ~200. 600 с запасом покрывает реальные сценарии и при
+// этом не даёт одним кликом залить карту тысячами записей по ошибке.
+const MAX_AREA_HOUSES = 600;
+// Ключ сопоставления адреса с уже существующими инцидентами: сравнивать строки
+// напрямую нельзя — парсер, житель и реестр пишут одну улицу по-разному
+// («улица Ломова, 177» / «Ломов көшесі, 177»), и мы бы завели дубль.
+const addrKey = (a) => {
+  const { street, house } = splitAddress(a);
+  return `${streetKey(street)}|${String(house).toLowerCase().replace(/\s+/g, '')}`;
+};
 
 const CAT_UTILITIES = {
   hot_water: ['hot_water'], cold_water: ['cold_water'], electricity: ['electricity'],
@@ -237,24 +279,8 @@ async function handlePost(req, res) {
     // дней (админ точно знает срок, напр. "на 8 часов отключили свет"). В любом
     // случае sweepExpiredOverrides() (decision-engine.js, вызывается на каждый
     // живой запрос) сам переведёт в RESTORED и вернёт адрес под автоматику.
-    const rawDuration = String(b.duration_days || '0');
-    const isEndOfDay = rawDuration === 'eod';
-    const isCustom = rawDuration === 'custom';
-    const durationDays = !isEndOfDay && !isCustom && [1, 5].includes(Number(rawDuration)) ? Number(rawDuration) : 0;
-    // ⚠️ Своё значение — единственное место здесь, где число реально приходит от
-    // клиента, а не выбирается из фиксированного списка кнопок. Валидируем: целое,
-    // положительное, единица measure — только hours/days (иначе часы по умолчанию),
-    // и жёсткий потолок 90 дней — страховка от опечатки/абсурдного ввода, который
-    // повесил бы "отключение" на публичной карте на годы вперёд.
-    const customUnit = b.duration_custom_unit === 'days' ? 'days' : 'hours';
-    const customValRaw = Math.floor(Number(b.duration_custom_value));
-    const customHours = isCustom && Number.isFinite(customValRaw) && customValRaw > 0
-      ? Math.min(customUnit === 'days' ? customValRaw * 24 : customValRaw, 90 * 24)
-      : 0;
+    const { until: manualOverrideUntil, label: durationLabel } = parseDuration(b);
     const now = new Date().toISOString();
-    const manualOverrideUntil = isEndOfDay ? endOfDayPavlodar()
-      : isCustom ? (customHours ? new Date(Date.now() + customHours * 3600000).toISOString() : null)
-      : durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null;
 
     // ⚠️ Если подтверждают cold_water/hot_water, а ПРОТИВОПОЛОЖНЫЙ ресурс уже
     // активен по тому же адресу — воды нет вообще, а не «только холодная/только
@@ -299,11 +325,111 @@ async function handlePost(req, res) {
       await log(supId, 'MERGED_INTO_WATER', { merged_into: incident.id });
     }
     await log(incident.id, 'MANUAL_FORCE_OUTAGE', {
-      reason,
-      duration_days: isEndOfDay ? 'eod' : isCustom ? `custom:${customValRaw}${customUnit}` : (durationDays || null),
+      reason, duration_days: durationLabel,
       merged_from: supersededIds.length ? supersededIds : null,
     });
     return res.status(200).json({ ok: true, incident });
+  }
+
+  /*
+   * "Отключить район" — одна кнопка на доме отключает и соседние дома, ровно так,
+   * как это делает автоматика: те же радиусы «рядом», по которым карта уже рисует
+   * вокруг подтверждённого дома жёлтые кольца «возможно отключение»
+   * (map/app.js:outagesNear / computeGhostHouses, см. address-book.js).
+   *
+   * Зачем: Водоканал/энергосбыт вырубают квартал целиком, а жалоба приходит с
+   * ОДНОГО дома. Раньше админ подтверждал по одному адресу вручную — на квартал
+   * это десятки кликов. Теперь: кнопка → сколько домов попадёт (dry_run) →
+   * подтверждение → массовое отключение одним запросом.
+   *
+   * ⚠️ Это РУЧНОЕ действие администратора, а не автоматика: у каждой записи
+   * manual_override = FORCE_OUTAGE, то есть Decision Engine их не трогает, а
+   * срок автовосстановления обязателен так же, как у одиночного force_outage.
+   * Автоматике по-прежнему НЕЛЬЗЯ отключать соседей по одной жалобе (политика
+   * владельца: официальный источник — отключение, соседи — только «возможно»).
+   */
+  if (action === 'force_area') {
+    const address = String(b.address || '').trim().slice(0, 200);
+    const utility_type = String(b.utility_type || '');
+    const reason = String(b.reason || '').trim().slice(0, 300) || null;
+    const scope = b.scope === 'street' ? 'street' : 'near';
+    if (!address || !UTILITIES.has(utility_type)) return res.status(400).json({ ok: false, error: 'bad_input' });
+
+    const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0];
+    const origin = `${proto}://${req.headers.host}`;
+    let book;
+    try { book = await loadAddressBook(origin); }
+    catch (e) { console.error('address book failed:', e.message); return res.status(502).json({ ok: false, error: 'address_book_unavailable' }); }
+
+    const area = findAreaHouses(book, address, scope);
+    if (!area.ok) return res.status(400).json({ ok: false, error: area.error });
+    if (area.houses.length > MAX_AREA_HOUSES) {
+      return res.status(400).json({ ok: false, error: 'too_many', count: area.houses.length, limit: MAX_AREA_HOUSES });
+    }
+    // Показать, что произойдёт, ДО того как произойдёт: админка сначала спрашивает
+    // "отключить N домов?" и только потом шлёт настоящий запрос.
+    if (b.dry_run) {
+      return res.status(200).json({
+        ok: true, dry_run: true, count: area.houses.length, street: area.streetLabel,
+        sample: area.houses.slice(0, 8).map((h) => h.address),
+      });
+    }
+
+    const now = new Date().toISOString();
+    const { until: manualOverrideUntil, label: durationLabel } = parseDuration(b);
+
+    // Все живые инциденты разом — иначе на 30 домов ушло бы 30 отдельных запросов
+    // (и лямбда уперлась бы в таймаут). Их немного (сотни), фильтруем в памяти.
+    const active = await select('incidents', 'status=eq.ACTIVE&limit=2000');
+    const activeBy = new Map();
+    active.forEach((i) => activeBy.set(`${addrKey(i.address)}|${i.utility_type}`, i));
+
+    const opposite = utility_type === 'cold_water' ? 'hot_water' : utility_type === 'hot_water' ? 'cold_water' : null;
+    const toInsert = [], toTouch = [], toSupersede = [];
+    let merged = 0;
+    for (const h of area.houses) {
+      const k = addrKey(h.address);
+      let effective = utility_type;
+      // Тот же слив, что у одиночного force_outage: если по этому адресу уже
+      // активен ПРОТИВОПОЛОЖНЫЙ вид воды — воды нет вообще, а не "только холодной".
+      if (opposite && activeBy.has(`${k}|${opposite}`)) {
+        effective = 'water';
+        toSupersede.push(activeBy.get(`${k}|${opposite}`).id);
+        const same = activeBy.get(`${k}|${utility_type}`);
+        if (same) toSupersede.push(same.id);
+        merged++;
+      }
+      const existing = activeBy.get(`${k}|${effective}`);
+      if (existing) { toTouch.push(existing.id); continue; }
+      toInsert.push({
+        address: h.address, utility_type: effective, status: 'ACTIVE', confirmation_type: 'MANUAL',
+        manual_override: 'FORCE_OUTAGE', manual_override_reason: reason, manual_override_created_at: now,
+        manual_override_until: manualOverrideUntil, first_reported_at: now, confirmed_at: now,
+      });
+    }
+
+    if (toSupersede.length) {
+      await update('incidents', `id=in.(${[...new Set(toSupersede)].join(',')})`,
+        { status: 'RESTORED', restored_at: now, updated_at: now });
+    }
+    if (toTouch.length) {
+      await update('incidents', `id=in.(${toTouch.join(',')})`, {
+        manual_override: 'FORCE_OUTAGE', manual_override_reason: reason, manual_override_created_at: now,
+        manual_override_until: manualOverrideUntil, updated_at: now,
+      });
+    }
+    const created = toInsert.length ? await insert('incidents', toInsert) : [];
+
+    // Лог — одной пачкой, а не по записи: иначе 30 домов = 30 запросов к БД.
+    const detail = { scope, base: address, reason, duration_days: durationLabel, area_size: area.houses.length };
+    const logRows = [...created.map((i) => i.id), ...toTouch]
+      .map((id) => ({ incident_id: id, event_type: 'MANUAL_FORCE_AREA', detail }));
+    if (logRows.length) { try { await insert('incident_log', logRows); } catch (e) { console.error('incident_log bulk failed:', e.message); } }
+
+    return res.status(200).json({
+      ok: true, total: area.houses.length, created: created.length, updated: toTouch.length,
+      merged, street: area.streetLabel,
+    });
   }
 
   if (action === 'force_restored') {

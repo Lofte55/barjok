@@ -112,9 +112,28 @@ const fmt = (s) => s ? new Date(s).toLocaleString('ru-RU', { day: '2-digit', mon
 // user_reports, которые ещё не набрали порог автоподтверждения).
 let allRows = [];
 
+// Понятные сообщения вместо "HTTP 400": массовые действия отказывают по
+// конкретным причинам, и админ должен понимать, что делать дальше.
+const ERR_RU = {
+  bad_input: 'Не хватает данных для действия',
+  bad_address: 'Адрес записан без номера дома — район по нему не собрать',
+  street_not_found: 'Такой улицы нет в адресном реестре города',
+  house_not_found: 'Этого дома нет в адресном реестре — координат для поиска соседей нет',
+  address_book_unavailable: 'Адресный реестр сейчас недоступен, попробуйте ещё раз',
+};
 async function api(path, opts) {
   const r = await fetch(path, opts);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+  if (!r.ok) {
+    // Тело ошибки — JSON вида { ok:false, error:'...' }; читаем его, а не
+    // выбрасываем голый статус.
+    const body = await r.json().catch(() => null);
+    const code = body && body.error;
+    if (code === 'too_many') {
+      throw new Error('В районе ' + body.count + ' домов — это больше предела ' + body.limit
+        + '. Отключите точечно или сообщите разработчику.');
+    }
+    throw new Error(ERR_RU[code] || code || ('HTTP ' + r.status));
+  }
   return r.json();
 }
 
@@ -147,6 +166,28 @@ function durationSelectHtml() {
     '<div class="csel dur-csel" data-csel style="display:none"><select class="dur-custom-unit" data-duration-unit>' +
     '<option value="hours">часы</option><option value="days">дни</option>' +
     '</select></div>';
+}
+
+/*
+ * "Отключить район" — одна кнопка: отключает этот дом И соседние, по тому же
+ * правилу «рядом», по которому карта уже рисует вокруг дома жёлтые кольца
+ * «возможно отключение» (своя улица ≤350 м, любая ≤150 м — см.
+ * api/_lib/address-book.js). Живой сценарий: Водоканал вырубил квартал, а
+ * жалоба пришла с одного дома — раньше админ проставлял соседей руками,
+ * по адресу за клик.
+ *
+ * Срок автовосстановления берётся из того же селекта в этой же ячейке, что и
+ * у "Подтвердить"/"Снова отключить".
+ */
+function housesWord(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'дом';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'дома';
+  return 'домов';
+}
+function areaButtonHtml(inc) {
+  return '<button class="ghost" data-act="force_area" data-address="' + escAttr(inc.address)
+    + '" data-utility="' + inc.utility_type + '" title="Отключить этот дом и соседние — как это делает автоматика">Отключить район</button>';
 }
 
 function currentFilters() {
@@ -219,6 +260,7 @@ function render() {
       dateVal = inc.latest_report_at;
       actions.push(durationSelectHtml());
       actions.push('<button data-act="confirm_pending" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Подтвердить</button>');
+      actions.push(areaButtonHtml(inc));
       actions.push('<button class="ghost" data-act="reject_pending" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Отклонить</button>');
     } else {
       statusBadge = inc.status === 'ACTIVE' ? '<span class="badge b-active">Отключено</span>' : '<span class="badge b-restored">Восстановлено</span>';
@@ -242,8 +284,15 @@ function render() {
           + (inc.manual_override_reason ? '<div class="muted">' + esc(inc.manual_override_reason) + '</div>' : '')
         : '<span class="muted">Автоматический режим</span>';
       dateVal = inc.status === 'ACTIVE' ? inc.confirmed_at : inc.restored_at;
-      if (inc.status === 'ACTIVE') actions.push('<button data-act="force_restored" data-id="' + inc.id + '">Восстановлено</button>');
-      else { actions.push(durationSelectHtml()); actions.push('<button data-act="force_outage_again" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Снова отключить</button>'); }
+      if (inc.status === 'ACTIVE') {
+        actions.push('<button data-act="force_restored" data-id="' + inc.id + '">Восстановлено</button>');
+        // Срок нужен и здесь: "Отключить район" заводит НОВЫЕ записи соседям.
+        actions.push(durationSelectHtml());
+      } else {
+        actions.push(durationSelectHtml());
+        actions.push('<button data-act="force_outage_again" data-address="' + escAttr(inc.address) + '" data-utility="' + inc.utility_type + '">Снова отключить</button>');
+      }
+      actions.push(areaButtonHtml(inc));
       if (inc.manual_override !== 'NONE') actions.push('<button class="ghost" data-act="clear_override" data-id="' + inc.id + '">Снять ручное управление</button>');
       actions.push('<button class="ghost" data-act="delete" data-id="' + inc.id + '" title="Удалить запись совсем">Удалить</button>');
     }
@@ -417,6 +466,35 @@ document.getElementById('rows').addEventListener('click', async (e) => {
           duration_custom_value: durVal ? durVal.value : '', duration_custom_unit: durUnit ? durUnit.value : '',
         }),
       });
+    } else if (act === 'force_area') {
+      // Два шага: сначала спрашиваем у сервера, сколько домов попадёт в район
+      // (dry_run), показываем это админу — и только после подтверждения отключаем.
+      // Массовое действие: без этого шага человек не видит, на что подписывается.
+      const durSel = btn.parentElement.querySelector('[data-duration]');
+      const durVal = btn.parentElement.querySelector('[data-duration-value]');
+      const durUnit = btn.parentElement.querySelector('[data-duration-unit]');
+      const base = {
+        action: 'force_area', address: btn.dataset.address, utility_type: btn.dataset.utility,
+        duration_days: durSel ? durSel.value : '0',
+        duration_custom_value: durVal ? durVal.value : '', duration_custom_unit: durUnit ? durUnit.value : '',
+      };
+      const label = btn.textContent;
+      btn.textContent = 'Считаю…';
+      const prev = await api('/api/admin-api', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...base, dry_run: true }),
+      });
+      btn.textContent = label;
+      const ok = confirm('Отключить ' + prev.count + ' ' + housesWord(prev.count) + ' рядом с «' + btn.dataset.address + '»?'
+        + '\\n\\n' + prev.sample.join('\\n') + (prev.count > prev.sample.length ? '\\n… и ещё ' + (prev.count - prev.sample.length) : ''));
+      if (!ok) { btn.disabled = false; return; }
+      btn.textContent = 'Отключаю…';
+      const r = await api('/api/admin-api', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(base),
+      });
+      btn.textContent = label;
+      alert('Готово: отключено ' + r.total + ' ' + housesWord(r.total)
+        + ' (новых ' + r.created + ', обновлено ' + r.updated + ')');
     } else if (act === 'reject_pending') {
       await api('/api/admin-api', {
         method: 'POST', headers: { 'content-type': 'application/json' },
