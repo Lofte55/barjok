@@ -134,7 +134,15 @@ async function main() {
   try {
     const rows = JSON.parse(fs.readFileSync(path.join(__dirname, 'buildings.json'), 'utf8'));
     const idx = {};
+    // ⚠️ Дедуп по «улица + номер»: один дом бывает размечен в OSM дважды —
+    // контуром way И мультиполигоном relation (после добавления relation в
+    // запрос такие пары стали попадать в выгрузку). Дубль в реестре — это
+    // задвоенный адрес в подсказках поиска.
+    const seen = new Set();
     for (const [street, house, lat, lng] of rows) {
+      const k = `${street}|${String(house).toLowerCase().replace(/\s+/g, '')}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
       if (!idx[street]) idx[street] = [];
       idx[street].push([house, lat, lng]);
     }

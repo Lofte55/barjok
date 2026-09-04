@@ -17,10 +17,15 @@ const ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ];
+// ⚠️ relation ОБЯЗАТЕЛЕН: здание со двором-колодцем или пристройками размечается
+// в OSM мультиполигоном, и теги адреса висят на самом отношении, а не на way.
+// Без этой строки такие дома пропадали из реестра молча — на 04.09.2026 это 28
+// адресов (Толстой 68 и 82, Ломова 45 и 135, Кутузова 200, Абая 441, Камзина 62/2…).
 const QUERY = `[out:json][timeout:180];
 (
   way["addr:housenumber"]["addr:street"](${BBOX});
   node["addr:housenumber"]["addr:street"](${BBOX});
+  relation["addr:housenumber"]["addr:street"](${BBOX});
 );
 out center tags;`;
 // Многоэтажка (обычно на центральном отоплении/ГВС): 3+ этажа ИЛИ явный тип
@@ -78,6 +83,15 @@ function normStreet(s) {
   return t.slice().sort((a, b) => b.length - a.length)[0];
 }
 
+// Сколько домов в уже опубликованном реестре (map/addresses.json лежит в git) —
+// эталон для проверки свежей выкачки. 0, если файла нет (самый первый запуск).
+function publishedCount() {
+  try {
+    const idx = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'map', 'addresses.json'), 'utf8'));
+    return Object.values(idx).reduce((n, list) => n + list.length, 0);
+  } catch (e) { return 0; }
+}
+
 async function fetchAll() {
   let lastErr;
   for (const url of ENDPOINTS) {
@@ -91,6 +105,15 @@ async function fetchAll() {
       const data = await res.json();
       const els = (data.elements || []).filter((e) => e.tags && e.tags['addr:street'] && e.tags['addr:housenumber']);
       if (!els.length) throw new Error('пустой ответ Overpass');
+      // ⚠️ Реестр обновляется раз в неделю и полностью замещает предыдущий. Один
+      // неудачный день Overpass (частичный ответ по таймауту — ответ при этом
+      // приходит с кодом 200) молча урезал бы город до половины домов, и на карте
+      // пропали бы адреса. Сверяемся с уже опубликованным реестром: заметно
+      // меньше домов, чем в прошлый раз — не доверяем и пробуем второй эндпоинт.
+      const known = publishedCount();
+      if (known && els.length < known * 0.9) {
+        throw new Error(`подозрительно мало домов: ${els.length} против ${known} в текущем реестре`);
+      }
       // компактная форма: [street, house, lat, lng, multi(0|1)]
       return els.map((e) => {
         const c = e.center || e;

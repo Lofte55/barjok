@@ -38,13 +38,25 @@ jobs:
           node-version: '22'
 
       # buildings.json (~2.6 МБ адресный реестр OSM) в git не хранится и качается
-      # с Overpass. Кэшируем, чтобы не бить Overpass на каждом прогоне.
-      # Реестр меняется редко — при необходимости обновить бампнуть версию ключа (v1 → v2).
+      # с Overpass. Кэшируем, чтобы не бить Overpass на каждом из 24 прогонов в сутки.
+      #
+      # ⚠️ Ключ НЕДЕЛЬНЫЙ, а не фиксированный. Раньше здесь стояло
+      # barjoq-buildings-pavlodar-v1 — один и тот же ключ навсегда, и Overpass не
+      # опрашивался НИ РАЗУ после первого прогона: реестр адресов застыл на дате,
+      # когда кэш создали (нашли 04.09.2026 — реестр был от 12.08). Дом, добавленный
+      # в OSM после этого, на карту не попадал никогда. Теперь ключ меняется каждый
+      # понедельник → раз в неделю кэш промахивается, парсер выкачивает свежий OSM
+      # и сохраняет новый кэш. Без restore-keys намеренно: с ними подтянулся бы
+      # прошлый кэш и обновление снова не произошло бы.
+      - name: Week stamp for cache key
+        id: week
+        run: echo "stamp=$(date -u +%G-w%V)" >> "$GITHUB_OUTPUT"
+
       - name: Restore OSM buildings cache
         uses: actions/cache@v4
         with:
           path: parser/buildings.json
-          key: barjoq-buildings-pavlodar-v1
+          key: barjoq-buildings-pavlodar-${{ steps.week.outputs.stamp }}
 
       # unzip нужен docx.js для распаковки .docx Павлодарэнерго. На ubuntu-latest есть,
       # но подстрахуемся на случай минимального образа.
@@ -74,7 +86,12 @@ jobs:
           git config user.name "barjoq-bot"
           git config user.email "actions@users.noreply.github.com"
           # geocache.json растёт по мере геокодинга — коммитим, чтобы кэш жил между прогонами.
-          git add map/data.json parser/geocache.json
+          # ⚠️ map/addresses.json — адресный справочник для поиска на карте. Раньше его
+          # здесь не было: парсер пересобирал файл каждый прогон, но в репозиторий он
+          # не попадал, и в браузер уезжала версия от 14.08 — поиск не знал о домах,
+          # появившихся в OSM позже. Файл меняется редко (раз в неделю, вместе с
+          # обновлением кэша OSM), так что лишних коммитов от него не будет.
+          git add map/data.json parser/geocache.json map/addresses.json
           if git diff --staged --quiet; then
             echo "Данные не изменились — коммит не нужен."
             echo "pushed=false" >> "$GITHUB_OUTPUT"
