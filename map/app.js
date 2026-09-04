@@ -58,7 +58,16 @@ const I18N = {
     shareCopied: 'Сілтеме мен мәтін көшірілді', shareFailed: 'Бөлісу сәтсіз аяқталды',
   },
 };
-let LANG = 'ru'; try { LANG = localStorage.getItem('barjoq_lang') || (location.pathname.indexOf('/kz/') === 0 ? 'kk' : 'ru'); } catch (e) {}
+/* ---------- Язык: ЕДИНСТВЕННЫЙ источник истины — URL ----------
+   Раньше стартовый язык брался из localStorage, а путь был лишь запасным
+   вариантом. Из-за этого один и тот же URL мог отрисоваться на разном языке:
+   /map/pavlodar показывал казахский, если человек когда-то нажал KZ, а
+   /kz/map/pavlodar — русский. Это ломало и SEO (два URL с одинаковым текстом),
+   и адреса (RU/KZ-реестр улиц ведёт себя по-разному). Теперь строгое
+   разделение: /kz/... — всегда казахский, всё остальное — всегда русский,
+   localStorage на язык карты больше не влияет. */
+const KZ_PATH = location.pathname.indexOf('/kz/') === 0;
+const LANG = KZ_PATH ? 'kk' : 'ru';
 const t = () => I18N[LANG];
 function systemsWord(n) {
   if (LANG === 'kk') return 'жүйе';
@@ -1616,12 +1625,30 @@ function applyLang() {
   document.querySelectorAll('[data-ad-cta]').forEach((el) => el.textContent = t().adCta);
   buildFilters(); applyFilters();
 }
-document.querySelectorAll('[data-lang-btn]').forEach((b) => b.onclick = () => {
-  LANG = b.dataset.langBtn; try { localStorage.setItem('barjoq_lang', LANG); } catch (e) {}
-  geoCache.clear();          // подписи геокодера тоже зависят от языка
-  setTiles(LANG);            // подложка (при наличии TILE_KEY переключит язык подписей)
-  applyLang();
+/* Кнопки RU/KZ — НАСТОЯЩИЙ переход между /map/... и /kz/map/..., а не подмена
+   текста на месте: язык теперь определяется URL (см. LANG выше). Query и hash
+   сохраняем — с лендинга сюда приходят с ?q=<адрес> и ?report=1. */
+function langHref(l) {
+  const path = KZ_PATH ? location.pathname.slice(3) : location.pathname;   // '/kz/map/x' → '/map/x'
+  return (l === 'kk' ? '/kz' + path : path) + location.search + location.hash;
+}
+document.querySelectorAll('[data-lang-btn]').forEach((b) => {
+  const l = b.dataset.langBtn;
+  b.onclick = () => { if (l !== LANG) location.href = langHref(l); };
 });
+
+/* На казахской карте внутренние ссылки должны вести в казахскую ветку, иначе
+   человек с /kz/map/pavlodar по логотипу «На главную» уходил обратно на русский
+   сайт — и языковое разделение рвалось на первом же клике. Правим только
+   страничные ссылки (главная и город), файлы вроде /favicon.svg и /map/data.json
+   не трогаем. */
+if (KZ_PATH) {
+  document.querySelectorAll('a[href^="/"]').forEach((a) => {
+    const h = a.getAttribute('href');
+    if (h === '/') a.setAttribute('href', '/kz/');
+    else if (/^\/(map\/)?pavlodar(\/|\?|$)/.test(h)) a.setAttribute('href', '/kz' + h);
+  });
+}
 
 /* ---------- Выбор города ----------
    Пока один город (Павлодар). URL /map/ и /map/pavlodar ведут на одну карту.

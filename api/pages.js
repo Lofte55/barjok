@@ -108,24 +108,31 @@ async function renderHome(req, res) {
 }
 
 async function renderMapHub(req, res) {
+  // Хаб городов тоже разделён по языкам: /map/ — русский, /kz/map/ — казахский.
+  // Ссылки на конкретный город ведут внутрь своей языковой ветки, иначе человек,
+  // выбравший KZ, с казахского хаба попадал бы на русскую карту.
+  const lang = langOf(req);
+  const p = lang === 'kk' ? '/kz' : '';
   const cities = allCities();
   const cityCardsHtml = `<div class="city-cards city-cards-scroll">${cities.map((c) => {
     const active = c.status === 'active';
     const nom = c.names.ru.nominative;
     const kkNom = c.names.kk && c.names.kk.nominative;
     return active
-      ? `<a class="city-card" href="/map/${c.slug}"><b${kkNom ? ` data-kk="${esc(kkNom)}"` : ''}>${esc(nom)}</b><span class="city-card-sub" data-kk="Ажыратулар картасы">Карта отключений</span></a>`
+      ? `<a class="city-card" href="${p}/map/${c.slug}"><b${kkNom ? ` data-kk="${esc(kkNom)}"` : ''}>${esc(nom)}</b><span class="city-card-sub" data-kk="Ажыратулар картасы">Карта отключений</span></a>`
       : `<div class="city-card disabled"><b${kkNom ? ` data-kk="${esc(kkNom)}"` : ''}>${esc(nom)}</b><span class="soon" data-kk="Жақында">Скоро</span></div>`;
   }).join('')}</div>`;
   const bodyHtml = `<p style="color:var(--ink-2)" data-kk="Су, жарық және жылу ажыратуларының картасын ашу үшін қаланы таңдаңыз.">Выберите город, чтобы открыть карту отключений воды, света и отопления.</p>${cityCardsHtml}`;
   const html = renderSeoPage({
     title: `Карта отключений — выберите город | ${BRAND}`,
     description: `Карта отключений воды, света и отопления по городам Казахстана. Выберите город: Павлодар и другие.`,
-    canonical: `${ORIGIN}/map/`, h1: 'Карта отключений', bodyHtml, jsonLd: [organizationJsonLd()],
+    canonical: `${ORIGIN}${p}/map/`, h1: 'Карта отключений', bodyHtml, jsonLd: [organizationJsonLd()],
+    lang, altHref: lang === 'kk' ? '/map/' : '/kz/map/',
+    hrefRu: `${ORIGIN}/map/`, hrefKk: `${ORIGIN}/kz/map/`,
   });
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.status(200).send(html);
+  res.status(200).send(lang === 'kk' ? bakeKk(html) : html);
 }
 
 async function renderCity(req, res) {
@@ -517,12 +524,14 @@ async function renderSitemap(req, res) {
     { loc: `${ORIGIN}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${ORIGIN}/map/`, changefreq: 'daily', priority: '0.5' },
     { loc: `${ORIGIN}/kz/`, changefreq: 'daily', priority: '1.0' },
+    { loc: `${ORIGIN}/kz/map/`, changefreq: 'daily', priority: '0.5' },
     { loc: `${ORIGIN}/partners/`, changefreq: 'monthly', priority: '0.6' },
   ];
   for (const city of activeCities()) {
     urls.push({ loc: `${ORIGIN}/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
     urls.push({ loc: `${ORIGIN}/map/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
     urls.push({ loc: `${ORIGIN}/kz/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
+    urls.push({ loc: `${ORIGIN}/kz/map/${city.slug}/`, changefreq: 'hourly', priority: '0.9' });
     for (const service of SERVICES) {
       urls.push({ loc: `${ORIGIN}/${city.slug}/${service.slug}/`, changefreq: 'hourly', priority: '0.8' });
       urls.push({ loc: `${ORIGIN}/kz/${city.slug}/${service.slug}/`, changefreq: 'hourly', priority: '0.8' });

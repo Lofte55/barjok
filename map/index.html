@@ -6,6 +6,22 @@
   <title>Карта отключения воды и света в Павлодаре сегодня — карта по адресам | BARJOK</title>
   <meta name="description" content="Живая карта отключений воды, света и отопления в Павлодаре. Введите адрес — узнайте, что отключено по вашему дому.">
   <link rel="canonical" href="https://barjok.kz/map/pavlodar">
+  <link rel="alternate" hreflang="ru" href="https://barjok.kz/map/pavlodar">
+  <link rel="alternate" hreflang="kk" href="https://barjok.kz/kz/map/pavlodar">
+  <link rel="alternate" hreflang="x-default" href="https://barjok.kz/map/pavlodar">
+  <!-- Один статический файл обслуживает и /map/pavlodar, и /kz/map/pavlodar
+       (rewrites в vercel.json). Серверного рендера у карты нет, поэтому <html lang>
+       и canonical правим здесь — ДО загрузки app.js, чтобы страница ни на
+       мгновение не выглядела русской на казахском URL. Сам язык интерфейса
+       определяется тем же признаком пути внутри app.js (строгое разделение). -->
+  <script>
+  (function () {
+    if (location.pathname.indexOf('/kz/') !== 0) return;
+    document.documentElement.lang = 'kk';
+    var c = document.querySelector('link[rel="canonical"]');
+    if (c) c.href = 'https://barjok.kz/kz/map/pavlodar';
+  })();
+  </script>
   <meta name="theme-color" content="#2f6bed">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/favicon.svg">
@@ -310,7 +326,7 @@
   <script defer src="/map/vendor/maplibre-gl/maplibre-gl.js?v=1788300000"></script>
   <script defer src="/map/vendor/maplibre-gl-leaflet/leaflet-maplibre-gl.js?v=1788300000"></script>
   <script defer src="/map/data.js?v=1788301405"></script>
-  <script defer src="/map/app.js?v=1788400004"></script>
+  <script defer src="/map/app.js?v=1788500001"></script>
 <!-- Яндекс.Метрика + информационный баннер о cookie — в /cookie-consent.js (единое место на все страницы) -->
 <script defer src="/cookie-consent.js?v=2"></script>
 <!-- Vercel Web Analytics — script-тег, не npm-пакет (проект без сборщика) -->

@@ -714,11 +714,16 @@ ${a11yWidgetHtml()}
 <script defer src="/_vercel/insights/script.js"></script>
 <script>
 (function(){
-  // ---------- i18n RU/KZ (тот же паттерн и тот же localStorage-ключ, что и на
-  // /map/ и старом лендинге, — переключение персистентно между страницами) ----------
-  var LANG='ru'; try{LANG=localStorage.getItem('barjoq_lang')||'ru';}catch(e){}
+  // ---------- i18n RU/KZ ----------
+  // Язык определяет ТОЛЬКО URL: /kz/... — казахский, всё остальное — русский.
+  // Раньше стартовый язык брался из localStorage, и русская страница у человека,
+  // однажды нажавшего KZ, отрисовывалась по-казахски — тот же URL показывал
+  // разный текст. Теперь переключатель — настоящая ссылка на /kz/..., а этот
+  // проход нужен лишь как страховка: серверный bakeKk() уже отдаёт казахский
+  // HTML, applyLang('kk') поверх него идемпотентен.
+  var LANG = location.pathname.indexOf('/kz/')===0 ? 'kk' : 'ru';
   function applyLang(l){
-    LANG=l; try{localStorage.setItem('barjoq_lang',l);}catch(e){}
+    LANG=l;
     document.documentElement.lang = l==='kk'?'kk':'ru';
     document.querySelectorAll('[data-lang-btn]').forEach(function(b){b.classList.toggle('on',b.dataset.langBtn===l);});
     document.querySelectorAll('[data-kk]').forEach(function(el){
@@ -985,7 +990,7 @@ function a11yWidgetHtml() {
     document.querySelectorAll('.a11y-toggle').forEach(function(b){
       var on=!!state.toggles[b.dataset.toggle];
       b.classList.toggle('on', on);
-      var isKk=false; try{isKk=(localStorage.getItem('barjoq_lang')||'ru')==='kk';}catch(e){}
+      var isKk = document.documentElement.lang === 'kk';
       b.querySelector('.a11y-state').textContent = on?(isKk?'Қосулы':'Вкл'):(isKk?'Өшірулі':'Выкл');
     });
   }
