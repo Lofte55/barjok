@@ -29,7 +29,7 @@ const I18N = {
     whatsOff: 'Что отключено по адресу', until: 'до', na: 'нет отключений по фильтрам',
     // ⚠️ Когда точного адреса НЕТ в данных, а рядом на улице есть отключения — писать
     // «по адресу» нельзя (это чужие дома). Формулируем честно.
-    nearbyOnly: 'Рядом на этой улице', notListed: 'По этому адресу отключение не заявлено',
+    nearbyOnly: 'Рядом на этой улице', nearbyAround: 'Рядом с этим домом', notListed: 'По этому адресу отключение не заявлено',
     source: 'Источник', demo: 'демо на открытых данных', adLabel: 'Реклама',
     adText: 'Место для рекламодателя', adCta: 'Разместить рекламу',
     share: 'Отправить соседям', shareCta: 'Проверить свой адрес и другие отключения — BARJOK',
@@ -51,7 +51,7 @@ const I18N = {
     checkAddress: 'Мекенжайды тексеру', searching: 'Мекенжай ізделуде…', addrNotFound: 'Мекенжай табылмады',
     allOk: 'Ажырату жоқ', allOkSub: 'Бұл мекенжайда су мен жарық қалыпты', nearby: 'Жақын жерде',
     whatsOff: 'Мекенжай бойынша не ажыратылған', until: 'дейін', na: 'сүзгі бойынша жоқ',
-    nearbyOnly: 'Осы көшеде жақын жерде', notListed: 'Бұл мекенжай бойынша ажырату жарияланбаған',
+    nearbyOnly: 'Осы көшеде жақын жерде', nearbyAround: 'Осы үйдің жанында', notListed: 'Бұл мекенжай бойынша ажырату жарияланбаған',
     source: 'Дереккөз', demo: 'ашық деректердегі демо', adLabel: 'Жарнама',
     adText: 'Жарнама беруші үшін орын', adCta: 'Жарнама орналастыру',
     share: 'Көршілерге жіберу', shareCta: 'Мекенжайыңызды және басқа ажыратуларды тексеріңіз — BARJOK',
@@ -275,8 +275,16 @@ async function applyLiveLayer() {
       const pq = parseQuery(a.address);
       if (!pq.street || !pq.house) return;
       const wantHouse = pq.house.toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е');
+      // ⚠️ Сверяем улицы по streetPairKey, а НЕ streetMatches: у последнего
+      // «Набережная улица» и «Набережная көшесі» — разные улицы (тип стоит в
+      // конце, стемминг их не сводит). А в реестре одна и та же улица лежит
+      // двумя ключами, и дома распределены между ними: дом «1» есть ТОЛЬКО в
+      // казахском варианте. Из-за этого добавленные в админке «Набережная, 1»
+      // и «Набережная, 3» вообще не появлялись на карте — инцидент есть в БД,
+      // координаты не нашлись, запись молча отбрасывалась.
+      const wantStreet = streetPairKey(pq.street);
       for (const street of Object.keys(idx || {})) {
-        if (!streetMatches(street, pq.street)) continue;
+        if (wantStreet ? streetPairKey(street) !== wantStreet : !streetMatches(street, pq.street)) continue;
         const hit = (idx[street] || []).find(
           ([house]) => String(house).toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е') === wantHouse,
         );
@@ -1325,17 +1333,22 @@ function sameAddress(a, b) {
 }
 
 function outagesNear(lat, lng, address) {
-  // ⚠️ Показываем ТОЛЬКО то, что реально касается адреса: точное совпадение адреса
-  // или отключение на ТОЙ ЖЕ улице в разумном радиусе. Раньше был ещё чисто
-  // дистанционный захват (d < 120 м) без учёта улицы — из-за него для «Лермонтова, 44»
-  // показывалось электричество с «Астана, 55» (соседняя улица, другой дом). Убрали:
-  // электричество/наряд с чужой улицы к дому не относится и в карточку не попадает.
+  // ⚠️ Правило ДОЛЖНО совпадать с ghost-маркерами (computeGhostHouses): точное
+  // совпадение адреса, ИЛИ та же улица до 350 м, ИЛИ любой дом в 150 м.
+  // Раньше здесь была только «та же улица», а у маркеров — круг 150 м, и они
+  // расходились: по «Набережная, 1» поиск отвечал «отключений нет», а клик по
+  // кружку на том же доме показывал аварию с «улица Астана, 8/1» (соседняя
+  // улица, 100 м). Один и тот же дом давал два разных ответа.
+  // ⚠️ Исторически чисто дистанционный захват уже убирали — он выдавал наряд
+  // соседней улицы ЗА СВОЙ. Сейчас это безопасно: карточка показывает такие
+  // записи отдельным блоком «рядом» с явной пометкой «по этому адресу
+  // отключение не заявлено» (см. openAddressCard), а не как своё отключение.
   const near = [];
   DATA.houses.forEach((h) => {
     const d = Math.hypot((h.lat - lat) * 111, (h.lng - lng) * 68); // км
     const exact = address && h.address.toLowerCase() === String(address).toLowerCase();
     const sameStreet = address && streetMatches(h.address, streetName(address));
-    if (exact || (sameStreet && d < 0.35)) near.push({ h, d, exact });
+    if (exact || (sameStreet && d < 0.35) || d < 0.15) near.push({ h, d, exact });
   });
   // точное совпадение адреса всегда первым
   near.sort((a, b) => (a.exact === b.exact ? a.d - b.d : a.exact ? -1 : 1));
@@ -1454,8 +1467,14 @@ function openAddressCard(pt, nearHouses) {
       // прокрутки/чтения). Точки цвета ресурса здесь — тот же приём, что и у
       // "Рядом: <адрес>" внутри строки (см. .hc-dot) — сразу видно, ЧТО рядом,
       // не читая текст целиком.
+      // ⚠️ «на этой улице» — только если ВСЕ источники действительно с этой улицы.
+      // outagesNear теперь берёт и соседние улицы в 150 м (иначе поиск и клик по
+      // маркеру давали по одному дому разные ответы) — писать про «эту улицу»
+      // про аварию с соседней было бы неправдой.
       : `<span class="hc-off nearby">${[...new Set(outs.map((x) => x.o.resource))].map((r) =>
-          `<span class="hc-dot" style="background:${RESOURCES[r].color}"></span>`).join('')}${t().nearbyOnly}: ${outs.length} ${systemsWord(outs.length)}</span>
+          `<span class="hc-dot" style="background:${RESOURCES[r].color}"></span>`).join('')}${
+          outs.every(({ h }) => streetMatches(h.address, streetName(pt.address))) ? t().nearbyOnly : t().nearbyAround
+        }: ${outs.length} ${systemsWord(outs.length)}</span>
          <span class="hc-note">${t().notListed}</span>`}</div>` : ''}
     <div class="hc-list">${inner}</div>
     <div class="hc-actions">
